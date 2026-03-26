@@ -1,0 +1,50 @@
+---
+# Deploy pipeline — ejecuta en push a main
+# Desencripta secretos con SOPS y actualiza stacks via Portainer webhooks
+
+when:
+  - event: push
+    branch: main
+
+steps:
+  - name: decrypt-validate
+    image: debian:12-slim
+    secrets:
+      - SOPS_AGE_KEY
+    commands:
+      - apt-get update -qq && apt-get install -y -qq curl age
+      - |
+        SOPS_VERSION="3.9.0"
+        curl -sSLo /usr/local/bin/sops \
+          "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
+        chmod +x /usr/local/bin/sops
+      - echo "$SOPS_AGE_KEY" > /tmp/age.key
+      - export SOPS_AGE_KEY_FILE=/tmp/age.key
+      - |
+        find services/docker-compose -name "*.env.enc" | while read f; do
+          echo "Validating $f..."
+          sops --decrypt "$f" > /dev/null || exit 1
+        done
+      - rm -f /tmp/age.key
+
+  - name: deploy-via-portainer
+    image: curlimages/curl:latest
+    secrets:
+      - PORTAINER_WEBHOOK_DEVOPS
+    when:
+      path:
+        include:
+          - services/docker-compose/devops/**
+    commands:
+      - curl -s -X POST "$PORTAINER_WEBHOOK_DEVOPS"
+
+  - name: deploy-media
+    image: curlimages/curl:latest
+    secrets:
+      - PORTAINER_WEBHOOK_MEDIA
+    when:
+      path:
+        include:
+          - services/docker-compose/media/**
+    commands:
+      - curl -s -X POST "$PORTAINER_WEBHOOK_MEDIA"

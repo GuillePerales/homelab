@@ -1,0 +1,17 @@
+# cert-manager — Helm values
+# Chart: jetstack/cert-manager
+# Namespace: kube-system
+# Docs: https://cert-manager.io/docs/installation/helm/
+
+installCRDs: true
+
+resources:
+  requests:
+    memory: 64Mi
+    cpu: 10m
+  limits:
+    memory: 128Mi
+
+# ClusterIssuer se crea tras instalar cert-manager
+# Ver services/k8s/apps/cert-manager/cluster-issuer.yaml
+# Opciones: Let's Encrypt (ACME) o CA interna self-signed

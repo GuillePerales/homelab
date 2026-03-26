@@ -1,0 +1,81 @@
+---
+# Authentik SSO — servidor + worker
+# Requiere PostgreSQL y Redis
+
+services:
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    container_name: authentik-postgresql
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${PG_PASS}
+      - POSTGRES_USER=authentik
+      - POSTGRES_DB=authentik
+    volumes:
+      - ${APPDATA}/postgresql:/var/lib/postgresql/data
+    networks:
+      - authentik-internal
+
+  redis:
+    image: docker.io/library/redis:alpine
+    container_name: authentik-redis
+    restart: unless-stopped
+    command: --save 60 1 --loglevel warning
+    volumes:
+      - ${APPDATA}/redis:/data
+    networks:
+      - authentik-internal
+
+  server:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_TAG:-2024.10.5}
+    container_name: authentik-server
+    restart: unless-stopped
+    command: server
+    environment:
+      - AUTHENTIK_REDIS__HOST=redis
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_POSTGRESQL__USER=authentik
+      - AUTHENTIK_POSTGRESQL__NAME=authentik
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${PG_PASS}
+      - AUTHENTIK_SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ${APPDATA}/media:/media
+      - ${APPDATA}/templates:/templates
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - authentik-internal
+      - mgmt-net
+
+  worker:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_TAG:-2024.10.5}
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    environment:
+      - AUTHENTIK_REDIS__HOST=redis
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_POSTGRESQL__USER=authentik
+      - AUTHENTIK_POSTGRESQL__NAME=authentik
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${PG_PASS}
+      - AUTHENTIK_SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ${APPDATA}/media:/media
+      - ${APPDATA}/certs:/certs
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - authentik-internal
+
+networks:
+  authentik-internal:
+    internal: true
+  mgmt-net:
+    external: true
+    name: mgmt-net

@@ -1,0 +1,36 @@
+# PostgreSQL — Helm values (Bitnami)
+# Chart: bitnami/postgresql
+# Namespace: database
+# Instancia compartida — una DB por servicio, no un pod por servicio
+# Docs: https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+
+auth:
+  # Passwords gestionados por Vault — no hardcodear aquí
+  existingSecret: postgresql-auth-secret
+  secretKeys:
+    adminPasswordKey: postgres-password
+
+primary:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+
+  persistence:
+    enabled: true
+    storageClass: nfs-client
+    size: 10Gi
+
+  # Bases de datos a crear (una por servicio)
+  initdb:
+    scripts:
+      init.sql: |
+        CREATE DATABASE forgejo_db;
+        CREATE DATABASE authentik_db;
+        CREATE DATABASE sonarqube_db;
+        CREATE DATABASE awx_db;
+
+# Backup — CronJob externo en namespace database
+# Ver: services/k8s/apps/postgresql-backup/

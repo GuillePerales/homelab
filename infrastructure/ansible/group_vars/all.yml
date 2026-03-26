@@ -1,0 +1,25 @@
+---
+# Variables globales para todos los hosts del homelab
+# Sobreescribir por grupo o host en group_vars/<grupo>.yml o host_vars/<host>.yml
+
+# Usuario SSH
+ansible_user: root
+ansible_ssh_private_key_file: ~/.ssh/homelab_ed25519
+
+# Zona horaria
+timezone: Europe/Madrid
+
+# Docker
+docker_data_root: /mnt/vault/docker
+puid: 3000
+pgid: 3000
+
+# NFS — nas-01
+nfs_server: 10.0.5.10
+nfs_vault_apps: /vault/apps
+nfs_tank_media: /tank/media
+nfs_tank_backups: /tank/backups
+
+# Red
+vlan_srv: 30
+vlan_infra: 5

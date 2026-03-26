@@ -1,0 +1,37 @@
+# === SECRETOS — NUNCA COMMITEAR ===
+*.key
+*.pem
+*.p12
+id_rsa*
+id_ed25519*
+!*.pub
+*.age
+keys.txt
+.env
+.env.*
+!.env.example
+*.dec.yaml
+*.dec.yml
+*-decrypted.*
+
+# === OpenTofu ===
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# === Ansible ===
+*.retry
+
+# === Logs y temporales ===
+*.log
+logs/
+tmp/
+*.tmp
+*.bak
+
+# === Sistema ===
+.DS_Store
+*.swp
+*~
+.vscode

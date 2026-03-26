@@ -1,0 +1,21 @@
+# homelab/services/docker-compose/media/sonarr/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${MEDIA}/tv:/tv
+      - ${DOWNLOADS}:/downloads

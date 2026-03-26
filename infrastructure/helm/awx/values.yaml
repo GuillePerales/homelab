@@ -1,0 +1,19 @@
+# AWX — valores para AWX Operator
+# El Operator se instala primero, luego crea el CR AWX
+# Namespace: awx
+# Docs: https://github.com/ansible/awx-operator
+
+# Este archivo no es un Helm values.yaml estándar —
+# AWX se despliega via AWX Operator con un Custom Resource.
+# Ver el CR en services/k8s/apps/awx/awx.yaml
+
+# Instalar el Operator:
+# helm repo add awx-operator https://ansible.github.io/awx-operator/
+# helm install awx-operator awx-operator/awx-operator -n awx --create-namespace
+
+# Resources para el Operator
+operator:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m

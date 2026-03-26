@@ -1,0 +1,5 @@
+creation_rules:
+  - path_regex: infrastructure/secrets/.*\.(yaml|yml)$
+    age: age1swfj8m568jcz82ywnxv9ggrn0fhrte7tk06wc7ywggqagr7q8czqxrxls2
+  - path_regex: services/.*\.env\.enc$
+    age: age1swfj8m568jcz82ywnxv9ggrn0fhrte7tk06wc7ywggqagr7q8czqxrxls2

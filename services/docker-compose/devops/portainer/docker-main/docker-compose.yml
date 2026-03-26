@@ -1,0 +1,17 @@
+networks:
+  srv-net:
+    external: true
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: 10.0.30.27
+    volumes:
+      - /opt/portainer/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Madrid

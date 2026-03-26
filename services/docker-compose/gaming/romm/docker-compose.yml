@@ -1,0 +1,47 @@
+---
+services:
+  romm:
+    image: rommapp/romm:latest
+    container_name: romm
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DB_HOST=romm-db
+      - DB_NAME=romm
+      - DB_USER=romm
+      - DB_PASSWD=${DB_PASS}
+      - ROMM_AUTH_SECRET_KEY=${SECRET_KEY}
+      - ROMM_AUTH_ENABLED=true
+      - IGDB_CLIENT_ID=${IGDB_CLIENT_ID}
+      - IGDB_CLIENT_SECRET=${IGDB_CLIENT_SECRET}
+    volumes:
+      - ${APPDATA}/config:/romm/config
+      - ${APPDATA}/assets:/romm/assets
+      - ${ROMS_PATH}:/romm/library
+    depends_on:
+      - romm-db
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+      romm-internal:
+
+  romm-db:
+    image: mariadb:latest
+    container_name: romm-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}
+      - MYSQL_DATABASE=romm
+      - MYSQL_USER=romm
+      - MYSQL_PASSWORD=${DB_PASS}
+    volumes:
+      - ${APPDATA}/mysql:/var/lib/mysql
+    networks:
+      - romm-internal
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
+  romm-internal:
+    internal: true

@@ -1,0 +1,23 @@
+---
+services:
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DB_SQLITE_FILE=/data/database.sqlite
+    volumes:
+      - ${APPDATA}:/data
+      - ${APPDATA}/letsencrypt:/etc/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"     # WebUI admin
+    networks:
+      - mgmt-net
+
+networks:
+  mgmt-net:
+    external: true
+    name: mgmt-net

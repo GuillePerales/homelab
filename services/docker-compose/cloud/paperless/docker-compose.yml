@@ -1,0 +1,58 @@
+---
+services:
+  paperless-broker:
+    image: redis:alpine
+    container_name: paperless-broker
+    restart: unless-stopped
+    networks:
+      - paperless-internal
+
+  paperless-db:
+    image: postgres:16-alpine
+    container_name: paperless-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - ${APPDATA}/postgresql:/var/lib/postgresql/data
+    networks:
+      - paperless-internal
+
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PAPERLESS_REDIS=redis://paperless-broker:6379
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${DB_PASS}
+      - PAPERLESS_SECRET_KEY=${SECRET_KEY}
+      - PAPERLESS_ADMIN_USER=${ADMIN_USER}
+      - PAPERLESS_ADMIN_PASSWORD=${ADMIN_PASS}
+      - PAPERLESS_OCR_LANGUAGE=${OCR_LANG:-spa+eng}
+      - USERMAP_UID=${PUID:-3000}
+      - USERMAP_GID=${PGID:-3000}
+    volumes:
+      - ${APPDATA}/data:/usr/src/paperless/data
+      - ${APPDATA}/media:/usr/src/paperless/media
+      - ${CONSUME_PATH}:/usr/src/paperless/consume
+      - ${EXPORT_PATH}:/usr/src/paperless/export
+    depends_on:
+      - paperless-broker
+      - paperless-db
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+      paperless-internal:
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
+  paperless-internal:
+    internal: true

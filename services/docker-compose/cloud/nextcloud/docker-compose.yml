@@ -1,0 +1,54 @@
+---
+services:
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_HOST=nextcloud-db
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - NEXTCLOUD_ADMIN_USER=${ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${ADMIN_PASS}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${CONTAINER_IP}
+      - REDIS_HOST=nextcloud-redis
+    volumes:
+      - ${APPDATA}/html:/var/www/html
+      - ${DATA_PATH}:/var/www/html/data
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+      nextcloud-internal:
+
+  nextcloud-db:
+    image: postgres:16-alpine
+    container_name: nextcloud-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - ${APPDATA}/postgresql:/var/lib/postgresql/data
+    networks:
+      - nextcloud-internal
+
+  nextcloud-redis:
+    image: redis:alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    command: --save 60 1 --loglevel warning
+    networks:
+      - nextcloud-internal
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
+  nextcloud-internal:
+    internal: true

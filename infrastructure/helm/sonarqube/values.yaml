@@ -1,0 +1,40 @@
+# SonarQube Community — Helm values
+# Chart: sonarqube/sonarqube
+# Namespace: devops
+# Docs: https://github.com/SonarSource/helm-chart-sonarqube
+
+edition: community
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  hosts:
+    - name: sonarqube.homelab.local
+      path: /
+  tls:
+    - secretName: sonarqube-tls
+      hosts:
+        - sonarqube.homelab.local
+
+resources:
+  requests:
+    memory: 1Gi
+    cpu: 250m
+  limits:
+    memory: 2Gi
+
+# Usar PostgreSQL compartido (namespace database)
+postgresql:
+  enabled: false
+
+jdbcOverwrite:
+  enable: true
+  jdbcUrl: "jdbc:postgresql://postgresql.database.svc.cluster.local:5432/sonarqube_db"
+  jdbcUsername: sonarqube
+  jdbcSecretName: sonarqube-db-secret
+  jdbcSecretPasswordKey: password
+
+persistence:
+  enabled: true
+  storageClass: nfs-client
+  size: 5Gi

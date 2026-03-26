@@ -1,0 +1,34 @@
+---
+# OpenClaw — Agente IA para gestión del homelab
+# Desplegado en pve-router (LXC), VLAN 15 (AI) — firewall estricto
+# Ver reglas de firewall en docs/homelab-catalog.md §13.3
+
+services:
+  openclaw:
+    image: openclaw/openclaw:latest   # imagen a confirmar cuando esté disponible
+    container_name: openclaw
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PROXMOX_HOST=192.168.1.135
+      - PROXMOX_TOKEN_ID=${PROXMOX_TOKEN_ID}
+      - PROXMOX_TOKEN_SECRET=${PROXMOX_TOKEN_SECRET}
+      - OPNSENSE_HOST=10.0.10.1
+      - OPNSENSE_KEY=${OPNSENSE_KEY}
+      - OPNSENSE_SECRET=${OPNSENSE_SECRET}
+      - TRUENAS_HOST=10.0.5.10
+      - TRUENAS_API_KEY=${TRUENAS_API_KEY}
+      - PORTAINER_HOST=10.0.30.27:9443
+      - PORTAINER_TOKEN=${PORTAINER_TOKEN}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    volumes:
+      - ${APPDATA}:/config
+    networks:
+      ai-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  ai-net:
+    external: true
+    name: ai-net

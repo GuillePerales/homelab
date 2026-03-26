@@ -1,0 +1,44 @@
+# HashiCorp Vault — Helm values
+# Chart: hashicorp/vault
+# Namespace: vault
+# Docs: https://developer.hashicorp.com/vault/docs/platform/k8s/helm
+
+server:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - host: vault.homelab.local
+        paths:
+          - /
+    tls:
+      - secretName: vault-tls
+        hosts:
+          - vault.homelab.local
+
+  # Almacenamiento en archivo (single node, suficiente para homelab)
+  dataStorage:
+    enabled: true
+    storageClass: nfs-client
+    size: 5Gi
+
+  # Auth methods a configurar manualmente tras deploy:
+  # vault auth enable kubernetes
+  # vault auth enable userpass
+
+ui:
+  enabled: true
+
+# Vault Agent Injector — inyecta secretos en pods via annotations
+injector:
+  enabled: true
+  resources:
+    requests:
+      memory: 64Mi

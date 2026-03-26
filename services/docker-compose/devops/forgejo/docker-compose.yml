@@ -1,0 +1,37 @@
+# services/docker-compose/devops/forgejo/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+  forgejo-internal:
+    driver: bridge
+
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:9
+    container_name: forgejo
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+      forgejo-internal:
+    environment:
+      - USER_UID=${PUID}
+      - USER_GID=${PGID}
+      - FORGEJO__database__DB_TYPE=sqlite3
+      - FORGEJO__server__DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__ROOT_URL=http://${FORGEJO_DOMAIN}:3000
+      - FORGEJO__server__SSH_DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__SSH_PORT=2222
+      - FORGEJO__service__DISABLE_REGISTRATION=true
+      - FORGEJO__service__REQUIRE_SIGNIN_VIEW=true
+      # Redirigir los repositorios al NAS
+      - FORGEJO__repository__ROOT=/opt/forgejo-repos
+    volumes:
+      # Config local (SQLite, sesiones, caché — rápido, en LXC)
+      - ${APPDATA}/config:/data
+      # Repositorios en el NAS (vault/git-storage — SSD mirror, snapshots)
+      - ${REPO_ROOT}:/opt/forgejo-repos
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "2222:22"

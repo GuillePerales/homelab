@@ -1,0 +1,47 @@
+# services/docker-compose/devops/woodpecker/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+  woodpecker-internal:
+    driver: bridge
+
+services:
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:v3
+    container_name: woodpecker-server
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${SERVER_IP}
+      woodpecker-internal:
+    environment:
+      - WOODPECKER_OPEN=false
+      - WOODPECKER_HOST=http://${SERVER_IP}:8000
+      - WOODPECKER_FORGEJO=true
+      - WOODPECKER_FORGEJO_URL=http://10.0.30.28:3000
+      - WOODPECKER_FORGEJO_CLIENT=${FORGEJO_CLIENT_ID}
+      - WOODPECKER_FORGEJO_SECRET=${FORGEJO_CLIENT_SECRET}
+      - WOODPECKER_AGENT_SECRET=${AGENT_SECRET}
+      - WOODPECKER_ADMIN=${WOODPECKER_ADMIN_USER}
+      - WOODPECKER_DATABASE_DRIVER=sqlite3
+      - WOODPECKER_DATABASE_DATASOURCE=/var/lib/woodpecker/woodpecker.sqlite
+    volumes:
+      - ${SERVER_APPDATA}:/var/lib/woodpecker
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:latest
+    container_name: woodpecker-agent
+    restart: unless-stopped
+    networks:
+      woodpecker-internal:
+    depends_on:
+      - woodpecker-server
+    environment:
+      - WOODPECKER_SERVER=woodpecker-server:9000
+      - WOODPECKER_AGENT_SECRET=${AGENT_SECRET}
+      - WOODPECKER_MAX_WORKFLOWS=4
+      - WOODPECKER_BACKEND=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/woodpecker:/tmp/woodpecker

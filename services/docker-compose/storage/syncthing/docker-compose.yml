@@ -1,0 +1,21 @@
+# homelab/services/docker-compose/sync/syncthing/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${DOCUMENTS}:/data/documents
+      - ${PHOTOS}:/data/photos

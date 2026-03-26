@@ -1,0 +1,58 @@
+---
+# Pterodactyl — Panel de gestión de servidores de juegos
+# Panel (frontend) + Wings (daemon en el host de juegos)
+
+services:
+  panel-cache:
+    image: redis:alpine
+    container_name: pterodactyl-redis
+    restart: unless-stopped
+    networks:
+      - pterodactyl-internal
+
+  panel-db:
+    image: mariadb:latest
+    container_name: pterodactyl-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}
+      - MYSQL_DATABASE=pterodactyl
+      - MYSQL_USER=pterodactyl
+      - MYSQL_PASSWORD=${DB_PASS}
+    volumes:
+      - ${APPDATA}/mysql:/var/lib/mysql
+    networks:
+      - pterodactyl-internal
+
+  panel:
+    image: ghcr.io/pterodactyl/panel:latest
+    container_name: pterodactyl-panel
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - APP_URL=http://${CONTAINER_IP}
+      - APP_KEY=${APP_KEY}
+      - DB_HOST=panel-db
+      - DB_DATABASE=pterodactyl
+      - DB_USERNAME=pterodactyl
+      - DB_PASSWORD=${DB_PASS}
+      - REDIS_HOST=panel-cache
+      - MAIL_DRIVER=log
+    volumes:
+      - ${APPDATA}/panel/var:/app/var
+      - ${APPDATA}/panel/nginx:/etc/nginx/http.d
+      - ${APPDATA}/panel/logs:/app/storage/logs
+    depends_on:
+      - panel-db
+      - panel-cache
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+      pterodactyl-internal:
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
+  pterodactyl-internal:
+    internal: true

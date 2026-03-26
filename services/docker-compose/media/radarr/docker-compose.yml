@@ -1,0 +1,21 @@
+# homelab/services/docker-compose/media/radarr/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${MEDIA}/movies:/movies
+      - ${DOWNLOADS}:/downloads

@@ -1,0 +1,31 @@
+---
+services:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ${APPDATA}/config/config.yml:/etc/loki/config.yml:ro
+      - ${APPDATA}/data:/loki
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ${APPDATA}/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      srv-net:
+        ipv4_address: ${PROMTAIL_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

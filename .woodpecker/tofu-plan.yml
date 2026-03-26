@@ -1,0 +1,35 @@
+---
+# OpenTofu plan pipeline — ejecuta en PRs que tocan infrastructure/opentofu/
+# Solo planifica, nunca aplica. Apply es manual tras revisar el plan.
+
+when:
+  - event: pull_request
+    path:
+      include:
+        - infrastructure/opentofu/**
+
+steps:
+  - name: tofu-fmt-check
+    image: ghcr.io/opentofu/opentofu:latest
+    commands:
+      - tofu fmt -check -recursive infrastructure/opentofu/
+
+  - name: tofu-validate-proxmox
+    image: ghcr.io/opentofu/opentofu:latest
+    commands:
+      - tofu -chdir=infrastructure/opentofu/proxmox init -backend=false
+      - tofu -chdir=infrastructure/opentofu/proxmox validate
+
+  - name: tofu-plan-proxmox
+    image: ghcr.io/opentofu/opentofu:latest
+    secrets:
+      - PROXMOX_API_TOKEN_ID
+      - PROXMOX_API_TOKEN_SECRET
+    environment:
+      TF_VAR_proxmox_api_token_id:
+        from_secret: PROXMOX_API_TOKEN_ID
+      TF_VAR_proxmox_api_token_secret:
+        from_secret: PROXMOX_API_TOKEN_SECRET
+    commands:
+      - tofu -chdir=infrastructure/opentofu/proxmox plan -out=plan.out
+      - tofu -chdir=infrastructure/opentofu/proxmox show plan.out

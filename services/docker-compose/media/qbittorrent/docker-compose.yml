@@ -1,0 +1,21 @@
+# homelab/services/docker-compose/media/qbittorrent/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=${WEBUI_PORT}
+    volumes:
+      - ${APPDATA}:/config
+      - ${DOWNLOADS}:/downloads

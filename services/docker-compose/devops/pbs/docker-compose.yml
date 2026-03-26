@@ -1,0 +1,24 @@
+networks:
+  srv-net:
+    external: true
+
+services:
+  pbs:
+    image: ayufan/proxmox-backup-server:latest
+    container_name: pbs
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/var/lib/proxmox-backup
+      - ${BACKUPS}:/backups
+    tmpfs:
+      - /run
+      - /run/lock
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    privileged: true

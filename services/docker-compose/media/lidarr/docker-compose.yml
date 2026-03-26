@@ -1,0 +1,21 @@
+# homelab/services/docker-compose/media/lidarr/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${MEDIA}/music:/music
+      - ${DOWNLOADS}:/downloads

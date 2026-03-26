@@ -1,0 +1,60 @@
+---
+# Immich — Google Photos self-hosted
+# Stack completo: server + microservices + ML + database + redis
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    container_name: immich-server
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DB_URL=postgresql://immich:${DB_PASS}@immich-database/immich
+      - REDIS_URL=redis://immich-redis:6379
+      - UPLOAD_LOCATION=/usr/src/app/upload
+    volumes:
+      - ${PHOTOS_PATH}:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - immich-database
+      - immich-redis
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+      immich-internal:
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    container_name: immich-ml
+    restart: unless-stopped
+    volumes:
+      - ${APPDATA}/model-cache:/cache
+    networks:
+      - immich-internal
+
+  immich-redis:
+    image: redis:alpine
+    container_name: immich-redis
+    restart: unless-stopped
+    networks:
+      - immich-internal
+
+  immich-database:
+    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0
+    container_name: immich-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=immich
+      - POSTGRES_USER=immich
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - ${APPDATA}/postgresql:/var/lib/postgresql/data
+    networks:
+      - immich-internal
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
+  immich-internal:
+    internal: true

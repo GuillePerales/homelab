@@ -1,0 +1,22 @@
+---
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=http://${CONTAINER_IP}
+    volumes:
+      - ${APPDATA}:/config
+      - ${MEDIA_PATH}/movies:/data/movies:ro
+      - ${MEDIA_PATH}/tv:/data/tv:ro
+      - ${MEDIA_PATH}/music:/data/music:ro
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

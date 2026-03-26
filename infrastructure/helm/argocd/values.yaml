@@ -1,0 +1,40 @@
+# ArgoCD — Helm values
+# Chart: argo/argo-cd
+# Namespace: devops
+# Docs: https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+
+global:
+  domain: argocd.homelab.local
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hostname: argocd.homelab.local
+    tls: true
+
+configs:
+  params:
+    # Desactivar TLS interno (Traefik termina TLS)
+    server.insecure: true
+
+  repositories:
+    forgejo-homelab:
+      url: http://10.0.30.XX:3003/homelab/homelab.git
+      type: git
+      name: forgejo-homelab
+
+repoServer:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+
+applicationSet:
+  resources:
+    requests:
+      memory: 128Mi
+
+# App of Apps root — ver services/k8s/argocd/apps/

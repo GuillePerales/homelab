@@ -1,0 +1,60 @@
+# Jenkins — Helm values
+# Chart: jenkins/jenkins
+# Namespace: devops
+# Docs: https://github.com/jenkinsci/helm-charts/tree/main/charts/jenkins
+
+controller:
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hostName: jenkins.homelab.local
+    tls:
+      - secretName: jenkins-tls
+        hosts:
+          - jenkins.homelab.local
+
+  # Plugins a instalar automáticamente
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - blueocean:latest
+    - prometheus:latest          # DORA metrics endpoint /prometheus
+    - sonar:latest               # SonarQube integration
+    - harbor:latest              # Harbor integration
+    - forgejo-checks:latest      # Forgejo PR status
+
+  # JCasC — configuración como código
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      forgejo-credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      id: "forgejo-token"
+                      username: "jenkins"
+                      password: "${FORGEJO_TOKEN}"
+                      description: "Forgejo API token"
+
+persistence:
+  enabled: true
+  storageClass: nfs-client
+  size: 10Gi
+
+agent:
+  enabled: true
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
