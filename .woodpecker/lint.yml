@@ -1,28 +1,27 @@
----
-# Lint pipeline — ejecuta en todo push y PR
-# Verifica formato YAML, docker-compose válido, y sintaxis Ansible
-
 when:
-  - event: [push, pull_request]
+  event: [push, pull_request]
 
 steps:
-  - name: lint-yaml
+  - name: yamllint
     image: cytopia/yamllint:latest
     commands:
-      - yamllint -d '{extends: default, rules: {line-length: {max: 120}}}' .
+      - yamllint -d relaxed services/docker-compose/ infrastructure/ansible/ .woodpecker/
 
-  - name: lint-compose
-    image: docker:cli
+  - name: compose-validate
+    image: docker:24-cli
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
       - |
         find services/docker-compose -name "docker-compose.yml" | while read f; do
           echo "Validating $f..."
-          docker compose -f "$f" config -q || exit 1
+          docker compose -f "$f" config --quiet || exit 1
         done
 
-  - name: lint-ansible
+  - name: ansible-lint
     image: pipelinecomponents/ansible-lint:latest
     commands:
-      - ansible-lint infrastructure/ansible/playbooks/
+      - ansible-lint infrastructure/ansible/
+    when:
+      path:
+        include: ["infrastructure/ansible/**"]

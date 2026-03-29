@@ -1,50 +1,40 @@
----
-# Deploy pipeline — ejecuta en push a main
-# Desencripta secretos con SOPS y actualiza stacks via Portainer webhooks
-
 when:
-  - event: push
-    branch: main
+  event: push
+  branch: main
+  path:
+    include: ["services/docker-compose/**"]
 
 steps:
-  - name: decrypt-validate
-    image: debian:12-slim
+  - name: sops-decrypt
+    image: mozilla/sops:latest
     secrets:
-      - SOPS_AGE_KEY
+      - sops_age_key
     commands:
-      - apt-get update -qq && apt-get install -y -qq curl age
-      - |
-        SOPS_VERSION="3.9.0"
-        curl -sSLo /usr/local/bin/sops \
-          "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
-        chmod +x /usr/local/bin/sops
       - echo "$SOPS_AGE_KEY" > /tmp/age.key
       - export SOPS_AGE_KEY_FILE=/tmp/age.key
+      # Validar que podemos desencriptar los .enc
       - |
-        find services/docker-compose -name "*.env.enc" | while read f; do
-          echo "Validating $f..."
+        find services/docker-compose -name "*.enc" | while read f; do
           sops --decrypt "$f" > /dev/null || exit 1
         done
       - rm -f /tmp/age.key
 
-  - name: deploy-via-portainer
+  - name: portainer-deploy
     image: curlimages/curl:latest
     secrets:
-      - PORTAINER_WEBHOOK_DEVOPS
-    when:
-      path:
-        include:
-          - services/docker-compose/devops/**
+      - portainer_webhook_core
+      - portainer_webhook_media
+    environment:
+      - CHANGED_FILES=${CI_COMMIT_CHANGED_FILES}
     commands:
-      - curl -s -X POST "$PORTAINER_WEBHOOK_DEVOPS"
-
-  - name: deploy-media
-    image: curlimages/curl:latest
-    secrets:
-      - PORTAINER_WEBHOOK_MEDIA
-    when:
-      path:
-        include:
-          - services/docker-compose/media/**
-    commands:
-      - curl -s -X POST "$PORTAINER_WEBHOOK_MEDIA"
+      - |
+        echo "Changed files: $CHANGED_FILES"
+        # Trigger webhook solo si cambió el stack correspondiente
+        if echo "$CHANGED_FILES" | grep -q "docker-compose/core"; then
+          curl -X POST "$PORTAINER_WEBHOOK_CORE" --silent --fail
+          echo "Triggered core stack deploy"
+        fi
+        if echo "$CHANGED_FILES" | grep -q "docker-compose/media"; then
+          curl -X POST "$PORTAINER_WEBHOOK_MEDIA" --silent --fail
+          echo "Triggered media stack deploy"
+        fi

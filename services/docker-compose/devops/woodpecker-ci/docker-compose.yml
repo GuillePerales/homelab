@@ -29,7 +29,7 @@ services:
       - ${SERVER_APPDATA}:/var/lib/woodpecker
 
   woodpecker-agent:
-    image: woodpeckerci/woodpecker-agent:latest
+    image: woodpeckerci/woodpecker-agent:v3
     container_name: woodpecker-agent
     restart: unless-stopped
     networks:

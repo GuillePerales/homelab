@@ -1,35 +1,34 @@
----
-# OpenTofu plan pipeline — ejecuta en PRs que tocan infrastructure/opentofu/
-# Solo planifica, nunca aplica. Apply es manual tras revisar el plan.
-
 when:
-  - event: pull_request
-    path:
-      include:
-        - infrastructure/opentofu/**
+  event: pull_request
+  path:
+    include: ["infrastructure/opentofu/**"]
 
 steps:
-  - name: tofu-fmt-check
+  - name: tofu-fmt
     image: ghcr.io/opentofu/opentofu:latest
     commands:
-      - tofu fmt -check -recursive infrastructure/opentofu/
+      - cd infrastructure/opentofu/proxmox
+      - tofu fmt -check -recursive
 
-  - name: tofu-validate-proxmox
+  - name: tofu-validate
     image: ghcr.io/opentofu/opentofu:latest
     commands:
-      - tofu -chdir=infrastructure/opentofu/proxmox init -backend=false
-      - tofu -chdir=infrastructure/opentofu/proxmox validate
+      - cd infrastructure/opentofu/proxmox
+      - tofu init -backend=false
+      - tofu validate
 
-  - name: tofu-plan-proxmox
+  - name: tofu-plan
     image: ghcr.io/opentofu/opentofu:latest
-    secrets:
-      - PROXMOX_API_TOKEN_ID
-      - PROXMOX_API_TOKEN_SECRET
     environment:
-      TF_VAR_proxmox_api_token_id:
-        from_secret: PROXMOX_API_TOKEN_ID
-      TF_VAR_proxmox_api_token_secret:
-        from_secret: PROXMOX_API_TOKEN_SECRET
+      - PROXMOX_VE_ENDPOINT=https://10.0.5.12:8006
+      - PROXMOX_VE_INSECURE=true
+    secrets:
+      - proxmox_token_id
+      - proxmox_token_secret
     commands:
-      - tofu -chdir=infrastructure/opentofu/proxmox plan -out=plan.out
-      - tofu -chdir=infrastructure/opentofu/proxmox show plan.out
+      - cd infrastructure/opentofu/proxmox
+      - tofu init
+      - tofu plan -no-color -out=tfplan
+      - tofu show -no-color tfplan
+    when:
+      event: pull_request

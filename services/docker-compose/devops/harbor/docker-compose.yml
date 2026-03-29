@@ -1,0 +1,99 @@
+services:
+  registry:
+    image: goharbor/registry-photon:v2.11.0
+    container_name: harbor-registry
+    restart: unless-stopped
+    volumes:
+      - ${APPDATA}/data/registry:/storage
+      - ${APPDATA}/config/registry/config.yml:/etc/registry/config.yml:ro
+    networks:
+      - harbor-net
+
+  core:
+    image: goharbor/harbor-core:v2.11.0
+    container_name: harbor-core
+    restart: unless-stopped
+    depends_on:
+      - registry
+      - redis
+      - postgresql
+    env_file:
+      - ${APPDATA}/config/core/env
+    volumes:
+      - ${APPDATA}/data/core/:/data/
+      - ${APPDATA}/config/core/app.conf:/etc/core/app.conf:ro
+    networks:
+      - harbor-net
+
+  portal:
+    image: goharbor/harbor-portal:v2.11.0
+    container_name: harbor-portal
+    restart: unless-stopped
+    depends_on:
+      - core
+    networks:
+      - harbor-net
+
+  jobservice:
+    image: goharbor/harbor-jobservice:v2.11.0
+    container_name: harbor-jobservice
+    restart: unless-stopped
+    depends_on:
+      - core
+    env_file:
+      - ${APPDATA}/config/jobservice/env
+    volumes:
+      - ${APPDATA}/data/job_logs:/var/log/jobs
+    networks:
+      - harbor-net
+
+  trivy-adapter:
+    image: goharbor/trivy-adapter-photon:v2.11.0
+    container_name: harbor-trivy
+    restart: unless-stopped
+    depends_on:
+      - core
+    env_file:
+      - ${APPDATA}/config/trivy-adapter/env
+    volumes:
+      - ${APPDATA}/data/trivy-adapter/trivy:/home/scanner/.cache/trivy
+    networks:
+      - harbor-net
+
+  nginx:
+    image: goharbor/nginx-photon:v2.11.0
+    container_name: harbor-nginx
+    restart: unless-stopped
+    depends_on:
+      - portal
+      - core
+    ports:
+      - "10.0.30.20:80:8080"
+      - "10.0.30.20:443:8443"
+    networks:
+      - harbor-net
+
+  redis:
+    image: goharbor/redis-photon:v2.11.0
+    container_name: harbor-redis
+    restart: unless-stopped
+    volumes:
+      - ${APPDATA}/data/redis:/var/lib/redis
+    networks:
+      - harbor-net
+
+  postgresql:
+    image: goharbor/harbor-db:v2.11.0
+    container_name: harbor-db
+    restart: unless-stopped
+    env_file:
+      - ${APPDATA}/config/db/env
+    volumes:
+      - ${APPDATA}/data/database:/var/lib/postgresql/data
+    networks:
+      - harbor-net
+
+networks:
+  harbor-net:
+    driver: bridge
+    internal: true
