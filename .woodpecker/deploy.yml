@@ -25,7 +25,7 @@ steps:
       - portainer_webhook_core
       - portainer_webhook_media
     environment:
-      - CHANGED_FILES=${CI_COMMIT_CHANGED_FILES}
+      CHANGED_FILES: ${CI_COMMIT_CHANGED_FILES}
     commands:
       - |
         echo "Changed files: $CHANGED_FILES"
