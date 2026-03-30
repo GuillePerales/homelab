@@ -25,6 +25,9 @@ services:
       - WOODPECKER_ADMIN=${WOODPECKER_ADMIN_USER}
       - WOODPECKER_DATABASE_DRIVER=sqlite3
       - WOODPECKER_DATABASE_DATASOURCE=/var/lib/woodpecker/woodpecker.sqlite
+    ports:
+      - "8000:8000"
+      - "9000:9000"
     volumes:
       - ${SERVER_APPDATA}:/var/lib/woodpecker
 
