@@ -1,0 +1,18 @@
+- name: Create Forgejo config directory on docker-main (local)
+  file:
+    path: /opt/forgejo/config
+    state: directory
+    owner: 3001
+    group: 3001
+    mode: '0755'
+
+- name: Create symlink to compose file in git repo (NFS)
+  file:
+    src: /mnt/vault/git-storage/homelab/services/docker-compose/devops/forgejo/docker-compose.yml
+    dest: /opt/forgejo/docker-compose.yml
+    state: link
+
+- name: Start Forgejo
+  community.docker.docker_compose_v2:
+    project_src: /opt/appdata/forgejo
+    state: present
