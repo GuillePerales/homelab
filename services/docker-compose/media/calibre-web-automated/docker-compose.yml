@@ -1,0 +1,21 @@
+# homelab/services/docker-compose/media/calibre-web-automated/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  calibre-web-automated:
+    image: crocodilestick/calibre-web-automated:latest
+    container_name: calibre-web-automated
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${CALIBRE_LIBRARY}:/calibre-library
+      - ${INGEST_DIR}:/cwa-book-ingest

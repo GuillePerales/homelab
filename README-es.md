@@ -38,7 +38,7 @@ Homelab personal gestionado íntegramente como Infraestructura como Código. Dos
 |---|---|
 | NAS | TrueNAS Scale en Dell R230 |
 | Almacenamiento | Pools ZFS: `tank` (stripe HDD) + `vault` (mirror SSD) |
-| Stack multimedia | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent — todos operativos |
+| Stack multimedia | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated — todos operativos |
 | Backup | Proxmox Backup Server (PBS) en Docker en el NAS |
 | Sincronización | Syncthing para sync con dispositivos móviles |
 
@@ -268,6 +268,7 @@ Categorías:
 | arr-prowlarr-01 | Prowlarr | docker-nas | Docker macvlan | 9696 | ✅ Operativo | Gestor centralizado de indexers |
 | arr-bazarr-01 | Bazarr | docker-nas | Docker macvlan | 6767 | ✅ Operativo | Descarga automática de subtítulos |
 | media-qbittorrent-01 | qBittorrent | docker-nas | Docker macvlan | 8080 | ✅ Operativo | Cliente de descargas web (enrutado por ProtonVPN) |
+| media-cwa-01 | Calibre-Web Automated | docker-nas | Docker macvlan | 8083 | ✅ Operativo | Biblioteca de ebooks con ingesta y conversión automática |
 
 ### 4.7 DevOps (VLAN 30 — SRV)
 
@@ -637,7 +638,7 @@ git diff --staged | grep -iE "(password|key|token|secret)"
 | **Phase 0** | Workstation, tooling, init del repo, SOPS + Age | ✅ Completada |
 | **Phase 1** | Red: OPNsense, 7 VLANs, switch gestionado, Tailscale | ✅ Completada |
 | **Phase 1.5** | VPN: Tailscale (remoto) + ProtonVPN WireGuard (salida) | ✅ Completada |
-| **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, PBS, Syncthing | ✅ Completada |
+| **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
 | **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Harbor + Trivy, pipelines IaC | 🔄 En curso |
 | **Phase 4+** | DevOps Enterprise: K3s, Jenkins, ArgoCD, SonarQube, Vault, AWX | ⏳ Planificada |
