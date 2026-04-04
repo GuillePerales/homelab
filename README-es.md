@@ -169,7 +169,7 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 
 | Host | Interfaz | Rango asignado |
 |---|---|---|
-| docker-nas (nas-01) | eno1.30 | 10.0.30.10–.25 |
+| docker-nas (nas-01) | vlan30 | 10.0.30.10–.25 |
 | docker-main (LXC pve-main) | eth0 | 10.0.30.26–.41 |
 | docker-aux (LXC pve-aux) | eth0 | 10.0.30.42–.57 |
 | DHCP dinámico | — | 10.0.30.100+ |

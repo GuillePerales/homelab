@@ -169,7 +169,7 @@ All production nodes run 24/7. Total idle power draw is under 100W.
 
 | Host | Interface | Assigned range |
 |---|---|---|
-| docker-nas (nas-01) | eno1.30 | 10.0.30.10–.25 |
+| docker-nas (nas-01) | vlan30 | 10.0.30.10–.25 |
 | docker-main (LXC pve-main) | eth0 | 10.0.30.26–.41 |
 | docker-aux (LXC pve-aux) | eth0 | 10.0.30.42–.57 |
 | DHCP dynamic | — | 10.0.30.100+ |
