@@ -10,6 +10,7 @@ keys.txt
 .env
 .env.*
 !.env.example
+!*.env.enc
 *.dec.yaml
 *.dec.yml
 *-decrypted.*

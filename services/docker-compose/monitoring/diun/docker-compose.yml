@@ -1,0 +1,25 @@
+---
+# diun — avisa a ntfy cuando una imagen en uso tiene versión nueva. No actualiza nada.
+# Se despliega una instancia por host Docker (docker-main y docker-nas), con red bridge por defecto.
+services:
+  diun:
+    container_name: diun
+    image: crazymax/diun:4.33.0
+    command: serve
+    restart: unless-stopped
+    hostname: ${DIUN_HOST}
+    environment:
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+      - DIUN_WATCH_WORKERS=10
+      - DIUN_WATCH_SCHEDULE=0 9 * * *
+      - DIUN_WATCH_JITTER=30s
+      - DIUN_WATCH_FIRSTCHECKNOTIF=false
+      - DIUN_PROVIDERS_DOCKER=true
+      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
+      - DIUN_NOTIF_NTFY_ENDPOINT=${NTFY_URL}
+      - DIUN_NOTIF_NTFY_TOPIC=homelab-actualizaciones
+      - DIUN_NOTIF_NTFY_PRIORITY=2
+    volumes:
+      - ${APPDATA}:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro

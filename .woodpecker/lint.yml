@@ -9,8 +9,7 @@ steps:
 
   - name: compose-validate
     image: docker:24-cli
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    # docker compose config no necesita el daemon: sin docker.sock
     commands:
       - |
         find services/docker-compose -name "docker-compose.yml" | while read f; do
