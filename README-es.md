@@ -250,17 +250,17 @@ Categorías:
 | ID | Servicio | Host | Tipo | Función |
 |---|---|---|---|---|
 | app-nextcloud-01 | Nextcloud | docker-main | Docker | Cloud personal: archivos, calendario, contactos |
-| app-immich-01 | Immich | docker-main | Docker | Gestión de fotos/vídeo (alternativa a Google Photos) |
+| app-immich-01 | Immich | docker-nas | Docker macvlan | ✅ Gestión de fotos/vídeo (alternativa a Google Photos) |
 | app-syncthing-01 | Syncthing | docker-nas | Docker macvlan | ✅ Sync P2P con dispositivos móviles |
 | app-paperless-01 | Paperless-ngx | docker-main | Docker | Gestión documental con OCR |
 
 ### 4.6 Multimedia (VLAN 30 — SRV)
 
-> Jellyfin y Overseerr planificados para Phase 7 en `docker-main`.
+> Jellyfin se desplegó en `docker-nas` en lugar de `docker-main`: acceso local al pool de media, sin salto NFS. Overseerr sigue planificado para Phase 7 en `docker-main`.
 
 | ID | Servicio | Host | Tipo | Puerto | Estado | Función |
 |---|---|---|---|---|---|---|
-| media-jellyfin-01 | Jellyfin | docker-main | Docker macvlan | 8096 | ⏳ Phase 7 | Servidor de streaming multimedia |
+| media-jellyfin-01 | Jellyfin | docker-nas | Docker macvlan | 8096 | ✅ Operativo | Servidor de streaming multimedia (acceso local al pool de media) |
 | media-overseerr-01 | Overseerr | docker-main | Docker macvlan | 5055 | ⏳ Phase 7 | Portal de peticiones multimedia |
 | arr-sonarr-01 | Sonarr | docker-nas | Docker macvlan | 8989 | ✅ Operativo | Gestión automática de series |
 | arr-radarr-01 | Radarr | docker-nas | Docker macvlan | 7878 | ✅ Operativo | Gestión automática de películas |
@@ -269,6 +269,7 @@ Categorías:
 | arr-bazarr-01 | Bazarr | docker-nas | Docker macvlan | 6767 | ✅ Operativo | Descarga automática de subtítulos |
 | media-qbittorrent-01 | qBittorrent | docker-nas | Docker macvlan | 8080 | ✅ Operativo | Cliente de descargas web (enrutado por ProtonVPN) |
 | media-cwa-01 | Calibre-Web Automated | docker-nas | Docker macvlan | 8083 | ✅ Operativo | Biblioteca de ebooks con ingesta y conversión automática |
+| media-jdownloader-01 | JDownloader 2 | docker-nas | Docker macvlan | 5800 | ✅ Operativo | Gestor de descargas directas |
 
 ### 4.7 DevOps (VLAN 30 — SRV)
 
@@ -596,6 +597,7 @@ awx/          ← AWX (upstream de Ansible Tower)
 │   │   ├── core/
 │   │   ├── monitoring/
 │   │   ├── cloud/
+│   │   ├── storage/
 │   │   └── devops/
 │   └── k8s/                ← Workloads K3s (Phase 4+)
 │       ├── argocd/apps/    ← Patrón App of Apps
@@ -643,7 +645,7 @@ git diff --staged | grep -iE "(password|key|token|secret)"
 | **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Harbor + Trivy, pipelines IaC | 🔄 En curso |
 | **Phase 4+** | DevOps Enterprise: K3s, Jenkins, ArgoCD, SonarQube, Vault, AWX | ⏳ Planificada |
 | **Phase 5** | NGINX Proxy Manager, Authentik SSO, SSL, Vaultwarden | ⏳ Planificada |
-| **Phase 6** | Nextcloud, Immich, Paperless-ngx | ⏳ Planificada |
-| **Phase 7** | Jellyfin, Overseerr | ⏳ Planificada |
+| **Phase 6** | Nextcloud, Immich (✅ adelantado en docker-nas), Paperless-ngx | ⏳ Planificada |
+| **Phase 7** | Jellyfin (✅ adelantado en docker-nas), Overseerr | ⏳ Planificada |
 | **Phase 8** | Prometheus, Grafana, Loki, Alertmanager, Uptime Kuma | ⏳ Planificada |
 | **Phase 9** | Agente IA OpenClaw | ⏳ Planificada |
