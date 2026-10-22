@@ -4,7 +4,7 @@ networks:
 
 services:
   pbs:
-    image: ayufan/proxmox-backup-server:latest
+    image: ayufan/proxmox-backup-server:v4.2.0-1
     container_name: pbs
     restart: unless-stopped
     networks:
@@ -14,6 +14,9 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}:/var/lib/proxmox-backup
+      # Config y logs fuera del contenedor: sin esto, recrearlo borra datastores, usuarios y certificado
+      - ${CONFIG}:/etc/proxmox-backup
+      - ${LOGS}:/var/log/proxmox-backup
       - ${BACKUPS}:/backups
     tmpfs:
       - /run
