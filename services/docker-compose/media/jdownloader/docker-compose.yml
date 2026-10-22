@@ -1,0 +1,20 @@
+# homelab/services/docker-compose/media/jdownloader/docker-compose.yml
+networks:
+  srv-net:
+    external: true
+
+services:
+  jdownloader:
+    image: jlesage/jdownloader-2:latest
+    container_name: jdownloader
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - USER_ID=${PUID}
+      - GROUP_ID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${DOWNLOADS}:/output
