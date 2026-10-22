@@ -1,0 +1,29 @@
+# homelab/services/docker-compose/media/jellyfin-nas/docker-compose.yml
+# Jellyfin - servidor multimedia self-hosted
+# Host: docker-nas (nas-01) | IP: 10.0.30.24 | Port: 8096
+# Ventaja sobre docker-main: acceso LOCAL a /mnt/tank sin salto NFS
+
+networks:
+  srv-net:
+    external: true
+
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}:/config
+      - ${MEDIA}/movies:/data/movies:ro
+      - ${MEDIA}/tv:/data/tv:ro
+      - ${MEDIA}/music:/data/music:ro
+    # Hardware transcoding — descomentar si CPU soporta Intel Quick Sync (iGPU)
+    # devices:
+    #   - /dev/dri:/dev/dri
