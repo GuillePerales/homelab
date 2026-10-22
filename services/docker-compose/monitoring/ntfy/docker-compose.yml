@@ -1,0 +1,31 @@
+---
+# ntfy — canal único de alertas del homelab (Proxmox, PBS y TrueNAS)
+# Proxmox y PBS publican por webhook HTTP; TrueNAS por correo al SMTP de ntfy (puerto 25).
+networks:
+  srv-net:
+    external: true
+services:
+  ntfy:
+    container_name: ntfy
+    image: binwiederhier/ntfy:v2.32.0
+    command: serve
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - TZ=${TZ}
+      - NTFY_BASE_URL=http://${CONTAINER_IP}
+      - NTFY_CACHE_FILE=/var/cache/ntfy/cache.db
+      - NTFY_CACHE_DURATION=72h
+      # Push en iOS: ntfy.sh solo recibe un hash del topic para despertar la app
+      - NTFY_UPSTREAM_BASE_URL=https://ntfy.sh
+      - NTFY_SMTP_SERVER_LISTEN=:25
+      - NTFY_SMTP_SERVER_DOMAIN=${SMTP_DOMAIN}
+    volumes:
+      - ${APPDATA}/cache:/var/cache/ntfy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

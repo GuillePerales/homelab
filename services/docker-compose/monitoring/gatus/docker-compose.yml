@@ -1,0 +1,21 @@
+---
+# Gatus — disponibilidad de los servicios del homelab, alertas a ntfy
+# Config en config/: config.yaml (versionado) + endpoints.yaml (ignorado, IPs internas). Sin UI de administración
+networks:
+  srv-net:
+    external: true
+services:
+  gatus:
+    container_name: gatus
+    image: twinproduction/gatus:v5.37.0
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - TZ=${TZ}
+      - GATUS_CONFIG_PATH=/config
+      - NTFY_URL=${NTFY_URL}
+    volumes:
+      - ./config:/config:ro
+      - ${APPDATA}/data:/data

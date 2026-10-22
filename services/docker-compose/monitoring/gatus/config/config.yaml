@@ -1,0 +1,17 @@
+# Gatus — https://github.com/TwiN/gatus
+storage:
+  type: sqlite
+  path: /data/data.db
+
+alerting:
+  ntfy:
+    url: ${NTFY_URL}
+    topic: homelab-alertas
+    priority: 4
+    default-alert:
+      failure-threshold: 3
+      success-threshold: 2
+      send-on-resolved: true
+
+# Los endpoints viven en endpoints.yaml (mismo directorio, ignorado por git:
+# contiene las IPs internas). Plantilla: ../endpoints.example.yaml

@@ -1,0 +1,24 @@
+# Copiar a config/endpoints.yaml y poner las direcciones reales (ese fichero está en .gitignore).
+# Gatus carga todos los *.yaml de /config y los fusiona.
+endpoints:
+  - name: Servicio web
+    group: media
+    url: "http://192.0.2.10:8096/health"
+    interval: 2m
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] < 500"
+    alerts:
+      - type: ntfy
+
+  - name: Servicio HTTPS con certificado autofirmado
+    group: infraestructura
+    url: "https://192.0.2.20:8007"
+    interval: 2m
+    client:
+      insecure: true
+    conditions:
+      - "[CONNECTED] == true"
+      - "[STATUS] < 500"
+    alerts:
+      - type: ntfy
