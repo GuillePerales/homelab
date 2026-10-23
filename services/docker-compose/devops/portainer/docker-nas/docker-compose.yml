@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     networks:
       srv-net:
-        ipv4_address: 10.0.30.18
+        ipv4_address: ${CONTAINER_IP}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/volumes:/var/lib/docker/volumes
