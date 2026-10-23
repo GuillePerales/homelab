@@ -16,6 +16,7 @@ services:
       - TZ=${TZ}
       - GATUS_CONFIG_PATH=/config
       - NTFY_URL=${NTFY_URL}
+      - GATUS_URL=${GATUS_URL}
     volumes:
       - ./config:/config:ro
       - ${APPDATA}/data:/data

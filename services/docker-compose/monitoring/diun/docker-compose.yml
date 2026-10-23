@@ -27,6 +27,10 @@ services:
       - DIUN_NOTIF_NTFY_ENDPOINT=${NTFY_URL}
       - DIUN_NOTIF_NTFY_TOPIC=homelab-actualizaciones
       - DIUN_NOTIF_NTFY_PRIORITY=2
+      - DIUN_NOTIF_NTFY_TAGS=arrow_up
+      - "DIUN_NOTIF_NTFY_TEMPLATETITLE={{ if .Entry.Metadata.ctn_names }}{{ .Entry.Metadata.ctn_names }}{{ else }}{{ .Entry.Image.Path }}{{ end }}: {{ .Entry.Image.Tag }} disponible"
+      - "DIUN_NOTIF_NTFY_TEMPLATEBODY=Versión nueva de {{ .Entry.Image.Domain }}/{{ .Entry.Image.Path }} (en {{ .Meta.Hostname }}). Para actualizar, cambiar el tag en el compose del repo homelab."
+      - "DIUN_NOTIF_NTFY_CLICK={{ .Entry.Image.HubLink }}"
     volumes:
       - ${APPDATA}:/data
       - /var/run/docker.sock:/var/run/docker.sock:ro

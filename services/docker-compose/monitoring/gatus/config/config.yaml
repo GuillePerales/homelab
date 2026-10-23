@@ -4,10 +4,22 @@ storage:
   path: /data/data.db
 
 alerting:
-  ntfy:
+  # Aviso a ntfy por su API JSON para poner título, prioridad y texto propios.
+  # Gatus solo sustituye variables en la URL y el cuerpo, y la única que distingue caída
+  # de recuperación es [ALERT_TRIGGERED_OR_RESOLVED]: por eso su valor lleva la prioridad,
+  # la etiqueta y el mensaje. No se usa [RESULT_ERRORS]: los errores de Go llevan comillas
+  # y romperían el JSON.
+  custom:
     url: ${NTFY_URL}
-    topic: homelab-alertas
-    priority: 4
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {"topic": "homelab-alertas", "title": "[ENDPOINT_NAME] · [ENDPOINT_GROUP]", "click": "${GATUS_URL}", "priority": [ALERT_TRIGGERED_OR_RESOLVED]}
+    placeholders:
+      ALERT_TRIGGERED_OR_RESOLVED:
+        TRIGGERED: '4, "tags": ["red_circle"], "message": "Caído: no responde en 3 comprobaciones seguidas"'
+        RESOLVED: '2, "tags": ["green_circle"], "message": "Recuperado: vuelve a responder"'
     default-alert:
       failure-threshold: 3
       success-threshold: 2
