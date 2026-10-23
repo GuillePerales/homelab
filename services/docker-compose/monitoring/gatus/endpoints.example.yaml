@@ -9,7 +9,7 @@ endpoints:
       - "[CONNECTED] == true"
       - "[STATUS] < 500"
     alerts:
-      - type: ntfy
+      - type: custom
 
   - name: Servicio HTTPS con certificado autofirmado
     group: infraestructura
@@ -21,4 +21,4 @@ endpoints:
       - "[CONNECTED] == true"
       - "[STATUS] < 500"
     alerts:
-      - type: ntfy
+      - type: custom
