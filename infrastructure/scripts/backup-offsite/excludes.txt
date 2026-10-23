@@ -1,0 +1,24 @@
+# Exclusiones de restic para backup-offsite.sh: lo regenerable o lo que ya va en otro formato.
+
+# Snapshots ZFS visibles: duplicarían cada dataset tantas veces como snapshots tenga
+.zfs
+
+# Immich: miniaturas y vídeos recodificados (se regeneran); la BD en crudo va como volcado en photos/backups
+/mnt/tank/media/photos/thumbs
+/mnt/tank/media/photos/encoded-video
+/mnt/vault/apps/immich/postgres
+/mnt/vault/apps/immich/ml-cache
+
+# Docker antiguo del NAS (hoy vive en boot-pool) y descargas de JDownloader
+/mnt/vault/apps/docker
+/mnt/vault/apps/jdownloader
+
+# Cachés, logs y carátulas de los servicios
+/mnt/vault/apps/*/data/logs
+/mnt/vault/apps/*/data/log
+/mnt/vault/apps/*/data/MediaCover
+/mnt/vault/apps/*/data/cache
+/mnt/vault/apps/calibre-web-automated/data/processed_books
+/mnt/vault/apps/calibre-web-automated/data/thumbnails
+*.log
+*.log.*
