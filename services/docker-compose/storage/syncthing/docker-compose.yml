@@ -5,7 +5,7 @@ networks:
 
 services:
   syncthing:
-    image: lscr.io/linuxserver/syncthing:latest
+    image: lscr.io/linuxserver/syncthing:2.1.7
     container_name: syncthing
     restart: unless-stopped
     networks:

@@ -7,7 +7,7 @@ networks:
 services:
   ntfy:
     container_name: ntfy
-    image: binwiederhier/ntfy:v2.32.0
+    image: binwiederhier/ntfy:v2.33.1
     command: serve
     restart: unless-stopped
     networks:

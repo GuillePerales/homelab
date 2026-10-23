@@ -17,6 +17,13 @@ services:
       - DIUN_WATCH_FIRSTCHECKNOTIF=false
       - DIUN_PROVIDERS_DOCKER=true
       - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
+      # Las imágenes van fijadas a una versión: vigilar los tags nuevos del repo, no solo el digest.
+      # Un servicio con otro formato de tag lo indica con la etiqueta diun.include_tags.
+      - DIUN_DEFAULTS_WATCHREPO=true
+      - DIUN_DEFAULTS_NOTIFYON=new
+      - DIUN_DEFAULTS_SORTTAGS=semver
+      - DIUN_DEFAULTS_MAXTAGS=5
+      - DIUN_DEFAULTS_INCLUDETAGS=^v?\d+\.\d+\.\d+$$
       - DIUN_NOTIF_NTFY_ENDPOINT=${NTFY_URL}
       - DIUN_NOTIF_NTFY_TOPIC=homelab-actualizaciones
       - DIUN_NOTIF_NTFY_PRIORITY=2

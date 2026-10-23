@@ -9,6 +9,9 @@ services:
   forgejo:
     image: codeberg.org/forgejo/forgejo:15
     container_name: forgejo
+    labels:
+      # Rama LTS: solo avisar de versiones 15.x
+      - "diun.include_tags=^15\\.\\d+\\.\\d+$$"
     restart: unless-stopped
     networks:
       srv-net:

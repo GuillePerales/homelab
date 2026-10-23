@@ -9,8 +9,11 @@ networks:
 
 services:
   jellyfin:
-    image: lscr.io/linuxserver/jellyfin:latest
+    image: lscr.io/linuxserver/jellyfin:version-12.3ubu2604
     container_name: jellyfin
+    labels:
+      # linuxserver no publica un tag semver corto para Jellyfin
+      - "diun.include_tags=^version-\\d+\\.\\d+(\\.\\d+)?ubu\\d+$$"
     restart: unless-stopped
     networks:
       srv-net:
