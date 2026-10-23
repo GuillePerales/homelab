@@ -1,0 +1,24 @@
+---
+# Homarr v1 (homarr-labs) — dashboard del homelab en docker-main
+# Desplegado como stack de Portainer. Tablero "Homelab": apps por categoría con ping de estado
+# y widgets de descargas, calendario, Jellyfin, Prowlarr, contenedores y discos de TrueNAS.
+networks:
+  srv-net:
+    external: true
+services:
+  homarr:
+    container_name: homarr
+    image: ghcr.io/homarr-labs/homarr:latest
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - SECRET_ENCRYPTION_KEY=${SECRET_ENCRYPTION_KEY}
+      - DB_DRIVER=better-sqlite3
+      - DB_URL=/appdata/db.sqlite
+      - TZ=${TZ}
+    volumes:
+      # Solo para el widget de contenedores
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${APPDATA}:/appdata

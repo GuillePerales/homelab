@@ -35,3 +35,5 @@ tmp/
 *.swp
 *~
 .vscode
+# === Gatus: endpoints reales con IPs internas ===
+services/docker-compose/monitoring/gatus/config/endpoints.yaml
