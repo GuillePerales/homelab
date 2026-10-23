@@ -152,9 +152,11 @@ EOF
 }
 
 check_containers() {
-  local h out bad unhealthy created
+  local h c out bad unhealthy created
   for h in $DOCKER_HOSTS; do
     out=$(remote "$h" 'docker ps -a --format "{{.Names}}|{{.Status}}"') || continue
+    # Los que se arrancan a mano cuando hacen falta no cuentan como parados
+    for c in ${DOCKER_ON_DEMAND:-}; do out=$(grep -v "^$c|" <<<"$out"); done
     bad=$(grep -vE "\|(Up |Created|Exited \(0\))" <<<"$out" | cut -d'|' -f1 | tr '\n' ' ')
     unhealthy=$(grep -E "unhealthy|Restarting" <<<"$out" | cut -d'|' -f1 | tr '\n' ' ')
     created=$(grep -E "\|Created" <<<"$out" | cut -d'|' -f1 | tr '\n' ' ')

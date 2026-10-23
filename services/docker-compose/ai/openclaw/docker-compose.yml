@@ -5,7 +5,7 @@
 
 services:
   openclaw:
-    image: openclaw/openclaw:latest   # imagen a confirmar cuando esté disponible
+    image: openclaw/openclaw:2026.10.6
     container_name: openclaw
     restart: unless-stopped
     environment:
