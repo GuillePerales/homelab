@@ -1,12 +1,21 @@
 ---
 # diun — avisa a ntfy cuando una imagen en uso tiene versión nueva. No actualiza nada.
-# Se despliega una instancia por host Docker (docker-main y docker-nas), con red bridge por defecto.
+# Se despliega una instancia por host Docker (docker-main y docker-nas), cada una con su IP en srv-net.
+# En srv-net con IP propia: en macvlan el host no llega a sus propios contenedores, así que
+# desde la red bridge el diun de docker-main no alcanzaba a ntfy (también en docker-main).
+networks:
+  srv-net:
+    external: true
+
 services:
   diun:
     container_name: diun
     image: crazymax/diun:4.33.0
     command: serve
     restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
     hostname: ${DIUN_HOST}
     environment:
       - TZ=${TZ}
