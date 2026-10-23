@@ -11,6 +11,9 @@ services:
     networks:
       srv-net:
         ipv4_address: ${CONTAINER_IP}
+    # Sale a internet solo por ProtonVPN (alias VPN_HOSTS en OPNsense): DNS de Proton por el túnel
+    dns:
+      - ${VPN_DNS}
     environment:
       - USER_ID=${PUID}
       - GROUP_ID=${PGID}
