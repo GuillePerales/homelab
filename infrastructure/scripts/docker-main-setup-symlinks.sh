@@ -6,7 +6,6 @@ APPDATA_ROOT="/opt"
 declare -A SERVICES=(
   ["forgejo"]="devops/forgejo"
   ["woodpecker-server"]="devops/woodpecker"
-  ["harbor"]="devops/harbor"
   ["portainer"]="devops/portainer"
 )
 
