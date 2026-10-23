@@ -1,0 +1,57 @@
+#!/usr/local/bin/php
+<?php
+
+/*
+ * Aviso a ntfy cuando el gateway de ProtonVPN cae o se recupera.
+ * Lo ejecuta OPNsense (rc.syshook monitor) en cada alarma de dpinger, con los
+ * gateways afectados en argv[1]. Solo avisa en las transiciones caída/recuperación,
+ * no en las pérdidas parciales de paquetes.
+ */
+
+require_once 'config.inc';
+require_once 'util.inc';
+require_once 'interfaces.inc';
+
+$watch = 'PROTONVPN_GW';
+$ntfy = 'http://192.0.2.31/';   /* IP real de ntfy: ajustar al instalar */
+$topic = 'homelab-alertas';
+$statefile = '/var/run/ntfy-protonvpn.state';
+
+$affected = !empty($argv[1]) ? explode(',', $argv[1]) : [];
+if (!in_array($watch, $affected)) {
+    exit(0);
+}
+
+$prev = @file_get_contents($statefile) ?: 'up';
+
+foreach (return_gateways_status() as $status) {
+    if ($status['name'] != $watch) {
+        continue;
+    }
+    if (strpos($status['status'], 'down') !== false) {
+        $now = 'down';
+    } elseif ($status['status'] == 'none') {
+        $now = 'up';
+    } else {
+        exit(0); /* pérdida o latencia: esperar a que se decida */
+    }
+    if ($now == $prev) {
+        exit(0);
+    }
+    file_put_contents($statefile, $now);
+
+    $msg = $now == 'down'
+        ? ['title' => 'ProtonVPN caída', 'priority' => 4, 'tags' => ['rotating_light'],
+           'message' => 'El túnel no responde: qBittorrent y JDownloader se quedan sin conexión (kill switch). Se recuperan solos cuando vuelva.']
+        : ['title' => 'ProtonVPN recuperada', 'priority' => 2, 'tags' => ['white_check_mark'],
+           'message' => 'El túnel vuelve a responder: las descargas salen otra vez por la VPN.'];
+    $msg['topic'] = $topic;
+
+    /* el PHP de OPNsense tiene allow_url_fopen desactivado: se envía con curl */
+    exec(sprintf('/usr/local/bin/curl -sf -m 10 -H %s -d %s %s',
+        escapeshellarg('Content-Type: application/json'),
+        escapeshellarg(json_encode($msg)), escapeshellarg($ntfy)), $out, $rc);
+    if ($rc !== 0) {
+        log_msg("ntfy-protonvpn: no se pudo avisar ({$now})", LOG_WARNING);
+    }
+}
