@@ -618,10 +618,26 @@ Todos los secretos siguen un modelo por capas:
 | K8s / Pods K3s | **HashiCorp Vault** | Secretos dinámicos en runtime — inyectados por Vault Agent |
 | Pipelines | **Secretos Woodpecker / Credentials Jenkins** | Credenciales de pipelines CI/CD |
 
+Cada servicio puede guardar su `.env` real en Git como `sops.env`, junto a su `docker-compose.yml`: solo se cifran los valores (age) y los nombres de las variables quedan legibles. La clave privada age no sale de la máquina de administración, así que los hosts reciben el fichero descifrado por SSH y nunca tienen la clave. Script: `infrastructure/scripts/sops-env/sops-env.sh`.
+
 ```bash
+# Cifrar en el repo el .env que usa un host
+infrastructure/scripts/sops-env/sops-env.sh pull <servicio> <host> <ruta del .env>
+
+# Qué variables difieren entre el repo y el host (solo nombres, nunca valores)
+infrastructure/scripts/sops-env/sops-env.sh diff <servicio> <host> <ruta del .env>
+
+# Escribir en el host el .env descifrado (con copia fechada)
+infrastructure/scripts/sops-env/sops-env.sh push <servicio> <host> <ruta del .env>
+
+# Editar en el sitio
+sops services/docker-compose/<categoria>/<servicio>/sops.env
+
 # Verificar siempre antes de commitear
 git diff --staged | grep -iE "(password|key|token|secret)"
 ```
+
+La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 
 **Reglas:**
 - Nunca commitear archivos `.env` con valores reales
