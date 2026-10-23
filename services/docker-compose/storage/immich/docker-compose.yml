@@ -11,7 +11,7 @@ networks:
 
 services:
   immich-server:
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-v3.3.5}
     container_name: immich-server
     restart: unless-stopped
     networks:
@@ -35,7 +35,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-v3.3.5}
     container_name: immich-machine-learning
     restart: unless-stopped
     networks:
@@ -46,8 +46,12 @@ services:
       - ${ML_CACHE}:/cache
 
   immich-redis:
-    image: docker.io/redis:6.2-alpine
+    # Valkey y Postgres: imágenes y digest del compose oficial de la versión de Immich.
+    # Se actualizan con sus notas de versión, no con diun.
+    image: docker.io/valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d
     container_name: immich-redis
+    labels:
+      - "diun.enable=false"
     restart: unless-stopped
     networks:
       - immich-net
@@ -58,9 +62,12 @@ services:
       retries: 5
 
   immich-postgres:
-    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0
+    # VectorChord (v3 ya no admite pgvecto.rs); incluye pgvecto.rs para migrar desde él
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
     container_name: immich-postgres
     restart: unless-stopped
+    labels:
+      - "diun.enable=false"
     networks:
       - immich-net
     environment:
@@ -70,12 +77,4 @@ services:
       - POSTGRES_INITDB_ARGS=--data-checksums
     volumes:
       - ${DB_DATA}:/var/lib/postgresql/data
-    healthcheck:
-      test: >-
-        pg_isready --dbname="$$POSTGRES_DB" --username="$$POSTGRES_USER" || exit 1;
-        Chksum="$$(psql --dbname="$$POSTGRES_DB" --username="$$POSTGRES_USER"
-        --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')";
-        echo "checksum failures: $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
-      interval: 5m
-      start_interval: 30s
-      start_period: 5m
+    shm_size: 128mb
