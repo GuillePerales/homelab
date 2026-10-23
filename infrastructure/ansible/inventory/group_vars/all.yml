@@ -1,0 +1,13 @@
+---
+# Variables globales para todos los hosts del homelab
+# Sobreescribir por grupo o host en inventory/group_vars/<grupo>.yml o inventory/host_vars/<host>.yml
+
+# Usuario SSH (la IP y la clave vienen de ~/.ssh/config)
+ansible_user: root
+
+# Zona horaria
+timezone: Europe/Madrid
+
+# Usuario de los contenedores de medios
+puid: 3000
+pgid: 3000

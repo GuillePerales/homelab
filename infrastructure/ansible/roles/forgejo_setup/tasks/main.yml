@@ -1,0 +1,13 @@
+# Forgejo en docker-main: datos locales en /opt/appdata/forgejo/config,
+# repositorios en el NFS del NAS (/mnt/nas/git-storage/forgejo/repositories)
+- name: Create Forgejo config directory
+  ansible.builtin.file:
+    path: /opt/appdata/forgejo/config
+    state: directory
+    mode: "0755"
+
+- name: Start Forgejo
+  community.docker.docker_compose_v2:
+    project_src: /opt/appdata/forgejo
+    project_name: forgejo
+    state: present

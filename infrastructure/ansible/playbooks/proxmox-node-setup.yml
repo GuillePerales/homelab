@@ -1,29 +1,42 @@
 # infrastructure/ansible/playbooks/proxmox-node-setup.yml
+# Proxmox VE 9 (Debian trixie), repos en formato deb822.
+# La actualización completa solo corre si se pide: --tags upgrade
 ---
 - name: Configure Proxmox nodes
   hosts: proxmox
-  become: true
 
   tasks:
-    - name: Disable enterprise repos
-      ansible.builtin.replace:
-        path: "{{ item }}"
-        regexp: "^deb "
-        replace: "#deb "
-      loop:
-        - /etc/apt/sources.list.d/pve-enterprise.list
-        - /etc/apt/sources.list.d/ceph.list
-      ignore_errors: true
+    - name: Find enterprise repos
+      ansible.builtin.stat:
+        path: "/etc/apt/sources.list.d/{{ item }}.sources"
+      loop: [pve-enterprise, ceph]
+      register: enterprise_repos
+
+    - name: Disable enterprise repos   # algunos nodos no los tienen
+      ansible.builtin.lineinfile:
+        path: "{{ item.stat.path }}"
+        regexp: "^Enabled:"
+        line: "Enabled: no"
+      loop: "{{ enterprise_repos.results | selectattr('stat.exists') | list }}"
+      loop_control:
+        label: "{{ item.item }}"
 
     - name: Add no-subscription repo
       ansible.builtin.copy:
-        dest: /etc/apt/sources.list.d/pve-no-sub.list
-        content: "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription\n"
+        dest: /etc/apt/sources.list.d/proxmox.sources
+        content: |
+          Types: deb
+          URIs: http://download.proxmox.com/debian/pve
+          Suites: trixie
+          Components: pve-no-subscription
+          Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+        mode: "0644"
 
     - name: Update and upgrade
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         upgrade: full
+      tags: [never, upgrade]
 
     - name: Install utilities
       ansible.builtin.apt:
@@ -32,7 +45,7 @@
 
     - name: Set timezone
       community.general.timezone:
-        name: Europe/Madrid
+        name: "{{ timezone }}"
 
     - name: Add authorized SSH key
       ansible.posix.authorized_key:
