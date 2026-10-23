@@ -5,22 +5,8 @@ when:
     include: ["services/docker-compose/**"]
 
 steps:
-  - name: sops-decrypt
-    image: mozilla/sops:latest
-    secrets:
-      - sops_age_key
-    commands:
-      - echo "$SOPS_AGE_KEY" > /tmp/age.key
-      - export SOPS_AGE_KEY_FILE=/tmp/age.key
-      # Validar que podemos desencriptar los .enc
-      - |
-        find services/docker-compose -name "*.enc" | while read f; do
-          sops --decrypt "$f" > /dev/null || exit 1
-        done
-      - rm -f /tmp/age.key
-
   - name: portainer-deploy
-    image: curlimages/curl:latest
+    image: curlimages/curl:8.23.0
     secrets:
       - portainer_webhook_core
       - portainer_webhook_media
