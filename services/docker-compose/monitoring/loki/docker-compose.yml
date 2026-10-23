@@ -1,7 +1,7 @@
 ---
 services:
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.7.9
     container_name: loki
     restart: unless-stopped
     command: -config.file=/etc/loki/config.yml
@@ -13,7 +13,7 @@ services:
         ipv4_address: ${CONTAINER_IP}
 
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:3.6.11
     container_name: promtail
     restart: unless-stopped
     command: -config.file=/etc/promtail/config.yml

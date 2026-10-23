@@ -11,7 +11,7 @@ services:
       - pterodactyl-internal
 
   panel-db:
-    image: mariadb:latest
+    image: mariadb:11.8.9
     container_name: pterodactyl-db
     restart: unless-stopped
     environment:
@@ -25,7 +25,7 @@ services:
       - pterodactyl-internal
 
   panel:
-    image: ghcr.io/pterodactyl/panel:latest
+    image: ghcr.io/pterodactyl/panel:v1.15.2
     container_name: pterodactyl-panel
     restart: unless-stopped
     environment:

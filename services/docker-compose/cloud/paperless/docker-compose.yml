@@ -21,7 +21,7 @@ services:
       - paperless-internal
 
   paperless-ngx:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4
     container_name: paperless-ngx
     restart: unless-stopped
     environment:

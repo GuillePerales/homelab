@@ -1,7 +1,7 @@
 ---
 services:
   romm:
-    image: rommapp/romm:latest
+    image: rommapp/romm:5.4.1
     container_name: romm
     restart: unless-stopped
     environment:
@@ -26,7 +26,7 @@ services:
       romm-internal:
 
   romm-db:
-    image: mariadb:latest
+    image: mariadb:11.8.9
     container_name: romm-db
     restart: unless-stopped
     environment:
