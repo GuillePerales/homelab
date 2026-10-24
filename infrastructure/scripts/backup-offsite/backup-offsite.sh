@@ -37,6 +37,41 @@ fail() {
 }
 trap fail ERR
 
+# Vigilante de temperatura: uno de los SSD de vault va en una bahía con poco aire y llegó
+# a 67 °C con la primera copia. Si alguno pasa de TEMP_PAUSE, el proceso se congela
+# (SIGSTOP) y sigue (SIGCONT) cuando bajan de TEMP_RESUME. Se puede ajustar en el .env.
+read -ra TEMP_DISKS <<<"${TEMP_DISKS:-/dev/sda /dev/sdb}"
+TEMP_PAUSE="${TEMP_PAUSE:-58}"
+TEMP_RESUME="${TEMP_RESUME:-48}"
+
+max_temp() {
+  local d t m=0
+  for d in "${TEMP_DISKS[@]}"; do
+    t=$(smartctl -A "$d" 2>/dev/null | awk '$1 == 194 {print $10}')
+    [ "${t:-0}" -gt "$m" ] && m=$t
+  done
+  echo "$m"
+}
+
+with_temp_guard() {  # with_temp_guard <comando…>
+  "$@" &
+  local pid=$! paused=0 t
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 30
+    t=$(max_temp)
+    if [ "$paused" = 0 ] && [ "$t" -ge "$TEMP_PAUSE" ]; then
+      kill -STOP "$pid" && paused=1
+      echo "$(date -Is) pausa: SSD a $t °C"
+      notify 3 thermometer "Backup externo en pausa" \
+        "Un SSD de vault está a $t °C. La copia sigue cuando baje de $TEMP_RESUME °C."
+    elif [ "$paused" = 1 ] && [ "$t" -le "$TEMP_RESUME" ]; then
+      kill -CONT "$pid" && paused=0
+      echo "$(date -Is) sigue: SSD a $t °C"
+    fi
+  done
+  wait "$pid"
+}
+
 # Una sola ejecución a la vez: la primera subida dura horas
 exec 9>/run/backup-offsite.lock
 flock -n 9 || { echo "$(date -Is) ya hay una copia en marcha" >>"$LOG"; exit 0; }
@@ -53,13 +88,15 @@ ssh -i "$DOCKER_MAIN_KEY" -o BatchMode=yes -o ConnectTimeout=15 \
 mv "$STAGING/docker-main-appdata.tar.gz.tmp" "$STAGING/docker-main-appdata.tar.gz"
 
 STEP="restic backup"
-nice -n 19 ionice -c3 restic backup --exclude-file "$SCRIPT_DIR/excludes.txt" \
-  --tag nocturno "${PATHS[@]}"
+# Límite de escritura en el repo local (KiB/s): a ~11 MB/s el SSD caliente se quedó en 52 °C
+with_temp_guard nice -n 19 ionice -c3 restic backup --exclude-file "$SCRIPT_DIR/excludes.txt" \
+  --limit-upload "${RESTIC_LIMIT_UPLOAD:-10240}" --tag nocturno "${PATHS[@]}"
 
 STEP="restic forget"
 if [ "$(date +%u)" = 7 ]; then
   # Poda semanal: es local, pero los paquetes reescritos hay que volver a subirlos
-  restic forget --keep-daily 30 --keep-weekly 12 --keep-monthly 6 --prune
+  with_temp_guard restic forget --keep-daily 30 --keep-weekly 12 --keep-monthly 6 --prune \
+    --limit-upload "${RESTIC_LIMIT_UPLOAD:-10240}"
 else
   restic forget --keep-daily 30 --keep-weekly 12 --keep-monthly 6
 fi
