@@ -1,0 +1,32 @@
+# homelab/services/docker-compose/media/mularr/docker-compose.yml
+# Mularr — aMule (red eD2k/Kad) con interfaz web y API compatible con qBittorrent y Torznab para Sonarr/Radarr
+networks:
+  srv-net:
+    external: true
+
+services:
+  mularr:
+    image: ghcr.io/joecarl/mularr:v1.0.0
+    container_name: mularr
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    # Sale a internet solo por ProtonVPN (alias VPN_HOSTS en OPNsense): DNS de Proton por el túnel
+    dns:
+      - ${VPN_DNS}
+    environment:
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+      - UMASK=002
+      - AMULE_INCOMING_DIR=/downloads/mularr
+      - AMULE_TEMP_DIR=/downloads/mularr/.incomplete
+      # Sin la API de Gluetun hasta que exista: aMule queda en LowID
+      - GLUETUN_ENABLED=false
+      - AUTH_USERNAME=${AUTH_USERNAME}
+      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - API_KEY=${API_KEY}
+    volumes:
+      - ${APPDATA}:/app/data
+      - ${DOWNLOADS}:/downloads
