@@ -25,7 +25,7 @@ module.exports = {
 	delay: 60,
 	searchCadence: "1 day",
 	rssCadence: "30 minutes",
-	excludeOlder: undefined,
+	excludeOlder: "8 weeks",
 	excludeRecentSearch: "2 weeks",
 	searchLimit: 50,
 };
