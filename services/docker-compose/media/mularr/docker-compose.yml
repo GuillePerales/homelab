@@ -20,8 +20,8 @@ services:
       - TZ=${TZ}
       - LOG_LEVEL=info
       - UMASK=002
-      - AMULE_INCOMING_DIR=/downloads/mularr
-      - AMULE_TEMP_DIR=/downloads/mularr/.incomplete
+      - AMULE_INCOMING_DIR=/data/emule
+      - AMULE_TEMP_DIR=/data/emule/.incomplete
       # Sin la API de Gluetun hasta que exista: aMule queda en LowID
       - GLUETUN_ENABLED=false
       - AUTH_USERNAME=${AUTH_USERNAME}
@@ -29,4 +29,5 @@ services:
       - API_KEY=${API_KEY}
     volumes:
       - ${APPDATA}:/app/data
-      - ${DOWNLOADS}:/downloads
+      # Solo su carpeta dentro de /data, con la misma ruta que ven las *arr (guía TRaSH)
+      - ${DATA}/emule:/data/emule

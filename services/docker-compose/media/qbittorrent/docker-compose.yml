@@ -24,4 +24,5 @@ services:
       - WEBUI_PORT=${WEBUI_PORT}
     volumes:
       - ${APPDATA}:/config
-      - ${DOWNLOADS}:/downloads
+      # Solo su carpeta dentro de /data, con la misma ruta que ven las *arr (guía TRaSH)
+      - ${DATA}/torrents:/data/torrents
