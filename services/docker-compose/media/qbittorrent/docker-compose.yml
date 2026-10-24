@@ -1,9 +1,39 @@
 # homelab/services/docker-compose/media/qbittorrent/docker-compose.yml
+# qBittorrent detrás de Gluetun (ProtonVPN por WireGuard con reenvío de puerto NAT-PMP).
+# Gluetun se queda la IP del servicio; qBittorrent usa su red, así que solo sale por el túnel
+# (kill switch de Gluetun) y es conectable por el puerto que Proton reenvía.
 networks:
   srv-net:
     external: true
 
 services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.41.3
+    container_name: gluetun-qbittorrent
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${VPN_COUNTRIES}
+      # Solo servidores P2P con reenvío de puerto
+      - PORT_FORWARD_ONLY=on
+      - VPN_PORT_FORWARDING=on
+      # Pasa el puerto reenviado a qBittorrent (y lo resetea al caer, por un fallo de qBittorrent)
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data "json={\"listen_port\":{{PORT}},\"current_network_interface\":\"{{VPN_INTERFACE}}\",\"random_port\":false,\"upnp\":false}" http://127.0.0.1:${WEBUI_PORT}/api/v2/app/setPreferences'
+      - VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}" http://127.0.0.1:${WEBUI_PORT}/api/v2/app/setPreferences'
+      # Web de qBittorrent accesible desde la red local; el resto de entradas, cerradas
+      - FIREWALL_INPUT_PORTS=${WEBUI_PORT}
+      - FIREWALL_OUTBOUND_SUBNETS=${LAN_SUBNETS}
+
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:5.3.0
     container_name: qbittorrent
@@ -11,12 +41,10 @@ services:
       # 14.x son tags antiguos del esquema de versiones anterior
       - "diun.exclude_tags=^14\\."
     restart: unless-stopped
-    networks:
-      srv-net:
-        ipv4_address: ${CONTAINER_IP}
-    # Sale a internet solo por ProtonVPN (alias VPN_HOSTS en OPNsense): DNS de Proton por el túnel
-    dns:
-      - ${VPN_DNS}
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
