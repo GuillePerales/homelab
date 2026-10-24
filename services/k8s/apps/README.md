@@ -21,6 +21,6 @@ apps/
 ## placeholder-app
 
 Aplicación mínima (nginx sirviendo una página estática) para:
-- Validar el pipeline completo Jenkins → Harbor → ArgoCD → K3s
+- Validar el pipeline completo Jenkins → registro de Forgejo → ArgoCD → K3s
 - Demostrar rolling updates declarativos
 - Servir de plantilla para aplicaciones reales
