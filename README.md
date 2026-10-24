@@ -278,7 +278,6 @@ Categories:
 | dev-portainer-01 | Portainer | docker-main | Docker macvlan | 9443 | ✅ Operational | Multi-host container management UI |
 | dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | 🔄 Phase 4 | Self-hosted Git server |
 | dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | 🔄 Phase 4 | CI/CD pipelines |
-| dev-harbor-01 | Harbor | docker-main | Docker (LXC IP) | 80/443 | 🔄 Phase 4 | Private container registry |
 | dev-jenkins-01 | Jenkins | K3s worker | Helm | 8080 | ⏳ Phase 4+ | Application CI/CD pipelines |
 | dev-argocd-01 | ArgoCD | K3s worker | Helm | 443 | ⏳ Phase 4+ | GitOps continuous delivery |
 | dev-sonarqube-01 | SonarQube | K3s worker | Helm | 9000 | ⏳ Phase 4+ | Code quality gate |
@@ -320,7 +319,7 @@ Categories:
 - `ai-openclaw-01` (LXC, 4GB) — AI agent *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Harbor
+- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB after Phase 4+) ✅ — Monitoring, cloud services
@@ -418,7 +417,7 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 | Public Git (projects, CV) | **GitHub / GitLab.com** | Visibility, free Actions/CI |
 | CI/CD infrastructure | **Woodpecker CI** | Forgejo-native webhooks, YAML identical to GitHub Actions |
 | CI/CD applications | **Jenkins** | De facto standard in Spanish enterprises, especially banking |
-| Container registry | **Harbor** | CNCF standard, Trivy integrated, project-level policies |
+| Container registry | **Forgejo registry** | Built into Forgejo (OCI): no extra service to run; images are scanned in the pipeline before they are pushed |
 | Orchestration (DevOps stack) | **K3s** | Same API as EKS/AKS/GKE, ~512MB idle |
 | Orchestration (personal services) | **Docker Compose** | Stable services don't need K8s scheduling or rolling updates |
 | GitOps | **ArgoCD** | Pull-based, declarative, used directly in enterprise production |
@@ -428,7 +427,7 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 | Service secrets | **Kept out of Git** | Real `.env` files live only on the hosts, covered by ZFS snapshots and PBS (off-site copy being set up); SOPS + Age is set up for files that must be versioned |
 | Secrets in K8s | **HashiCorp Vault** | Dynamic secrets, auto-rotation, enterprise standard |
 | Code quality | **SonarQube Community** | Quality gates in pipeline |
-| Vulnerability scanning | **Trivy** | Integrated in Harbor + explicit Jenkins stage |
+| Vulnerability scanning | **Trivy** | Pipeline stage in Woodpecker and Jenkins — fails on critical CVEs before the push |
 | Kubernetes CNI | **Calico** | Enforces NetworkPolicies (Flannel does not) |
 | Ansible UI | **AWX** | RBAC + execution history, free upstream of Ansible Tower |
 | Branch strategy | **Trunk-based** | Protected main, short-lived feature branches, PR required |
@@ -458,16 +457,16 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 │  ├── tofu apply │           │  ├── SonarQube gate   │
 │  ├── ansible    │           │  ├── docker build     │
 │  └── compose up │           │  ├── Trivy scan       │
-└────────┬────────┘           │  └── push → Harbor   │
+└────────┬────────┘           │  └── push → Forgejo  │
          │                   └──────────┬───────────┘
          ▼                              │
 ┌─────────────────┐           ┌──────────────────────┐
 │  IaC LAYER      │           │  REGISTRY            │
 │                 │           │                      │
-│  OpenTofu       │           │  Harbor              │
-│  └── Proxmox    │           │  ├── Trivy auto-scan  │
-│                 │           │  ├── Pull policies    │
-│  Ansible        │           │  └── Retention rules  │
+│  OpenTofu       │           │  Forgejo registry    │
+│  └── Proxmox    │           │  ├── OCI images       │
+│                 │           │  ├── Per-repo access  │
+│  Ansible        │           │  └── Cleanup rules    │
 │  └── K3s nodes  │           └──────────┬───────────┘
 │  └── Docker     │                      │ ArgoCD pull
 │  └── Hardening  │                      ▼
@@ -520,7 +519,7 @@ Jenkins (K3s)
     ├── quality     SonarQube gate — fails on CRITICAL
     ├── build       docker build
     ├── scan        Trivy — fails on CVE CRITICAL
-    ├── push        docker push → Harbor
+    ├── push        docker push → Forgejo registry
     └── manifest    update K8s manifest commit in Forgejo
                           │
                           ▼
@@ -560,7 +559,7 @@ K3s runs on dedicated VMs in Proxmox (not LXCs — K3s requires kernel module ac
 **Namespace strategy:**
 
 ```
-devops/       ← Jenkins, SonarQube, Harbor
+devops/       ← Jenkins, SonarQube
 platform/     ← ArgoCD, cert-manager
 vault/        ← HashiCorp Vault
 monitoring/   ← Prometheus, Grafana, Loki (Phase 8)
@@ -640,7 +639,7 @@ git diff --staged | grep -iE "(password|key|token|secret)"
 | **Phase 1.5** | VPN: Tailscale (remote) + ProtonVPN WireGuard (egress) | ✅ Done |
 | **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
-| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Harbor + Trivy, IaC pipelines | 🔄 In progress |
+| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Forgejo registry + Trivy, IaC pipelines | 🔄 In progress |
 | **Phase 4+** | DevOps Enterprise: K3s, Jenkins, ArgoCD, SonarQube, Vault, AWX | ⏳ Planned |
 | **Phase 5** | NGINX Proxy Manager, Authentik SSO, SSL, Vaultwarden | ⏳ Planned |
 | **Phase 6** | Nextcloud, Immich (✅ deployed early on docker-nas), Paperless-ngx | ⏳ Planned |

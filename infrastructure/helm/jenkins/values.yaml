@@ -29,7 +29,6 @@ controller:
     - blueocean:latest
     - prometheus:latest          # DORA metrics endpoint /prometheus
     - sonar:latest               # SonarQube integration
-    - harbor:latest              # Harbor integration
     - forgejo-checks:latest      # Forgejo PR status
 
   # JCasC — configuración como código
