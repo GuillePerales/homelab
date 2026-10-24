@@ -23,6 +23,7 @@ PATHS=(
   /mnt/vault/git-storage
   /mnt/vault/secrets
   /mnt/vault/apps               # configuración y BDs de los servicios de docker-nas
+  /mnt/tank/backups             # datastore de PBS: las VM y los CT (OPNsense, docker-main, docker-aux)
   "$STAGING"                    # /opt/appdata de docker-main, traído por SSH
 )
 
@@ -72,6 +73,34 @@ with_temp_guard() {  # with_temp_guard <comando…>
   wait "$pid"
 }
 
+# Vigilante de atascos: a veces una petición a Proton se queda colgada sin error y rclone
+# espera para siempre (el 2026-10-24 estuvo 2 h quieta en el 69 %). Si en STALL_MIN minutos
+# no lee nada del repo local, se corta y se relanza; sync sigue por donde iba.
+STALL_MIN="${STALL_MIN:-15}"
+UPLOAD_ATTEMPTS="${UPLOAD_ATTEMPTS:-5}"
+
+with_stall_guard() {  # with_stall_guard <comando…>
+  local try pid last now quiet
+  for try in $(seq 1 "$UPLOAD_ATTEMPTS"); do
+    "$@" &
+    pid=$! last=-1 quiet=0
+    while kill -0 "$pid" 2>/dev/null; do
+      sleep 60
+      now=$(awk '/^rchar/ {print $2}' "/proc/$pid/io" 2>/dev/null || echo 0)
+      if [ "$now" = "$last" ]; then quiet=$((quiet + 1)); else quiet=0 last=$now; fi
+      if [ "$quiet" -ge "$STALL_MIN" ]; then
+        echo "$(date -Is) atascada $STALL_MIN min: se corta (intento $try de $UPLOAD_ATTEMPTS)"
+        kill "$pid" 2>/dev/null || true; sleep 10; kill -9 "$pid" 2>/dev/null || true
+        break
+      fi
+    done
+    [ "$quiet" -ge "$STALL_MIN" ] && continue
+    wait "$pid"; return
+  done
+  echo "$(date -Is) la subida se atascó en los $UPLOAD_ATTEMPTS intentos"
+  return 1
+}
+
 # Una sola ejecución a la vez: la primera subida dura horas
 exec 9>/run/backup-offsite.lock
 flock -n 9 || { echo "$(date -Is) ya hay una copia en marcha" >>"$LOG"; exit 0; }
@@ -110,7 +139,7 @@ STEP="subida a Proton Drive"
 # Un fichero cada vez y con reintentos: Proton responde con 502 sueltos. Los paquetes de
 # restic no cambian una vez escritos, así que cada noche solo sube lo nuevo.
 # replace-existing-draft: si una subida anterior dejó el fichero a medias, se reemplaza.
-nice -n 19 ionice -c3 rclone sync "$RESTIC_REPOSITORY" "$RCLONE_DEST" \
+with_stall_guard nice -n 19 ionice -c3 rclone sync "$RESTIC_REPOSITORY" "$RCLONE_DEST" \
   --transfers 1 --checkers 2 --retries 10 --retries-sleep 30s --low-level-retries 20 \
   --protondrive-replace-existing-draft --stats 10m --stats-one-line -v
 
