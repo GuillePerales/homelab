@@ -16,5 +16,5 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}:/config
-      - ${MEDIA}/tv:/tv
-      - ${MEDIA}/movies:/movies
+      # Mismas rutas que Radarr y Sonarr, sin mapeos
+      - ${DATA}/media:/data/media

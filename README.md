@@ -364,12 +364,11 @@ tank  (~6TB — HDD stripe)
 │   ├── proxmox/      ← PBS backup datastore
 │   ├── databases/
 │   └── configs/
-├── downloads/
-│   ├── complete/
-│   └── incomplete/
-├── media/
-│   ├── movies/ tv/ music/
-│   └── isos/
+├── data/             ← One dataset for downloads and library (hardlinks, TRaSH guide)
+│   ├── torrents/  movies/ tv/ music/
+│   ├── emule/ jdownloader/
+│   └── media/     movies/ tv/ music/
+├── media/            ← What the *arr apps don't manage: photos, books, games
 └── vms/
     └── images/       ← Proxmox cluster NFS storage
 
@@ -385,8 +384,8 @@ vault  (~400GB — SSD mirror)
 
 | Share | Path | Access | Notes |
 |---|---|---|---|
-| media | /tank/media | VLAN 30, INFRA | Jellyfin, \*arr |
-| downloads | /tank/downloads | VLAN 30 | qBittorrent, staging |
+| data/media | /tank/data/media | VLAN 30, INFRA | Movies, TV and music (Jellyfin, \*arr) |
+| media | /tank/media | VLAN 30, INFRA | Photos, books, games |
 | backups | /tank/backups | VLAN 5 only | PBS and Restic only |
 | vms | /tank/vms | VLAN 5 | Proxmox cluster shared storage |
 | vault/apps | /vault/apps | VLAN 30 | Docker appdata (SSD) |

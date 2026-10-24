@@ -17,5 +17,5 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}:/config
-      - ${MEDIA}/movies:/movies
-      - ${DOWNLOADS}:/downloads
+      # Un único montaje con descargas y biblioteca: las importaciones son hardlinks (guía TRaSH)
+      - ${DATA}:/data
