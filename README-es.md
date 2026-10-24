@@ -425,7 +425,7 @@ El stack DevOps replica un entorno enterprise real usando exclusivamente herrami
 | IaC provisioning | **OpenTofu** | Fork open-source de Terraform, 100% compatible HCL, licencia MPL-2.0 |
 | IaC configuración | **Ansible + AWX** | Estándar de la industria, igual en homelab que en empresas |
 | Gestor de paquetes K8s | **Helm** | Estándar para desplegar aplicaciones en Kubernetes |
-| Secretos en Git | **SOPS + Age** | Cifrado de archivos antes del commit, ya operativo |
+| Secretos de los servicios | **Fuera de Git** | Los `.env` reales solo viven en los hosts, cubiertos por snapshots ZFS y PBS (copia externa en preparación); SOPS + Age está preparado para lo que haya que versionar |
 | Secretos en K8s | **HashiCorp Vault** | Secretos dinámicos, auto-rotación, estándar enterprise |
 | Calidad de código | **SonarQube Community** | Quality gates en el pipeline |
 | Escaneo de vulnerabilidades | **Trivy** | Integrado en Harbor + stage explícito en Jenkins |
@@ -504,7 +504,7 @@ push a Forgejo
         ▼
 Woodpecker CI
     ├── lint        yamllint + docker compose config + ansible-lint
-    ├── validate    SOPS decrypt en memoria + validación de esquema
+    ├── validate    validación de esquema
     ├── plan        OpenTofu fmt + validate + plan (PRs con cambios en infrastructure/)
     └── deploy      webhook Portainer → actualización rolling del stack
 ```
@@ -615,14 +615,12 @@ Todos los secretos siguen un modelo por capas:
 
 | Capa | Herramienta | Cuándo |
 |---|---|---|
-| Git / Docker Compose | **SOPS + Age** | Secretos estáticos commiteados a Git — cifrados antes del commit |
+| Docker Compose | **`.env` solo en el host** | Los valores reales nunca entran en Git (el repo es público); solo se suben las plantillas `.env.example`. Se respaldan con los datos del host |
+| Git (si no hay alternativa) | **SOPS + Age** | Lo que haya que versionar se cifra antes del commit (`.sops.yaml`) |
 | K8s / Pods K3s | **HashiCorp Vault** | Secretos dinámicos en runtime — inyectados por Vault Agent |
 | Pipelines | **Secretos Woodpecker / Credentials Jenkins** | Credenciales de pipelines CI/CD |
 
 ```bash
-# Editar un archivo cifrado
-sops services/docker-compose/devops/woodpecker-ci/.env.enc
-
 # Verificar siempre antes de commitear
 git diff --staged | grep -iE "(password|key|token|secret)"
 ```

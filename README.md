@@ -425,7 +425,7 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 | IaC provisioning | **OpenTofu** | Open-source fork of Terraform, 100% HCL compatible, MPL-2.0 license |
 | IaC configuration | **Ansible + AWX** | Industry standard, same in homelab as in enterprises |
 | K8s package manager | **Helm** | Standard for deploying applications on Kubernetes |
-| Secrets in Git | **SOPS + Age** | File encryption before commit, already operational |
+| Service secrets | **Kept out of Git** | Real `.env` files live only on the hosts, covered by ZFS snapshots and PBS (off-site copy being set up); SOPS + Age is set up for files that must be versioned |
 | Secrets in K8s | **HashiCorp Vault** | Dynamic secrets, auto-rotation, enterprise standard |
 | Code quality | **SonarQube Community** | Quality gates in pipeline |
 | Vulnerability scanning | **Trivy** | Integrated in Harbor + explicit Jenkins stage |
@@ -504,7 +504,7 @@ push to Forgejo
         ▼
 Woodpecker CI
     ├── lint        yamllint + docker compose config + ansible-lint
-    ├── validate    SOPS decrypt in-memory + schema check
+    ├── validate    schema check
     ├── plan        OpenTofu fmt + validate + plan (PRs touching infrastructure/)
     └── deploy      Portainer webhook → rolling stack update
 ```
@@ -615,14 +615,12 @@ All secrets follow a layered model:
 
 | Layer | Tool | When |
 |---|---|---|
-| Git / Docker Compose | **SOPS + Age** | Static secrets committed to Git — encrypted before commit |
+| Docker Compose | **Host-only `.env`** | Real values never enter Git (the repo is public); only `.env.example` templates are committed. Backed up with the host data |
+| Git (when unavoidable) | **SOPS + Age** | Files that must be versioned are encrypted before commit (`.sops.yaml`) |
 | K8s / K3s pods | **HashiCorp Vault** | Dynamic secrets at runtime — injected by Vault Agent |
 | Pipelines | **Woodpecker secrets / Jenkins credentials** | CI/CD pipeline credentials |
 
 ```bash
-# Edit an encrypted file
-sops services/docker-compose/devops/woodpecker-ci/.env.enc
-
 # Always verify before committing
 git diff --staged | grep -iE "(password|key|token|secret)"
 ```
