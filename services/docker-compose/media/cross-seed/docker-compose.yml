@@ -1,0 +1,18 @@
+# homelab/services/docker-compose/media/cross-seed/docker-compose.yml
+# cross-seed — busca en los trackers privados lo que ya hay en qBittorrent y en la biblioteca y lo
+# comparte también allí sin descargar nada: hardlinks en /data/torrents/cross-seed (guía TRaSH).
+# Sin IP propia ni VPN: solo habla con Prowlarr, qBittorrent, Radarr y Sonarr (Prowlarr baja los .torrent).
+services:
+  cross-seed:
+    image: ghcr.io/cross-seed/cross-seed:6.13.9
+    container_name: cross-seed
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    command: daemon
+    environment:
+      - TZ=${TZ}
+    volumes:
+      # config.js con las URLs y claves (no está en el repo; plantilla en config.example.js)
+      - ${APPDATA}:/config
+      # Mismo montaje que las *arr: los hardlinks necesitan un único sistema de ficheros
+      - ${DATA}:/data
