@@ -256,12 +256,12 @@ Categories:
 
 ### 4.6 Media (VLAN 30 — SRV)
 
-> Jellyfin was deployed on `docker-nas` instead of `docker-main`: local access to the media pool, no NFS hop. Overseerr is still planned for Phase 7 on `docker-main`.
+> Jellyfin was deployed on `docker-nas` instead of `docker-main`: local access to the media pool, no NFS hop. Seerr (successor to Overseerr) runs on `docker-main`.
 
 | ID | Service | Host | Type | Port | Status | Function |
 |---|---|---|---|---|---|---|
 | media-jellyfin-01 | Jellyfin | docker-nas | Docker macvlan | 8096 | ✅ Operational | Media streaming server (local access to the media pool) |
-| media-overseerr-01 | Overseerr | docker-main | Docker macvlan | 5055 | ⏳ Phase 7 | Media request portal |
+| media-seerr-01 | Seerr | docker-main | Docker macvlan | 5055 | ✅ Deployed | Watchlist and media requests |
 | arr-sonarr-01 | Sonarr | docker-nas | Docker macvlan | 8989 | ✅ Operational | Automatic TV series management |
 | arr-radarr-01 | Radarr | docker-nas | Docker macvlan | 7878 | ✅ Operational | Automatic movie management |
 | arr-lidarr-01 | Lidarr | docker-nas | Docker macvlan | 8686 | ✅ Operational | Automatic music management |
@@ -643,6 +643,6 @@ git diff --staged | grep -iE "(password|key|token|secret)"
 | **Phase 4+** | DevOps Enterprise: K3s, Jenkins, ArgoCD, SonarQube, Vault, AWX | ⏳ Planned |
 | **Phase 5** | NGINX Proxy Manager, Authentik SSO, SSL, Vaultwarden | ⏳ Planned |
 | **Phase 6** | Nextcloud, Immich (✅ deployed early on docker-nas), Paperless-ngx | ⏳ Planned |
-| **Phase 7** | Jellyfin (✅ deployed early on docker-nas), Overseerr | ⏳ Planned |
+| **Phase 7** | Jellyfin (✅ deployed early on docker-nas), Seerr (✅) | ⏳ Planned |
 | **Phase 8** | Prometheus, Grafana, Loki, Alertmanager, Uptime Kuma | ⏳ Planned |
 | **Phase 9** | OpenClaw AI agent | ⏳ Planned |
