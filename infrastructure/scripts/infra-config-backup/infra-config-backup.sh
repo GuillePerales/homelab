@@ -27,7 +27,7 @@ pull() {  # pull <nombre> <usuario@host>: el comando lo fija authorized_keys en 
   local dir="$DEST/$1" out
   mkdir -p "$dir"
   out="$dir/$TODAY.tar.gz"
-  if ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=15 \
+  if ssh -T -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=15 \
       -o UserKnownHostsFile="$(dirname "$SSH_KEY")/known_hosts" "$2" >"$out.tmp" \
       && gzip -t "$out.tmp" 2>/dev/null; then
     mv "$out.tmp" "$out"
