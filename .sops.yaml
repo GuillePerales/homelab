@@ -1,5 +1,7 @@
+# Clave pública age del portátil de administración (la privada no sale de él; copia en el gestor de contraseñas).
 creation_rules:
   - path_regex: infrastructure/secrets/.*\.(yaml|yml)$
     age: age1swfj8m568jcz82ywnxv9ggrn0fhrte7tk06wc7ywggqagr7q8czqxrxls2
-  - path_regex: services/.*\.env\.enc$
+  # .env de cada servicio, solo valores cifrados (infrastructure/scripts/sops-env)
+  - path_regex: services/.*/sops\.env$
     age: age1swfj8m568jcz82ywnxv9ggrn0fhrte7tk06wc7ywggqagr7q8czqxrxls2

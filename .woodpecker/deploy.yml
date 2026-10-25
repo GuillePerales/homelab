@@ -5,6 +5,12 @@ when:
     include: ["services/docker-compose/**"]
 
 steps:
+  # Ningún sops.env sin cifrar (no necesita la clave age: comprueba los metadatos de SOPS)
+  - name: sops-check
+    image: bash:5.3.20
+    commands:
+      - bash infrastructure/scripts/sops-env/sops-env.sh check
+
   - name: portainer-deploy
     image: curlimages/curl:8.23.0
     secrets:
