@@ -74,20 +74,31 @@ with_temp_guard() {  # with_temp_guard <comando…>
 }
 
 # Vigilante de atascos: a veces una petición a Proton se queda colgada sin error y rclone
-# espera para siempre (el 2026-10-24 estuvo 2 h quieta en el 69 %). Si en STALL_MIN minutos
-# no lee nada del repo local, se corta y se relanza; sync sigue por donde iba.
+# espera para siempre (el 2026-10-24 estuvo 2 h quieta en el 69 %; el 2026-10-25, 9 h en
+# el 58 % tras un 502). Si en STALL_MIN minutos no avanza, se corta y se relanza; sync sigue
+# por donde iba. El avance se pregunta a rclone por su interfaz de control (bytes subidos,
+# ficheros comprobados o transferidos y errores): los bytes leídos del proceso no valen,
+# porque cuentan también lo que llega por la red y una conexión colgada sigue recibiendo.
 STALL_MIN="${STALL_MIN:-15}"
 UPLOAD_ATTEMPTS="${UPLOAD_ATTEMPTS:-5}"
+RC_ADDR="${RC_ADDR:-127.0.0.1:5572}"
 
-with_stall_guard() {  # with_stall_guard <comando…>
+rclone_progress() {  # suma de contadores de rclone; vacío si no responde (al arrancar o al acabar)
+  rclone rc --url "http://$RC_ADDR" core/stats 2>/dev/null | python3 -c '
+import sys, json
+s = json.load(sys.stdin)
+print(sum(s.get(k, 0) for k in ("bytes", "checks", "transfers", "errors")))' 2>/dev/null || true
+}
+
+with_stall_guard() {  # with_stall_guard <comando de rclone…> (se le añade --rc)
   local try pid last now quiet
   for try in $(seq 1 "$UPLOAD_ATTEMPTS"); do
-    "$@" &
+    "$@" --rc --rc-addr "$RC_ADDR" --rc-no-auth &
     pid=$! last=-1 quiet=0
     while kill -0 "$pid" 2>/dev/null; do
       sleep 60
-      now=$(awk '/^rchar/ {print $2}' "/proc/$pid/io" 2>/dev/null || echo 0)
-      if [ "$now" = "$last" ]; then quiet=$((quiet + 1)); else quiet=0 last=$now; fi
+      now=$(rclone_progress || true)   # con set -e, una consulta fallida no debe tumbar la copia
+      if [ -z "$now" ] || [ "$now" != "$last" ]; then quiet=0 last=${now:--1}; else quiet=$((quiet + 1)); fi
       if [ "$quiet" -ge "$STALL_MIN" ]; then
         echo "$(date -Is) atascada $STALL_MIN min: se corta (intento $try de $UPLOAD_ATTEMPTS)"
         kill "$pid" 2>/dev/null || true; sleep 10; kill -9 "$pid" 2>/dev/null || true
