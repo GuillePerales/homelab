@@ -209,7 +209,7 @@ Categorías:
 | infra-pve-01 | Proxmox VE | pve-router | Bare Metal | Hipervisor + host OPNsense |
 | infra-pve-02 | Proxmox VE | pve-main | Bare Metal | Hipervisor principal |
 | infra-pve-03 | Proxmox VE | pve-aux | Bare Metal | Hipervisor secundario |
-| infra-nas-01 | TrueNAS Scale | nas-01 | Bare Metal | NAS — ZFS, NFS, Docker |
+| nas-01 | TrueNAS Scale | nas-01 | Bare Metal | NAS — ZFS, NFS, Docker |
 | infra-ipmi-01 | iDRAC/IPMI | nas-01 | Firmware | Gestión de hardware Dell |
 | infra-rpi-01 | Raspberry Pi | rpi-dns | Bare Metal | DNS failover + utilidades |
 
