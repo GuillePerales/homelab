@@ -27,15 +27,16 @@ steps:
   - name: tofu-plan
     image: ghcr.io/opentofu/opentofu:1.13.2
     environment:
-      - PROXMOX_VE_ENDPOINT=https://10.0.5.12:8006
-      - PROXMOX_VE_INSECURE=true
-    secrets:
-      - proxmox_token_id
-      - proxmox_token_secret
+      PROXMOX_VE_ENDPOINT: https://10.0.5.12:8006
+      PROXMOX_VE_INSECURE: "true"
+      PROXMOX_TOKEN_ID:
+        from_secret: proxmox_token_id
+      PROXMOX_TOKEN_SECRET:
+        from_secret: proxmox_token_secret
     commands:
       - cd infrastructure/opentofu/proxmox
       - tofu init
       - tofu plan -no-color -out=tfplan
       - tofu show -no-color tfplan
     when:
-      event: pull_request
+      - event: pull_request
