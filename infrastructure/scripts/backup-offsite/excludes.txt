@@ -10,7 +10,6 @@
 /mnt/vault/apps/immich/ml-cache
 
 # Docker antiguo del NAS (hoy vive en boot-pool) y descargas de JDownloader
-/mnt/vault/apps/docker
 /mnt/vault/apps/jdownloader
 
 # Cachés, logs y carátulas de los servicios
