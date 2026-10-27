@@ -603,7 +603,6 @@ awx/          ← AWX (upstream de Ansible Tower)
 │       ├── apps/
 │       └── namespaces/     ← RBAC + NetworkPolicies
 └── .woodpecker/            ← Definiciones de pipelines CI/CD
-    ├── lint.yml
     └── tofu-plan.yml
 ```
 
