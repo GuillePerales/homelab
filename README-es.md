@@ -503,9 +503,10 @@ push a Forgejo
 Woodpecker CI
     ├── lint        yamllint + docker compose config + ansible-lint
     ├── validate    validación de esquema
-    ├── plan        OpenTofu fmt + validate + plan (PRs con cambios en infrastructure/)
-    └── deploy      webhook Portainer → actualización rolling del stack
+    └── plan        OpenTofu fmt + validate + plan (PRs con cambios en infrastructure/)
 ```
+
+> Los servicios de Docker Compose se despliegan uno a uno (`docker compose -p <servicio> up -d`), no desde CI: el despliegue continuo queda para ArgoCD en K3s. Un agente de CI con SSH a los hosts sería un riesgo mayor que la comodidad que aporta.
 
 #### Pipeline de aplicaciones (Jenkins + ArgoCD)
 
@@ -603,8 +604,7 @@ awx/          ← AWX (upstream de Ansible Tower)
 │       └── namespaces/     ← RBAC + NetworkPolicies
 └── .woodpecker/            ← Definiciones de pipelines CI/CD
     ├── lint.yml
-    ├── tofu-plan.yml
-    └── deploy.yml
+    └── tofu-plan.yml
 ```
 
 ### 8.6 Gestión de Secretos
