@@ -32,25 +32,23 @@ jobs:
         with:
           persist-credentials: false
       # Los .env reales no están en el repo: se usa el .env.example del servicio
-      # y, si no tiene, valores ficticios para las variables que usan los compose.
+      # y, si no tiene, cada ${VAR} del compose se rellena con un valor ficticio.
       - name: docker compose config
         run: |
           docker compose version
-          export DATA=/data APPDATA=/appdata CONTAINER_IP=10.0.0.1 PUID=1000 PGID=1000 \
-                 TZ=Europe/Madrid CALIBRE_LIBRARY=/library INGEST_DIR=/ingest
           rc=0
           while IFS= read -r f; do
             d=$(dirname "$f")
-            args=()
             if [ -f "$d/.env.example" ]; then
-              unset DATA APPDATA CONTAINER_IP PUID PGID TZ CALIBRE_LIBRARY INGEST_DIR
-              args=(--env-file "$d/.env.example")
+              cmd=(env -i PATH="$PATH" HOME="$HOME" docker compose --env-file "$d/.env.example")
+            else
+              vars=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*' "$f" | sed 's/^\${//' | sort -u)
+              dummy=()
+              for v in $vars; do dummy+=("$v=/ficticio"); done
+              cmd=(env -i PATH="$PATH" HOME="$HOME" "${dummy[@]}" docker compose)
             fi
             echo "Validando $f"
-            docker compose "${args[@]}" -f "$f" config --quiet || { echo "::error file=$f::docker compose config falla"; rc=1; }
-            # restaura los valores ficticios para el siguiente servicio
-            export DATA=/data APPDATA=/appdata CONTAINER_IP=10.0.0.1 PUID=1000 PGID=1000 \
-                   TZ=Europe/Madrid CALIBRE_LIBRARY=/library INGEST_DIR=/ingest
+            "${cmd[@]}" -f "$f" config --quiet || { echo "::error file=$f::docker compose config falla"; rc=1; }
           done < <(find services/docker-compose -name docker-compose.yml | sort)
           exit "$rc"
 
