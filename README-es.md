@@ -652,12 +652,15 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 0** | Workstation, tooling, init del repo, SOPS + Age | ✅ Completada |
 | **Phase 1** | Red: OPNsense, 7 VLANs, switch gestionado, Tailscale | ✅ Completada |
 | **Phase 1.5** | VPN: Tailscale (remoto) + ProtonVPN WireGuard (salida) | ✅ Completada |
-| **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing | ✅ Completada |
+| **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing — refuerzo de la protección de datos en curso | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
-| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, registro de Forgejo + Trivy, pipelines IaC | 🔄 En curso |
-| **Phase 4+** | DevOps Enterprise: K3s, Jenkins, ArgoCD, SonarQube, Vault, AWX | ⏳ Planificada |
-| **Phase 5** | NGINX Proxy Manager, Authentik SSO, SSL, Vaultwarden | ⏳ Planificada |
-| **Phase 6** | Nextcloud, Immich (✅ adelantado en docker-nas), Paperless-ngx | ⏳ Planificada |
-| **Phase 7** | Jellyfin (✅ adelantado en docker-nas), Seerr (✅) | ⏳ Planificada |
-| **Phase 8** | Prometheus, Grafana, Loki, Alertmanager, Uptime Kuma | ⏳ Planificada |
-| **Phase 9** | Agente IA OpenClaw | ⏳ Planificada |
+| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, registro de Forgejo + Trivy, pipelines IaC (OpenTofu plan en las PR), runbooks de recuperación | 🔄 En curso |
+| **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube y AWX en revisión | ⏳ Planificada |
+| **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
+| **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
+| **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos prevista | ✅ Completada |
+| **Phase 8** | Observabilidad y operación: Prometheus, Grafana, Alertmanager, exporters, planificador de tareas; Loki en evaluación | ⏳ Planificada |
+| **Phase 9** | Agente IA acotado y siempre encendido, con mínimo privilegio (replanteada) | ⏳ Planificada |
+| **Postimplantación** | Práctica de data engineering con datos reales del homelab: lakehouse, streaming CDC | ⏳ Ideas |
+
+> Replanteado en octubre de 2026: el alcance original de la fase 5 (proxy inverso, SSO, gestor de contraseñas) y los elementos de Nextcloud y Uptime Kuma se descartaron tras revisarlos (un solo usuario, alternativas más ligeras ya en marcha).
