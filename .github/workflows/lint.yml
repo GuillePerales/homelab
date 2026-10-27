@@ -1,0 +1,133 @@
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+      - run: pip install yamllint==1.38.0
+      - run: yamllint -d relaxed services/docker-compose infrastructure/ansible .woodpecker .github
+
+  compose-validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Los .env reales no están en el repo: se usa el .env.example del servicio
+      # y, si no tiene, cada ${VAR} del compose se rellena con un valor ficticio.
+      - name: docker compose config
+        run: |
+          docker compose version
+          rc=0
+          while IFS= read -r f; do
+            d=$(dirname "$f")
+            if [ -f "$d/.env.example" ]; then
+              cmd=(env -i PATH="$PATH" HOME="$HOME" docker compose --env-file "$d/.env.example")
+            else
+              vars=$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*' "$f" | sed 's/^\${//' | sort -u)
+              dummy=()
+              for v in $vars; do dummy+=("$v=/ficticio"); done
+              cmd=(env -i PATH="$PATH" HOME="$HOME" "${dummy[@]}" docker compose)
+            fi
+            echo "Validando $f"
+            "${cmd[@]}" -f "$f" config --quiet || { echo "::error file=$f::docker compose config falla"; rc=1; }
+          done < <(find services/docker-compose -name docker-compose.yml | sort)
+          exit "$rc"
+
+  shellcheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+      - run: pip install shellcheck-py==0.11.0.1
+      - run: git ls-files -z '*.sh' | xargs -0 -r shellcheck -S warning
+
+  sops-check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No necesita la clave age: comprueba los metadatos de SOPS
+      - run: bash infrastructure/scripts/sops-env/sops-env.sh check
+
+  gitleaks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  changes:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ansible: ${{ steps.filter.outputs.ansible }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            ansible:
+              - 'infrastructure/ansible/**'
+
+  ansible-lint:
+    needs: changes
+    if: needs.changes.outputs.ansible == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+      - run: pip install ansible-lint==26.10.1
+      - run: ansible-lint infrastructure/ansible/
+
+  # Único check requerido en la protección de rama
+  checks:
+    if: always()
+    needs: [yamllint, compose-validate, shellcheck, sops-check, gitleaks, changes, ansible-lint]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Comprobar resultado de los jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Resultados: $RESULTS"
+          # ansible-lint puede quedar 'skipped'; cualquier otra cosa distinta de success falla
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) exit 1 ;; esac
+          done

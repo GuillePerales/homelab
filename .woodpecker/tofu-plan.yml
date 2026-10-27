@@ -1,3 +1,10 @@
+# Pipeline de OpenTofu: fmt -> validate -> plan en pull requests que tocan
+# infrastructure/opentofu/**. Es el único que necesita red interna (el plan habla
+# con la API de Proxmox), por eso sigue en Woodpecker, que corre dentro del
+# homelab. El lint y el sops-check del repo viven en GitHub Actions.
+# Nota: hoy infrastructure/opentofu/proxmox no tiene código .tf y Woodpecker solo
+# escucha a Forgejo (parado), así que no se ejecuta hasta que existan ambos.
+
 when:
   event: pull_request
   path:
@@ -5,20 +12,20 @@ when:
 
 steps:
   - name: tofu-fmt
-    image: ghcr.io/opentofu/opentofu:latest
+    image: ghcr.io/opentofu/opentofu:1.13.2
     commands:
       - cd infrastructure/opentofu/proxmox
       - tofu fmt -check -recursive
 
   - name: tofu-validate
-    image: ghcr.io/opentofu/opentofu:latest
+    image: ghcr.io/opentofu/opentofu:1.13.2
     commands:
       - cd infrastructure/opentofu/proxmox
       - tofu init -backend=false
       - tofu validate
 
   - name: tofu-plan
-    image: ghcr.io/opentofu/opentofu:latest
+    image: ghcr.io/opentofu/opentofu:1.13.2
     environment:
       - PROXMOX_VE_ENDPOINT=https://10.0.5.12:8006
       - PROXMOX_VE_INSECURE=true
