@@ -2,7 +2,7 @@
 # Se construye UNA vez en un tar; lo que se escanea es exactamente lo que se publica.
 #  - build: kaniko sin privilegios (sin docker.sock ni modo privileged)
 #  - trivy: informe completo y puerta (falla con CVE críticos con arreglo disponible)
-#  - publish: crane sube el tar al registro de Forgejo; solo desde main
+#  - publish: skopeo sube el tar al registro de Forgejo; solo desde main
 # Dos variantes de la misma app para comparar CVE según la imagen base.
 
 when:
@@ -38,14 +38,16 @@ steps:
       - trivy image --input image.tar --severity CRITICAL --ignore-unfixed --exit-code 1 --quiet
 
   - name: publish
-    image: gcr.io/go-containerregistry/crane:debug
+    image: quay.io/skopeo/stable:v1.16.1
     environment:
       FORGEJO_USER:
         from_secret: forgejo_registry_user
       FORGEJO_TOKEN:
         from_secret: forgejo_registry_token
     commands:
-      - crane auth login 10.0.30.28:3000 --insecure -u $FORGEJO_USER -p $FORGEJO_TOKEN
-      - crane push --insecure image.tar 10.0.30.28:3000/root/homelab-check:$VARIANT
+      - skopeo copy --dest-tls-verify=false
+        --dest-creds "$FORGEJO_USER:$FORGEJO_TOKEN"
+        docker-archive:image.tar
+        docker://10.0.30.28:3000/root/homelab-check:$VARIANT
     when:
       - branch: main
