@@ -29,5 +29,5 @@ steps:
     commands:
       - ansible-lint infrastructure/ansible/
     when:
-      path:
-        include: ["infrastructure/ansible/**"]
+      - path:
+          include: ["infrastructure/ansible/**"]
