@@ -3,7 +3,7 @@
 Personal homelab managed entirely as Infrastructure as Code. Two parallel objectives: a private self-hosted stack that replaces cloud services, and a production-grade DevOps pipeline built with the same tools used in enterprise environments.
 
 **Version:** 3.2 — March 2026
-**Status:** Phase 4 in progress
+**Status:** Phase 4 completed
 
 ---
 
@@ -276,8 +276,8 @@ Categories:
 | ID | Service | Host | Type | Port | Status | Function |
 |---|---|---|---|---|---|---|
 | dev-portainer-01 | Portainer | docker-main | Docker macvlan | 9443 | ✅ Operational | Multi-host container management UI |
-| dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | 🔄 Phase 4 | Self-hosted Git server |
-| dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | 🔄 Phase 4 | CI/CD pipelines |
+| dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | ✅ Phase 4 | Self-hosted Git server |
+| dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | ✅ Phase 4 | CI/CD pipelines |
 | dev-jenkins-01 | Jenkins | K3s worker | Helm | 8080 | ⏳ Phase 4+ | Application CI/CD pipelines |
 | dev-argocd-01 | ArgoCD | K3s worker | Helm | 443 | ⏳ Phase 4+ | GitOps continuous delivery |
 | dev-sonarqube-01 | SonarQube | K3s worker | Helm | 9000 | ⏳ Phase 4+ | Code quality gate |
@@ -653,7 +653,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 1.5** | VPN: Tailscale (remote) + ProtonVPN WireGuard (egress) | ✅ Done |
 | **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — data protection hardening ongoing | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
-| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Forgejo registry + Trivy, IaC pipelines (OpenTofu plan on PRs), recovery runbooks | 🔄 In progress |
+| **Phase 4** | DevOps Core: Forgejo (GitHub mirror), Woodpecker CI, own images scanned with Trivy and published to the Forgejo registry — OpenTofu plan and recovery runbooks continue in their own projects | ✅ Done |
 | **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube and AWX under review | ⏳ Planned |
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
