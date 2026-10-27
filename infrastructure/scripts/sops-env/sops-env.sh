@@ -15,7 +15,9 @@
 # (devops/portainer/docker-main). <host> es un alias de ~/.ssh/config.
 set -euo pipefail
 
-REPO="$(git -C "$(dirname "$(readlink -f "$0")")" rev-parse --show-toplevel)"
+HERE="$(dirname "$(readlink -f "$0")")"
+# La imagen bash del CI no trae git: si falta, la raíz está tres niveles por encima
+REPO="$(git -C "$HERE" rev-parse --show-toplevel 2>/dev/null || { cd "$HERE/../../.." && pwd; })"
 BASE="$REPO/services/docker-compose"
 NAME=sops.env
 cd "$REPO"   # sops busca .sops.yaml desde el directorio actual
