@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(*zfs send*)",
+      "Bash(*zfs recv*)",
+      "Bash(*zfs receive*)",
+      "Bash(*zfs destroy*)",
+      "Bash(*zfs rollback*)",
+      "Bash(*zfs create*)",
+      "Bash(*zfs set*)",
+      "Bash(*zfs rename*)",
+      "Bash(*zpool create*)",
+      "Bash(*zpool destroy*)",
+      "Bash(*zpool add*)",
+      "Bash(*zpool remove*)",
+      "Bash(*zpool attach*)",
+      "Bash(*zpool detach*)",
+      "Bash(*zpool replace*)",
+      "Bash(*zpool offline*)",
+      "Bash(*zpool export*)",
+      "Bash(*zpool import*)",
+      "Bash(*zpool scrub*)",
+      "Bash(*smartctl -t*)",
+      "Bash(*syncoid*)"
+    ]
+  }
+}
