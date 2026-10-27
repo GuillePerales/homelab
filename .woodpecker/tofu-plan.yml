@@ -2,8 +2,8 @@
 # infrastructure/opentofu/**. Es el único que necesita red interna (el plan habla
 # con la API de Proxmox), por eso sigue en Woodpecker, que corre dentro del
 # homelab. El lint y el sops-check del repo viven en GitHub Actions.
-# Nota: hoy infrastructure/opentofu/proxmox no tiene código .tf y Woodpecker solo
-# escucha a Forgejo (parado), así que no se ejecuta hasta que existan ambos.
+# Nota: hoy infrastructure/opentofu/proxmox no tiene código .tf, así que no se
+# ejecuta hasta que exista. Woodpecker escucha al espejo de Forgejo.
 
 when:
   event: pull_request
