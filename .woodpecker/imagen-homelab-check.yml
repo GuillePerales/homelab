@@ -1,0 +1,51 @@
+# Imagen de práctica de la fase 4: build -> Trivy -> registro de Forgejo.
+# Se construye UNA vez en un tar; lo que se escanea es exactamente lo que se publica.
+#  - build: kaniko sin privilegios (sin docker.sock ni modo privileged)
+#  - trivy: informe completo y puerta (falla con CVE críticos con arreglo disponible)
+#  - publish: crane sube el tar al registro de Forgejo; solo desde main
+# Dos variantes de la misma app para comparar CVE según la imagen base.
+
+when:
+  - event: push
+    path:
+      include:
+        - services/images/homelab-check/**
+        - .woodpecker/imagen-homelab-check.yml
+
+matrix:
+  include:
+    - VARIANT: slim
+      BASE: python:3.13-slim
+    - VARIANT: alpine
+      BASE: python:3.13-alpine
+
+steps:
+  - name: build
+    image: gcr.io/kaniko-project/executor:v1.23.2-debug
+    commands:
+      - /kaniko/executor
+        --context services/images/homelab-check
+        --dockerfile services/images/homelab-check/Dockerfile
+        --build-arg BASE=$BASE
+        --destination homelab-check:$VARIANT
+        --no-push
+        --tar-path image.tar
+
+  - name: trivy
+    image: aquasec/trivy:0.58.1
+    commands:
+      - trivy image --input image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0
+      - trivy image --input image.tar --severity CRITICAL --ignore-unfixed --exit-code 1 --quiet
+
+  - name: publish
+    image: gcr.io/go-containerregistry/crane:debug
+    environment:
+      FORGEJO_USER:
+        from_secret: forgejo_registry_user
+      FORGEJO_TOKEN:
+        from_secret: forgejo_registry_token
+    commands:
+      - crane auth login 10.0.30.28:3000 --insecure -u $FORGEJO_USER -p $FORGEJO_TOKEN
+      - crane push --insecure image.tar 10.0.30.28:3000/root/homelab-check:$VARIANT
+    when:
+      - branch: main
