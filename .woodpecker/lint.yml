@@ -1,8 +1,7 @@
-# REDUNDANTE: este pipeline ya lo cubre GitHub Actions (.github/workflows/).
-# El lint (yamllint, validación de compose, ansible-lint) y el sops-check viven
-# allí. Woodpecker solo escucha a Forgejo, que está parado, así que este
-# fichero no se ejecuta. Se conserva únicamente por si Forgejo vuelve a ser
-# espejo de lectura con CI; si no, conviene eliminarlo.
+# Lint en Woodpecker sobre el espejo de Forgejo (root/homelab). El lint oficial
+# que protege main vive en GitHub Actions (.github/workflows/); este pipeline
+# lo duplica a propósito para comprobar el circuito GitHub -> espejo ->
+# Woodpecker. Si el espejo no dispara pipelines o no aporta nada, eliminarlo.
 #
 # Qué hace: yamllint -> docker compose config de cada compose -> ansible-lint.
 
