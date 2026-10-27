@@ -8,7 +8,7 @@ networks:
 services:
   homarr:
     container_name: homarr
-    image: ghcr.io/homarr-labs/homarr:v2.8.1
+    image: ghcr.io/homarr-labs/homarr:v2.9.1
     restart: unless-stopped
     networks:
       srv-net:

@@ -5,7 +5,7 @@ networks:
 
 services:
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.0
+    image: lscr.io/linuxserver/lidarr:3.1.6
     container_name: lidarr
     labels:
       # 8.1.x son tags antiguos (rama nightly previa)
