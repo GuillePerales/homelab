@@ -10,7 +10,7 @@ networks:
 services:
   diun:
     container_name: diun
-    image: crazymax/diun:4.33.0
+    image: crazymax/diun:4.33.1
     command: serve
     restart: unless-stopped
     networks:
