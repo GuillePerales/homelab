@@ -1,6 +1,6 @@
 # homelab/services/docker-compose/storage/immich/docker-compose.yml
 # Immich - Google Photos self-hosted alternative
-# Host: nas-01 (docker-nas) | IP: 10.0.30.22 | Port: 2283
+# Host: nas-01 (docker-nas) | IP: XX.XX | Port: 2283
 # Docs: https://immich.app/docs/install/docker-compose
 
 networks:
