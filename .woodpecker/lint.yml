@@ -1,14 +1,22 @@
+# REDUNDANTE: este pipeline ya lo cubre GitHub Actions (.github/workflows/).
+# El lint (yamllint, validación de compose, ansible-lint) y el sops-check viven
+# allí. Woodpecker solo escucha a Forgejo, que está parado, así que este
+# fichero no se ejecuta. Se conserva únicamente por si Forgejo vuelve a ser
+# espejo de lectura con CI; si no, conviene eliminarlo.
+#
+# Qué hace: yamllint -> docker compose config de cada compose -> ansible-lint.
+
 when:
   event: [push, pull_request]
 
 steps:
   - name: yamllint
-    image: cytopia/yamllint:latest
+    image: pipelinecomponents/yamllint:0.35.27
     commands:
       - yamllint -d relaxed services/docker-compose/ infrastructure/ansible/ .woodpecker/
 
   - name: compose-validate
-    image: docker:24-cli
+    image: docker:29.9.2-cli
     # docker compose config no necesita el daemon: sin docker.sock
     commands:
       - |
@@ -18,7 +26,7 @@ steps:
         done
 
   - name: ansible-lint
-    image: pipelinecomponents/ansible-lint:latest
+    image: pipelinecomponents/ansible-lint:0.79.54
     commands:
       - ansible-lint infrastructure/ansible/
     when:
