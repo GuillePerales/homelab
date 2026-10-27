@@ -3,7 +3,7 @@
 Homelab personal gestionado íntegramente como Infraestructura como Código. Dos objetivos en paralelo: un stack self-hosted privado que sustituye servicios cloud, y un pipeline DevOps de nivel productivo construido con las mismas herramientas que se usan en entornos enterprise.
 
 **Versión:** 3.2 — Marzo 2026
-**Estado:** Phase 4 en curso
+**Estado:** Phase 4 completada
 
 ---
 
@@ -276,8 +276,8 @@ Categorías:
 | ID | Servicio | Host | Tipo | Puerto | Estado | Función |
 |---|---|---|---|---|---|---|
 | dev-portainer-01 | Portainer | docker-main | Docker macvlan | 9443 | ✅ Operativo | UI de gestión multi-host de contenedores |
-| dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | 🔄 Phase 4 | Servidor Git self-hosted |
-| dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | 🔄 Phase 4 | Pipelines CI/CD |
+| dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | ✅ Phase 4 | Servidor Git self-hosted |
+| dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | ✅ Phase 4 | Pipelines CI/CD |
 | dev-jenkins-01 | Jenkins | Worker K3s | Helm | 8080 | ⏳ Phase 4+ | Pipelines CI/CD de aplicaciones |
 | dev-argocd-01 | ArgoCD | Worker K3s | Helm | 443 | ⏳ Phase 4+ | Entrega continua GitOps |
 | dev-sonarqube-01 | SonarQube | Worker K3s | Helm | 9000 | ⏳ Phase 4+ | Quality gate de código |
@@ -653,7 +653,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 1.5** | VPN: Tailscale (remoto) + ProtonVPN WireGuard (salida) | ✅ Completada |
 | **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing — refuerzo de la protección de datos en curso | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
-| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, registro de Forgejo + Trivy, pipelines IaC (OpenTofu plan en las PR), runbooks de recuperación | 🔄 En curso |
+| **Phase 4** | DevOps Core: Forgejo (espejo de GitHub), Woodpecker CI, imágenes propias escaneadas con Trivy y publicadas en el registro de Forgejo — el plan de OpenTofu y los runbooks de recuperación siguen en sus propios proyectos | ✅ Completada |
 | **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube y AWX en revisión | ⏳ Planificada |
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
