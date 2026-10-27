@@ -1,0 +1,19 @@
+---
+# homelab-check — comprueba URLs del homelab en bucle y avisa a ntfy al cambiar de estado
+# Imagen propia construida y escaneada por Woodpecker (.woodpecker/imagen-homelab-check.yml)
+# y publicada en el registro de Forgejo. Fijar IMAGE_TAG a una etiqueta por commit (slim-<sha>)
+services:
+  homelab-check:
+    container_name: homelab-check
+    image: ${REGISTRY}/root/homelab-check:${IMAGE_TAG}
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      - CHECK_URLS=${CHECK_URLS}
+      - NTFY_URL=${NTFY_URL}
+      - INTERVAL=${INTERVAL}

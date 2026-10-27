@@ -1,7 +1,7 @@
 # Imagen de práctica de la fase 4: build -> Trivy -> registro de Forgejo.
 # Se construye UNA vez en un tar; lo que se escanea es exactamente lo que se publica.
 #  - build: kaniko sin privilegios (sin docker.sock ni modo privileged)
-#  - trivy: informe completo y puerta (falla con CVE críticos con arreglo disponible)
+#  - trivy: informe completo y puerta (falla con CVE HIGH o CRITICAL con arreglo disponible)
 #  - publish: skopeo sube el tar al registro de Forgejo; solo desde main
 # Dos variantes de la misma app para comparar CVE según la imagen base.
 
@@ -35,7 +35,7 @@ steps:
     image: aquasec/trivy:0.58.1
     commands:
       - trivy image --input image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0
-      - trivy image --input image.tar --severity CRITICAL --ignore-unfixed --exit-code 1 --quiet
+      - trivy image --input image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --quiet
 
   - name: publish
     image: quay.io/skopeo/stable:v1.16.1
@@ -45,9 +45,15 @@ steps:
       FORGEJO_TOKEN:
         from_secret: forgejo_registry_token
     commands:
-      - skopeo copy --dest-tls-verify=false
-        --dest-creds "$FORGEJO_USER:$FORGEJO_TOKEN"
-        docker-archive:image.tar
-        docker://10.0.30.28:3000/root/homelab-check:$VARIANT
+      # El host del registro sale de la URL de la forja (no se escribe aquí)
+      - REGISTRY=$${CI_FORGE_URL#http://}
+      - SHORT=$(echo $CI_COMMIT_SHA | cut -c1-8)
+      # Dos etiquetas: la móvil (slim) y la inmutable por commit (slim-<sha>)
+      - |
+        for TAG in $VARIANT $VARIANT-$SHORT; do
+          skopeo copy --dest-tls-verify=false \
+            --dest-creds "$FORGEJO_USER:$FORGEJO_TOKEN" \
+            docker-archive:image.tar docker://$REGISTRY/root/homelab-check:$TAG
+        done
     when:
       - branch: main
