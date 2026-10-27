@@ -1,5 +1,5 @@
-# scripts/setup-symlinks.sh
 #!/bin/bash
+# scripts/setup-symlinks.sh
 GIT_ROOT="/mnt/nas/git-storage/homelab/services/docker-compose"
 APPDATA_ROOT="/opt"
 
