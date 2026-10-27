@@ -652,12 +652,15 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 0** | Workstation, tooling, repo init, SOPS + Age | ✅ Done |
 | **Phase 1** | Network: OPNsense, 7 VLANs, managed switch, Tailscale | ✅ Done |
 | **Phase 1.5** | VPN: Tailscale (remote) + ProtonVPN WireGuard (egress) | ✅ Done |
-| **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing | ✅ Done |
+| **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — data protection hardening ongoing | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
-| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Forgejo registry + Trivy, IaC pipelines | 🔄 In progress |
-| **Phase 4+** | DevOps Enterprise: K3s, Jenkins, ArgoCD, SonarQube, Vault, AWX | ⏳ Planned |
-| **Phase 5** | NGINX Proxy Manager, Authentik SSO, SSL, Vaultwarden | ⏳ Planned |
-| **Phase 6** | Nextcloud, Immich (✅ deployed early on docker-nas), Paperless-ngx | ⏳ Planned |
-| **Phase 7** | Jellyfin (✅ deployed early on docker-nas), Seerr (✅) | ⏳ Planned |
-| **Phase 8** | Prometheus, Grafana, Loki, Alertmanager, Uptime Kuma | ⏳ Planned |
-| **Phase 9** | OpenClaw AI agent | ⏳ Planned |
+| **Phase 4** | DevOps Core: Forgejo, Woodpecker CI, Forgejo registry + Trivy, IaC pipelines (OpenTofu plan on PRs), recovery runbooks | 🔄 In progress |
+| **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube and AWX under review | ⏳ Planned |
+| **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
+| **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
+| **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library planned | ✅ Done |
+| **Phase 8** | Observability & operations: Prometheus, Grafana, Alertmanager, exporters, job scheduler; Loki under evaluation | ⏳ Planned |
+| **Phase 9** | Restricted, always-on AI agent with least privilege (replanned) | ⏳ Planned |
+| **Post-deployment** | Data-engineering practice on real homelab data: lakehouse, CDC streaming | ⏳ Ideas |
+
+> Replanned in October 2026: the original reverse proxy / SSO / password-manager scope of Phase 5 and the Nextcloud and Uptime Kuma items were dropped after review (single-user setup, lighter alternatives already in place).
