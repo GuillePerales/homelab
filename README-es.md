@@ -84,7 +84,7 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 
 #### Switch 1: Router ISP
 
-- Sin VLANs, gestiona `192.168.1.0/24`
+- Sin VLANs, gestiona `XX.XX`
 - Conecta: Internet ↔ gestión Proxmox + WAN OPNsense
 - **Justificación:** Gestión Proxmox aquí = siempre accesible independientemente del estado de OPNsense
 
@@ -97,7 +97,7 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 ```
                       INTERNET
                           │
-                   Router ISP (192.168.1.0/24)
+                   Router ISP (XX.XX)
                    └─ Gestión Proxmox (em0)
                    └─ WAN OPNsense (igb0, DHCP)
                           │
@@ -120,13 +120,13 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 
 | VLAN | Nombre | Subred | Salida | Propósito |
 |---|---|---|---|---|
-| 5 | INFRA | 10.0.5.0/24 | ISP directo | Hardware físico: Proxmox, TrueNAS, IPMI, RPi |
-| 10 | MGMT | 10.0.10.0/24 | ISP directo | Servicios virtualizados: OPNsense, NGINX, Authentik |
-| 15 | AI | 10.0.15.0/24 | ISP directo | Agentes AI (OpenClaw) — firewall estricto |
-| 20 | DEVICES | 10.0.20.0/24 | ProtonVPN | Dispositivos personales |
-| 30 | SRV | 10.0.30.0/24 | ProtonVPN + kill switch | Stacks Docker, workloads K3s |
-| 50 | IOT | 10.0.50.0/24 | ProtonVPN | IoT no confiable — solo internet |
-| 99 | GUEST | 10.0.99.0/24 | ProtonVPN | Invitados — solo internet |
+| 5 | INFRA | XX.XX | ISP directo | Hardware físico: Proxmox, TrueNAS, IPMI, RPi |
+| 10 | MGMT | XX.XX | ISP directo | Servicios virtualizados: OPNsense, NGINX, Authentik |
+| 15 | AI | XX.XX | ISP directo | Agentes AI (OpenClaw) — firewall estricto |
+| 20 | DEVICES | XX.XX | ProtonVPN | Dispositivos personales |
+| 30 | SRV | XX.XX | ProtonVPN + kill switch | Stacks Docker, workloads K3s |
+| 50 | IOT | XX.XX | ProtonVPN | IoT no confiable — solo internet |
+| 99 | GUEST | XX.XX | ProtonVPN | Invitados — solo internet |
 
 **Separación crítica: INFRA vs MGMT**
 
@@ -169,10 +169,10 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 
 | Host | Interfaz | Rango asignado |
 |---|---|---|
-| docker-nas (nas-01) | vlan30 | 10.0.30.10–.25 |
-| docker-main (LXC pve-main) | eth0 | 10.0.30.26–.41 |
-| docker-aux (LXC pve-aux) | eth0 | 10.0.30.42–.57 |
-| DHCP dinámico | — | 10.0.30.100+ |
+| docker-nas (nas-01) | vlan30 | XX.XX |
+| docker-main (LXC pve-main) | eth0 | XX.XX |
+| docker-aux (LXC pve-aux) | eth0 | XX.XX |
+| DHCP dinámico | — | XX.XX+ |
 
 ### 3.6 Reglas de firewall (OPNsense) — políticas clave
 
@@ -396,7 +396,7 @@ vault  (~400GB — mirror SSD)
 
 ## 7. Acceso Remoto
 
-**Tailscale** funciona como subnet router plugin dentro de OPNsense, anunciando el rango completo `10.0.0.0/8`. Esto proporciona acceso a todas las VLANs y servicios desde cualquier dispositivo con cliente Tailscale.
+**Tailscale** funciona como subnet router plugin dentro de OPNsense, anunciando el rango completo `XX.XX`. Esto proporciona acceso a todas las VLANs y servicios desde cualquier dispositivo con cliente Tailscale.
 
 **Por qué Tailscale y no WireGuard tradicional:** El ISP usa CGNAT sin IPv4 pública. WireGuard tradicional requiere un endpoint público para recibir conexiones, lo que es imposible bajo CGNAT. Tailscale usa su servidor de coordinación para establecer túneles peer-to-peer mediante NAT traversal — sin necesidad de abrir puertos en el router ISP.
 

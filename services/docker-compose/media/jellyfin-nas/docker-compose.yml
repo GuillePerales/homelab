@@ -1,6 +1,6 @@
 # homelab/services/docker-compose/media/jellyfin-nas/docker-compose.yml
 # Jellyfin - servidor multimedia self-hosted
-# Host: docker-nas (nas-01) | IP: 10.0.30.24 | Port: 8096
+# Host: docker-nas (nas-01) | IP: XX.XX | Port: 8096
 # Ventaja sobre docker-main: acceso LOCAL a /mnt/tank sin salto NFS
 
 networks:

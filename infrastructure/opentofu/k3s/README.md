@@ -6,8 +6,8 @@ Provisioning de las VMs de Proxmox para el cluster K3s. Parte de Phase 4+.
 
 | Recurso | Nodo Proxmox | vCPU | RAM | Disco | IP |
 |---|---|---|---|---|---|
-| VM k3s-control | pve-main | 2 | 4GB | 40GB | 10.0.30.50 |
-| VM k3s-worker | pve-aux | 2 | 3GB | 40GB | 10.0.30.51 |
+| VM k3s-control | pve-main | 2 | 4GB | 40GB | XX.XX |
+| VM k3s-worker | pve-aux | 2 | 3GB | 40GB | XX.XX |
 
 ## Notas
 
