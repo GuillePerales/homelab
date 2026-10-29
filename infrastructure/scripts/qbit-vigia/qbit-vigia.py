@@ -4,12 +4,14 @@
 - Riesgo de H&R: un torrent privado completo que no está sembrando (parado, con error o
   sin ficheros) o que ha desaparecido antes de cumplir el seed mínimo de su tracker.
 - Torrent rechazado por el tracker (unregistered, passkey inválida, cuenta desactivada…).
-- qBittorrent no conectable (sin puerto reenviado) durante más de dos pasadas seguidas.
+- qBittorrent no conectable (sin puerto reenviado) durante dos pasadas seguidas: recrea el
+  proyecto de compose (Gluetun + qBittorrent) para que Gluetun coja otro servidor, como mucho
+  RECREAR_MAX_DIA veces al día; pasado ese límite solo avisa.
 - Resumen semanal: lo sembrado y lo subido por tracker, desde el lado del cliente.
 
 Lo lanza cada 15 min un cron de TrueNAS en nas-01. Habla con qBittorrent por `docker exec`
-contra 127.0.0.1, que entra sin contraseña (bypass_local_auth), y solo lee: nunca cambia
-nada en qBittorrent. Cada aviso se manda una vez; el estado vive en STATE_FILE.
+contra 127.0.0.1, que entra sin contraseña (bypass_local_auth), y solo lee: lo único que
+cambia es recrear los contenedores. Cada aviso se manda una vez; el estado vive en STATE_FILE.
 Configuración privada (no versionada): /mnt/vault/secrets/qbit-vigia.env
 Uso: qbit-vigia.py [--resumen]   (--resumen manda el resumen semanal ya, para probarlo)
 """
@@ -45,6 +47,10 @@ SEED_MIN = {k: float(v) for k, v in (p.split("=") for p in ENV.get("SEED_MINIMO"
 SEED_MIN_DEFECTO = float(ENV.get("SEED_MINIMO_DEFECTO", "72"))
 RESUMEN_DIA = int(ENV.get("RESUMEN_DIA", "0"))     # 0 = lunes
 RESUMEN_HORA = int(ENV.get("RESUMEN_HORA", "9"))
+# proyecto de compose de Gluetun + qBittorrent (directorio con su docker-compose.yml y .env)
+RECREAR_DIR = ENV.get("RECREAR_DIR", "/mnt/vault/apps/qbittorrent")
+RECREAR_PROYECTO = ENV.get("RECREAR_PROYECTO", "qbittorrent")
+RECREAR_MAX_DIA = int(ENV.get("RECREAR_MAX_DIA", "3"))
 
 SEMBRANDO = {"uploading", "stalledUP", "forcedUP", "queuedUP", "checkingUP"}
 RIESGO = {"stoppedUP", "pausedUP", "error", "missingFiles"}
@@ -62,6 +68,14 @@ def notify(topic, prioridad, etiquetas, titulo, mensaje):
     msg = {"topic": topic, "priority": prioridad, "tags": etiquetas, "title": titulo, "message": mensaje}
     req = urllib.request.Request(NTFY_URL, data=json.dumps(msg).encode(), headers={"Content-Type": "application/json"})
     urllib.request.urlopen(req, timeout=10)
+
+
+def recrear():
+    """Recrea Gluetun y qBittorrent: Gluetun vuelve a pedir servidor y puerto, y qBittorrent
+    se engancha a su red nueva (si solo se reinicia Gluetun, qBittorrent se queda sin red)."""
+    r = subprocess.run(["docker", "compose", "-p", RECREAR_PROYECTO, "up", "-d", "--force-recreate"],
+                       cwd=RECREAR_DIR, capture_output=True, text=True, timeout=600)
+    return r.returncode == 0, (r.stderr or r.stdout).strip()[-300:]
 
 
 def tracker_de(trackers):
@@ -139,7 +153,8 @@ def main():
                            "descarga otra vez el .torrent y vuelve a añadirlo para sembrar.")
     state["pendientes"] = nuevos_pendientes
 
-    # conectable: avisar a la segunda pasada seguida sin puerto (30 min con el cron de 15 min)
+    # conectable: a la segunda pasada seguida sin puerto (30 min con el cron de 15 min) recrear
+    # Gluetun + qBittorrent; si sigue igual, recrear en cada pasada hasta RECREAR_MAX_DIA al día
     info = qbit("transfer/info")
     fallos = state.get("conexion", 0)
     if info["connection_status"] == "connected":
@@ -149,10 +164,26 @@ def main():
         fallos = 0
     else:
         fallos += 1
-        if fallos == 2:
-            notify(TOPIC_ALERTAS, 3, ["warning"], "qBittorrent no conectable",
-                   f"Lleva más de 15 min en «{info['connection_status']}»: sin puerto reenviado no subes nada. "
-                   "Mira los logs de gluetun-qbittorrent; si Gluetun se reinició, recrea qBittorrent.")
+        if fallos >= 2:
+            recreados = state.get("recreados", {})
+            hechos = recreados.get("n", 0) if recreados.get("fecha") == hoy else 0
+            if hechos < RECREAR_MAX_DIA:
+                ok, salida = recrear()
+                state["recreados"] = {"fecha": hoy, "n": hechos + 1}
+                if ok:
+                    notify(TOPIC_ALERTAS, 3, ["arrows_counterclockwise"], "qBittorrent recreado",
+                           f"Llevaba más de 15 min en «{info['connection_status']}» (sin puerto reenviado). "
+                           f"Recreados Gluetun y qBittorrent para coger otro servidor "
+                           f"({hechos + 1}/{RECREAR_MAX_DIA} hoy).")
+                else:
+                    notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
+                           f"Falló la recreación automática: {salida}")
+            elif hechos == RECREAR_MAX_DIA:
+                state["recreados"] = {"fecha": hoy, "n": hechos + 1}
+                notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
+                       f"Sigue en «{info['connection_status']}» tras {RECREAR_MAX_DIA} recreaciones hoy: "
+                       "no lo vuelvo a intentar hasta mañana. Mira los logs de gluetun-qbittorrent "
+                       "(¿caída de ProtonVPN o de su reenvío de puertos?).")
     state["conexion"] = fallos
 
     # resumen semanal por tracker (lo que ve el cliente, no la cifra oficial del tracker)
