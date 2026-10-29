@@ -23,5 +23,8 @@
       "Bash(*smartctl -t*)",
       "Bash(*syncoid*)"
     ]
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true
   }
 }
