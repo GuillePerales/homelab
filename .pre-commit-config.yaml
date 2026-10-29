@@ -21,3 +21,8 @@ repos:
         language: system
         pass_filenames: false
         files: (^|/)sops\.env$
+      - id: readme-check
+        name: readme-check (README público sin IPs, rutas ni dominios internos)
+        entry: bash infrastructure/scripts/readme-check/readme-check.sh
+        language: system
+        files: ^README(-es)?\.md$
