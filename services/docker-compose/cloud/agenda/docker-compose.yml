@@ -1,0 +1,41 @@
+# agenda — crea citas en el calendario de iCloud (CalDAV) desde Obsidian y la terminal
+# Solo escribe en iCloud: no toca el vault. Credenciales en el .env real (contraseña de app).
+networks:
+  srv-net:
+    external: true
+services:
+  agenda:
+    container_name: agenda
+    image: python:3.13.3-slim
+    # Las dependencias van a /tmp (tmpfs): el contenedor corre sin root y con el sistema de ficheros de solo lectura
+    command: >
+      sh -c "pip install -q --no-cache-dir --target /tmp/pylib -r /app/requirements.txt
+      && export PYTHONPATH=/tmp/pylib && exec python /app/agenda.py run"
+    restart: unless-stopped
+    user: "3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=100m,exec
+    labels:
+      # Tags tipo 3.13.3-slim: diun solo vigila los de la rama 3.13
+      - 'diun.include_tags=^3\.13\.\d+-slim$$'
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - TZ=${TZ}
+      - ICLOUD_USER=${ICLOUD_USER}
+      - ICLOUD_PASS=${ICLOUD_PASS}
+      - CALENDARIOS=${CALENDARIOS}
+      - CALENDARIO_DEFECTO=${CALENDARIO_DEFECTO}
+    volumes:
+      - ./agenda.py:/app/agenda.py:ro
+      - ./requirements.txt:/app/requirements.txt:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8080/health', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
