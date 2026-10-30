@@ -21,7 +21,7 @@ declare -A SERVICES=(
 
 # Ficheros montados con ruta relativa, además del compose
 declare -A EXTRA_FILES=(
-  ["agenda"]="agenda.py requirements.txt"
+  ["agenda"]="agenda.py"
 )
 
 for svc in "${!SERVICES[@]}"; do
