@@ -7,15 +7,12 @@ services:
   agenda:
     container_name: agenda
     image: python:3.13.3-slim
-    # Las dependencias van a /tmp (tmpfs): el contenedor corre sin root y con el sistema de ficheros de solo lectura
-    command: >
-      sh -c "pip install -q --no-cache-dir --target /tmp/pylib -r /app/requirements.txt
-      && export PYTHONPATH=/tmp/pylib && exec python /app/agenda.py run"
+    command: ["python", "/app/agenda.py", "run"]
     restart: unless-stopped
     user: "3000:3000"
     read_only: true
     tmpfs:
-      - /tmp:size=100m,exec
+      - /tmp:size=16m
     labels:
       # Tags tipo 3.13.3-slim: diun solo vigila los de la rama 3.13
       - 'diun.include_tags=^3\.13\.\d+-slim$$'
@@ -32,7 +29,6 @@ services:
       - CALENDARIO_DEFECTO=${CALENDARIO_DEFECTO}
     volumes:
       - ./agenda.py:/app/agenda.py:ro
-      - ./requirements.txt:/app/requirements.txt:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8080/health', timeout=5)"]
       interval: 60s
