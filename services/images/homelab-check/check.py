@@ -25,12 +25,16 @@ def check(url: str, timeout: float) -> str | None:
 
 
 def notify(ntfy_url: str, message: str) -> None:
+    """Un fallo de ntfy no debe tumbar el bucle: se registra y se sigue comprobando."""
     req = urllib.request.Request(
         ntfy_url,
         data=message.encode(),
         headers={"Title": "homelab-check", "Priority": "4"},
     )
-    urllib.request.urlopen(req, timeout=5).close()
+    try:
+        urllib.request.urlopen(req, timeout=5).close()
+    except Exception as exc:  # noqa: BLE001 - ntfy caído o inaccesible
+        print(f"ntfy no disponible: {exc}", file=sys.stderr, flush=True)
 
 
 def run_round(urls: list[str], timeout: float) -> dict[str, str]:
