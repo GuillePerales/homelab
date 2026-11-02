@@ -31,9 +31,10 @@ steps:
     environment:
       PROXMOX_VE_ENDPOINT: https://10.0.5.12:8006
       PROXMOX_VE_INSECURE: "true"
-      PROXMOX_TOKEN_ID:
+      # OpenTofu solo lee variables del entorno con el prefijo TF_VAR_ (variables del README)
+      TF_VAR_proxmox_api_token_id:
         from_secret: proxmox_token_id
-      PROXMOX_TOKEN_SECRET:
+      TF_VAR_proxmox_api_token_secret:
         from_secret: proxmox_token_secret
     commands:
       - cd infrastructure/opentofu/proxmox
