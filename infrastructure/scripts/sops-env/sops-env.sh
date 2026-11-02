@@ -69,9 +69,10 @@ cmd_diff() {
 cmd_push() {
   local dir path; dir=$(service_dir "$1"); path=$(printf %q "$3")
   [ -f "$dir/$NAME" ] || die "no hay $NAME en ${dir#"$REPO"/}"
-  # cat > sigue los enlaces: algunos .env de los hosts son enlaces y deben seguir siéndolo
+  # cat > sigue los enlaces: algunos .env de los hosts son enlaces y deben seguir siéndolo.
+  # umask antes del cp: la copia .bak lleva los secretos en claro y no debe quedar legible por otros
   decrypt "$dir/$NAME" | ssh -o BatchMode=yes "$2" \
-    "set -e; [ ! -e $path ] || cp -L $path $path.bak-\$(date +%F-%H%M); umask 077; cat > $path"
+    "set -e; umask 077; [ ! -e $path ] || cp -L $path $path.bak-\$(date +%F-%H%M); cat > $path"
   echo "escrito en $2:$3; aplicar con docker compose up -d (o Portainer)"
 }
 
