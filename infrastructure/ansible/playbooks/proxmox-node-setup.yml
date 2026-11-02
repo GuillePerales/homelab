@@ -47,7 +47,10 @@
       community.general.timezone:
         name: "{{ timezone }}"
 
+    # /root/.ssh/authorized_keys es un enlace a /etc/pve/priv/authorized_keys (compartido
+    # por el clúster): sin follow, el módulo sustituiría el enlace por un fichero normal
     - name: Add authorized SSH key
       ansible.posix.authorized_key:
         user: root
+        follow: true
         key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/homelab_ed25519.pub') }}"
