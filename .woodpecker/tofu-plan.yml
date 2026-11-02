@@ -3,10 +3,12 @@
 # con la API de Proxmox), por eso sigue en Woodpecker, que corre dentro del
 # homelab. El lint y el sops-check del repo viven en GitHub Actions.
 # Nota: hoy infrastructure/opentofu/proxmox no tiene código .tf, así que no se
-# ejecuta hasta que exista. Woodpecker escucha al espejo de Forgejo.
+# ejecuta hasta que exista. Woodpecker escucha al espejo de Forgejo, que replica
+# ramas pero no pull requests: por eso el evento es push (el plan corre al
+# sincronizar cada rama que toque infrastructure/opentofu/).
 
 when:
-  event: pull_request
+  event: push
   path:
     include: ["infrastructure/opentofu/**"]
 
@@ -39,4 +41,4 @@ steps:
       - tofu plan -no-color -out=tfplan
       - tofu show -no-color tfplan
     when:
-      - event: pull_request
+      - event: push
