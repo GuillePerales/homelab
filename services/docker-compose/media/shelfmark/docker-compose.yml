@@ -1,0 +1,34 @@
+# homelab/services/docker-compose/media/shelfmark/docker-compose.yml
+# Shelfmark — buscador y descargador de libros (Anna's Archive y espejos; admite también Prowlarr).
+# Deja cada libro en la carpeta de ingesta de Calibre-Web Automated, que lo importa a la biblioteca.
+# Sin puerto entrante: sale a internet por el túnel de OPNsense (alias VPN_HOSTS), no por Gluetun.
+# .env (sin secretos; la cuenta se crea en la web): PUID, PGID, TZ, CONTAINER_IP, APPDATA,
+# INGEST_DIR y CALIBRE_LIBRARY (las mismas que CWA), BOOK_LANGUAGE (p. ej. es) y CALIBRE_WEB_URL.
+networks:
+  srv-net:
+    external: true
+
+services:
+  shelfmark:
+    image: ghcr.io/calibrain/shelfmark:v1.6.1
+    container_name: shelfmark
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    # Chromium resuelve los retos de Cloudflare en las descargas directas: necesita ~2 GiB
+    mem_limit: 2g
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - BOOK_LANGUAGE=${BOOK_LANGUAGE}
+      - CALIBRE_WEB_URL=${CALIBRE_WEB_URL}
+      # Marca en los resultados los libros que ya están en la biblioteca (solo lectura)
+      - LIBRARY_CHECK_CALIBRE_ENABLED=true
+      - CALIBRE_LIBRARY_DB_PATH=/calibre-library/metadata.db
+    volumes:
+      - ${APPDATA}:/config
+      # Carpeta de ingesta de CWA: lo que se descarga aquí lo importa CWA
+      - ${INGEST_DIR}:/books
+      - ${CALIBRE_LIBRARY}:/calibre-library:ro

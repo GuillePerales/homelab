@@ -38,7 +38,7 @@ Personal homelab managed entirely as Infrastructure as Code. Two parallel object
 |---|---|
 | NAS | TrueNAS Scale on Dell R230 |
 | Storage | ZFS pools: `tank` (HDD stripe) + `vault` (SSD mirror) |
-| Media stack | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated — all operational |
+| Media stack | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated, Shelfmark — all operational |
 | Backup | Proxmox Backup Server (PBS) in Docker on NAS |
 | Sync | Syncthing for mobile device sync |
 
@@ -270,6 +270,9 @@ Categories:
 | media-qbittorrent-01 | qBittorrent | docker-nas | Docker macvlan | 8080 | ✅ Operational | Web download client (routed through ProtonVPN) |
 | media-cwa-01 | Calibre-Web Automated | docker-nas | Docker macvlan | 8083 | ✅ Operational | Ebook library with automatic ingestion and format conversion |
 | media-jdownloader-01 | JDownloader 2 | docker-nas | Docker macvlan | 5800 | ✅ Operational | Direct download manager |
+| media-mularr-01 | Mularr | docker-nas | Docker macvlan | 8940 | ✅ Operational | aMule (eD2k) bridged to Sonarr and Radarr as download client and indexer (behind its own Gluetun) |
+| media-crossseed-01 | cross-seed | docker-nas | Docker | — | ✅ Operational | Finds the same torrents on other trackers and seeds them from existing files |
+| media-shelfmark-01 | Shelfmark | docker-nas | Docker macvlan | 8084 | ✅ Operational | Ebook search and download, feeding the Calibre-Web Automated ingest folder |
 
 ### 4.7 DevOps (VLAN 30 — SRV)
 
