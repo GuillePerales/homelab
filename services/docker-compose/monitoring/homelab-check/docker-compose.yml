@@ -7,6 +7,9 @@ services:
     container_name: homelab-check
     image: ${REGISTRY}/root/homelab-check:${IMAGE_TAG}
     restart: unless-stopped
+    labels:
+      # diun no puede listar los tags del registro de Forgejo (HTTP, no HTTPS): la versión se cambia a mano con IMAGE_TAG
+      - "diun.enable=false"
     read_only: true
     cap_drop:
       - ALL
