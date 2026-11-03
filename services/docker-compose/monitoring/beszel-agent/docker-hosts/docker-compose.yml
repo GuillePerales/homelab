@@ -5,6 +5,8 @@
 # Red del host: el agente necesita ver las interfaces reales. Solo conexión saliente al hub (DISABLE_SSH).
 # .env (secretos en sops.env): HUB_URL, TOKEN (token universal del hub), KEY (clave pública del hub),
 # SYSTEM_NAME (nombre del sistema en el hub), APPDATA (/opt/appdata/beszel-agent)
+# sops.env es el de docker-main. docker-aux no monta el clon del NAS: lleva una copia de este compose
+# en /opt/beszel-agent con el mismo .env salvo SYSTEM_NAME=docker-aux y APPDATA=/opt/beszel-agent.
 services:
   beszel-agent:
     container_name: beszel-agent
