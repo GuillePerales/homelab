@@ -232,6 +232,16 @@ Categories:
 
 ### 4.4 Monitoring (VLAN 30 — SRV)
 
+Running on `docker-main` (diun also on `docker-nas`):
+
+| ID | Service | Host | Port | Status | Function |
+|---|---|---|---|---|---|
+| mon-ntfy-01 | ntfy | docker-main | 80 | ✅ Operational | Single alert channel (Proxmox, PBS, TrueNAS, scripts and services) |
+| mon-gatus-01 | Gatus | docker-main | 8080 | ✅ Operational | Service availability checks with ntfy alerts |
+| mon-diun-01 | diun | docker-main, docker-nas | — | ✅ Operational | Notifies ntfy of new versions of the images in use (no auto-update) |
+| mon-homarr-01 | Homarr | docker-main | 7575 | ✅ Operational | Homelab dashboard |
+| mon-check-01 | homelab-check | docker-main | — | ✅ Operational | Custom image (build → Trivy → Forgejo registry) that checks URLs and alerts ntfy |
+
 > Phase 8 — planned on `docker-aux`, macvlan range `.42–.57`
 
 | ID | Service | Host | Port | Function |
@@ -253,6 +263,7 @@ Categories:
 | app-immich-01 | Immich | docker-nas | Docker macvlan | ✅ Photo/video management (Google Photos alternative) |
 | app-syncthing-01 | Syncthing | docker-nas | Docker macvlan | ✅ P2P file sync to mobile devices |
 | app-paperless-01 | Paperless-ngx | docker-main | Docker | Document management with OCR |
+| app-agenda-01 | Agenda | docker-main | Docker macvlan | ✅ Small custom API to create iCloud calendar events (CalDAV) from Obsidian and the terminal |
 
 ### 4.6 Media (VLAN 30 — SRV)
 
@@ -269,7 +280,7 @@ Categories:
 | arr-bazarr-01 | Bazarr | docker-nas | Docker macvlan | 6767 | ✅ Operational | Automatic subtitle downloads |
 | media-qbittorrent-01 | qBittorrent | docker-nas | Docker macvlan | 8080 | ✅ Operational | Web download client (routed through ProtonVPN) |
 | media-cwa-01 | Calibre-Web Automated | docker-nas | Docker macvlan | 8083 | ✅ Operational | Ebook library with automatic ingestion and format conversion |
-| media-jdownloader-01 | JDownloader 2 | docker-nas | Docker macvlan | 5800 | ✅ Operational | Direct download manager |
+| media-jdownloader-01 | JDownloader 2 | docker-nas | Docker macvlan | 5800 | ⏸️ On demand | Direct download manager (stopped; started when needed) |
 | media-mularr-01 | Mularr | docker-nas | Docker macvlan | 8940 | ✅ Operational | aMule (eD2k) bridged to Sonarr and Radarr as download client and indexer (behind its own Gluetun) |
 | media-crossseed-01 | cross-seed | docker-nas | Docker | — | ✅ Operational | Finds the same torrents on other trackers and seeds them from existing files |
 | media-shelfmark-01 | Shelfmark | docker-nas | Docker macvlan | 8084 | ✅ Operational | Ebook search and download, feeding the Calibre-Web Automated ingest folder |
@@ -322,7 +333,7 @@ Categories:
 - `ai-openclaw-01` (LXC, 4GB) — AI agent *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker
+- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, homelab-check
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB after Phase 4+) ✅ — Monitoring, cloud services

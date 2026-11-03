@@ -123,6 +123,8 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install ansible-lint==26.10.1
+      # ansible-lint no resuelve los módulos de estas colecciones sin instalarlas
+      - run: ansible-galaxy collection install ansible.posix community.docker community.general
       - run: ansible-lint infrastructure/ansible/
 
   # Único check requerido en la protección de rama
