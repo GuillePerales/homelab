@@ -1,0 +1,5 @@
+# infrastructure/ansible/inventory/host_vars/docker-main.yml
+---
+# Registro de Forgejo por HTTP: sin esto Docker no puede descargar homelab-check
+docker_insecure_registries:
+  - 10.0.30.28:3000
