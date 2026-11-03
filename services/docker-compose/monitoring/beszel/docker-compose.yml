@@ -19,6 +19,8 @@ services:
     environment:
       - APP_URL=http://${CONTAINER_IP}:8090
       - DISABLE_SSH=true
+      # Homarr lee con un usuario readonly: así ve todas las máquinas sin poder editarlas
+      - SHARE_ALL_SYSTEMS=true
       - TZ=${TZ}
     volumes:
       - ${APPDATA}/data:/beszel_data
