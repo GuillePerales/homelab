@@ -150,9 +150,26 @@ STEP="subida a Proton Drive"
 # Un fichero cada vez y con reintentos: Proton responde con 502 sueltos. Los paquetes de
 # restic no cambian una vez escritos, así que cada noche solo sube lo nuevo.
 # replace-existing-draft: si una subida anterior dejó el fichero a medias, se reemplaza.
-with_stall_guard nice -n 19 ionice -c3 rclone sync "$RESTIC_REPOSITORY" "$RCLONE_DEST" \
-  --transfers 1 --checkers 2 --retries 10 --retries-sleep 30s --low-level-retries 20 \
-  --protondrive-replace-existing-draft --stats 10m --stats-one-line -v
+upload_proton() {
+  with_stall_guard nice -n 19 ionice -c3 rclone sync "$RESTIC_REPOSITORY" "$RCLONE_DEST" \
+    --transfers 1 --checkers 2 --retries "${PROTON_RETRIES:-3}" --retries-sleep 30s \
+    --low-level-retries 20 --protondrive-replace-existing-draft --stats 10m --stats-one-line -v
+}
+log_start=$(wc -l <"$LOG")
+if ! upload_proton; then
+  # Tras un 400 o 502 suelto, Proton deja el fichero como borrador roto y todos los
+  # reintentos dan 422 «ya existe» sobre él (2026-10-28, 10-30, 11-01 y 11-02: ~2 h
+  # perdidas y fallo de la noche). Se borra solo ese borrador remoto, que la copia local
+  # sigue teniendo, y se vuelve a subir una vez.
+  mapfile -t rotos < <(tail -n +"$((log_start + 1))" "$LOG" \
+    | sed -nE 's/.* ERROR : ([^ ]+): Failed to copy: (400|422|502).*/\1/p' | sort -u)
+  [ "${#rotos[@]}" -gt 0 ] || false
+  for f in "${rotos[@]}"; do
+    echo "$(date -Is) borrando el borrador roto en Proton: $f"
+    rclone deletefile "$RCLONE_DEST/$f" || true
+  done
+  upload_proton
+fi
 
 STEP="comprobación de Proton Drive"
 if [ "$(date +%d)" = 01 ]; then
