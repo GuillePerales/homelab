@@ -241,8 +241,8 @@ Running on `docker-main` (diun also on `docker-nas`):
 | mon-diun-01 | diun | docker-main, docker-nas | — | ✅ Operational | Notifies ntfy of new versions of the images in use (no auto-update) |
 | mon-homarr-01 | Homarr | docker-main | 7575 | ✅ Operational | Homelab dashboard |
 | mon-check-01 | homelab-check | docker-main | — | ✅ Operational | Custom image (build → Trivy → Forgejo registry) that checks URLs and alerts ntfy |
-| mon-beszel-01 | Beszel (hub + agents) | docker-main; agents on every node, the NAS and the Docker LXCs | 8090 | 🚧 In progress | Hardware monitoring: CPU, RAM, load, network, temperatures, S.M.A.R.T. and per-container usage, with history |
-| mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | 🚧 In progress | Scheduled Internet speed tests (every 6 h); moved forward from Phase 8 |
+| mon-beszel-01 | Beszel (hub + agents) | docker-main; agents on every node, the NAS and the Docker LXCs | 8090 | ✅ Operational | Hardware monitoring: CPU, RAM, load, network, temperatures, S.M.A.R.T. and per-container usage, with history |
+| mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | ✅ Operational | Scheduled Internet speed tests (every 6 h); moved forward from Phase 8 |
 
 > Phase 8 — planned on `docker-aux`, macvlan range `.42–.57`
 
