@@ -1,0 +1,116 @@
+# infrastructure/ansible/playbooks/beszel-agent.yml
+# Agente binario de Beszel en los nodos de Proxmox (sin Docker en el host), como servicio systemd
+# con un usuario sin privilegios. S.M.A.R.T. por capacidades ambientales, no como root.
+# Solo conexión saliente al hub por WebSocket: no abre puertos (DISABLE_SSH).
+# Los secretos no viven en el repo: se pasan por entorno al lanzar el playbook.
+#   BESZEL_HUB_URL=… BESZEL_TOKEN=… BESZEL_KEY=… ansible-playbook playbooks/beszel-agent.yml
+# Actualizar: cambiar beszel_version y beszel_sha256 (de beszel_<versión>_checksums.txt de la release).
+---
+- name: Install Beszel agent on Proxmox nodes
+  hosts: proxmox
+  vars:
+    beszel_version: "0.21.1"
+    beszel_sha256: "3b6ee592632ec03b9a43312e99a40203a7b3d83fe40dd0c25acda1eb915ea7c0"
+    beszel_hub_url: "{{ lookup('env', 'BESZEL_HUB_URL') }}"
+    beszel_token: "{{ lookup('env', 'BESZEL_TOKEN') }}"
+    beszel_key: "{{ lookup('env', 'BESZEL_KEY') }}"
+
+  tasks:
+    - name: Check secrets
+      ansible.builtin.assert:
+        that: [beszel_hub_url | length > 0, beszel_token | length > 0, beszel_key | length > 0]
+        fail_msg: "Faltan BESZEL_HUB_URL, BESZEL_TOKEN o BESZEL_KEY en el entorno"
+
+    - name: Create beszel system user
+      ansible.builtin.user:
+        name: beszel
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Create agent directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: beszel
+        group: beszel
+        mode: "0750"
+      loop: [/opt/beszel-agent, /var/lib/beszel-agent]
+
+    - name: Download agent release
+      ansible.builtin.get_url:
+        url: "https://github.com/henrygd/beszel/releases/download/v{{ beszel_version }}/beszel-agent_linux_amd64.tar.gz"
+        dest: "/opt/beszel-agent/beszel-agent-{{ beszel_version }}.tar.gz"
+        checksum: "sha256:{{ beszel_sha256 }}"
+        mode: "0640"
+
+    - name: Unpack agent binary
+      ansible.builtin.unarchive:
+        src: "/opt/beszel-agent/beszel-agent-{{ beszel_version }}.tar.gz"
+        dest: /opt/beszel-agent
+        remote_src: true
+        include: [beszel-agent]
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Restart beszel-agent
+
+    - name: Write agent environment (secrets)
+      ansible.builtin.copy:
+        dest: /etc/beszel-agent.env
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          HUB_URL={{ beszel_hub_url }}
+          TOKEN={{ beszel_token }}
+          KEY={{ beszel_key }}
+          SYSTEM_NAME={{ inventory_hostname }}
+          DISABLE_SSH=true
+          DATA_DIR=/var/lib/beszel-agent
+          SMART_INTERVAL=1h
+      no_log: true
+      notify: Restart beszel-agent
+
+    - name: Install systemd unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/beszel-agent.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Beszel agent
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          EnvironmentFile=/etc/beszel-agent.env
+          ExecStart=/opt/beszel-agent/beszel-agent
+          User=beszel
+          Group=beszel
+          SupplementaryGroups=disk
+          AmbientCapabilities=CAP_SYS_RAWIO CAP_SYS_ADMIN
+          CapabilityBoundingSet=CAP_SYS_RAWIO CAP_SYS_ADMIN
+          Restart=on-failure
+          RestartSec=5
+          StateDirectory=beszel-agent
+          ProtectSystem=strict
+          ProtectHome=read-only
+          PrivateTmp=true
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Restart beszel-agent
+
+    - name: Enable and start agent
+      ansible.builtin.systemd_service:
+        name: beszel-agent
+        enabled: true
+        state: started
+        daemon_reload: true
+
+  handlers:
+    - name: Restart beszel-agent
+      ansible.builtin.systemd_service:
+        name: beszel-agent
+        state: restarted
+        daemon_reload: true

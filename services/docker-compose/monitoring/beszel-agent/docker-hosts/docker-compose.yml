@@ -1,0 +1,30 @@
+---
+# Agente de Beszel para los LXC con Docker (docker-main, docker-aux): CPU, RAM, red y disco del LXC
+# y CPU/RAM de cada contenedor. Los nodos de Proxmox llevan el agente binario (Ansible, beszel-agent.yml)
+# y el NAS su propio compose (../nas-01) con S.M.A.R.T.
+# Red del host: el agente necesita ver las interfaces reales. Solo conexión saliente al hub (DISABLE_SSH).
+# .env (secretos en sops.env): HUB_URL, TOKEN (token universal del hub), KEY (clave pública del hub),
+# SYSTEM_NAME (nombre del sistema en el hub), APPDATA (/opt/appdata/beszel-agent)
+services:
+  beszel-agent:
+    container_name: beszel-agent
+    image: henrygd/beszel-agent:0.21.1
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - HUB_URL=${HUB_URL}
+      - TOKEN=${TOKEN}
+      - KEY=${KEY}
+      - SYSTEM_NAME=${SYSTEM_NAME}
+      - DISABLE_SSH=true
+      - DOCKER_IMAGE_CHECK=false   # diun ya avisa de versiones nuevas
+    volumes:
+      - ${APPDATA}/data:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt:
+      - no-new-privileges
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 120s
+      timeout: 5s
+      retries: 3

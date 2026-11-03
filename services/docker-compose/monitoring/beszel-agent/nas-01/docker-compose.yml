@@ -1,0 +1,39 @@
+---
+# Agente de Beszel en el NAS (TrueNAS Scale): CPU, RAM, red, temperaturas, contenedores,
+# uso de los pools y S.M.A.R.T. de los cuatro discos SATA.
+# Imagen :alpine porque trae smartctl; SYS_RAWIO basta para SATA (no hay NVMe).
+# Los pools se montan en solo lectura en /extra-filesystems para que el agente mida su uso.
+# .env (secretos en sops.env): HUB_URL, TOKEN, KEY, SYSTEM_NAME, APPDATA (/mnt/vault/apps/beszel-agent)
+services:
+  beszel-agent:
+    container_name: beszel-agent
+    image: henrygd/beszel-agent:0.21.1-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - HUB_URL=${HUB_URL}
+      - TOKEN=${TOKEN}
+      - KEY=${KEY}
+      - SYSTEM_NAME=${SYSTEM_NAME}
+      - DISABLE_SSH=true
+      - DOCKER_IMAGE_CHECK=false   # diun ya avisa de versiones nuevas
+      - SMART_INTERVAL=1h
+    volumes:
+      - ${APPDATA}/data:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/vault:/extra-filesystems/vault:ro
+      - /mnt/tank:/extra-filesystems/tank:ro
+    devices:
+      - /dev/sda:/dev/sda
+      - /dev/sdb:/dev/sdb
+      - /dev/sdc:/dev/sdc
+      - /dev/sdd:/dev/sdd
+    cap_add:
+      - SYS_RAWIO
+    security_opt:
+      - no-new-privileges
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 120s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,32 @@
+---
+# Beszel (hub) — monitorización de hardware del homelab en docker-main
+# Proyecto de compose "beszel" (enlace desde /opt/appdata/beszel/compose). Los agentes se conectan al hub
+# por WebSocket con el token universal (HUB_URL + TOKEN): el hub no abre SSH hacia nadie (DISABLE_SSH).
+# Homarr lo lee con la integración de Beszel (tabla de sistemas y tablero de hardware).
+# .env: CONTAINER_IP (macvlan de srv-net), TZ, APPDATA (/opt/appdata/beszel). Sin secretos: el usuario
+# administrador se crea en la web en el primer arranque.
+networks:
+  srv-net:
+    external: true
+services:
+  beszel:
+    container_name: beszel
+    image: henrygd/beszel:0.21.1
+    restart: unless-stopped
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - APP_URL=http://${CONTAINER_IP}:8090
+      - DISABLE_SSH=true
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/data:/beszel_data
+    security_opt:
+      - no-new-privileges
+    healthcheck:
+      test: ["CMD", "/beszel", "health", "--url", "http://localhost:8090"]
+      start_period: 10s
+      timeout: 5s
+      interval: 120s
+      retries: 3
