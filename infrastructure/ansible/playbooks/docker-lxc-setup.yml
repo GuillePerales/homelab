@@ -39,16 +39,16 @@
       ansible.builtin.copy:
         dest: /etc/docker/daemon.json
         mode: "0644"
-        content: |
-          {
-            "data-root": "/var/lib/docker",
-            "log-driver": "json-file",
-            "log-opts": {
-              "max-size": "10m",
-              "max-file": "3"
-            },
-            "storage-driver": "overlay2"
-          }
+        content: "{{ docker_daemon_config | to_nice_json(indent=2, sort_keys=False) }}\n"
+      vars:
+        docker_daemon_config: >-
+          {{ {
+            'data-root': '/var/lib/docker',
+            'log-driver': 'json-file',
+            'log-opts': {'max-size': '10m', 'max-file': '3'},
+            'storage-driver': 'overlay2'
+          } | combine({'insecure-registries': docker_insecure_registries}
+                      if docker_insecure_registries | default([]) | length > 0 else {}) }}
       notify: Restart Docker
 
     - name: Enable and start Docker
