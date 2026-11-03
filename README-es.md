@@ -241,6 +241,8 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | mon-diun-01 | diun | docker-main, docker-nas | — | ✅ Operativo | Avisa a ntfy de versiones nuevas de las imágenes en uso (no actualiza) |
 | mon-homarr-01 | Homarr | docker-main | 7575 | ✅ Operativo | Dashboard del homelab |
 | mon-check-01 | homelab-check | docker-main | — | ✅ Operativo | Imagen propia (build → Trivy → registro de Forgejo) que comprueba URLs y avisa a ntfy |
+| mon-beszel-01 | Beszel (hub + agentes) | docker-main; agentes en cada nodo, el NAS y los LXC con Docker | 8090 | 🚧 En curso | Monitorización de hardware: CPU, RAM, carga, red, temperaturas, S.M.A.R.T. y uso por contenedor, con historial |
+| mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | 🚧 En curso | Tests programados de velocidad a Internet (cada 6 h); adelantado de la fase 8 |
 
 > Phase 8 — planificado en `docker-aux`, rango macvlan `.42–.57`
 
@@ -250,7 +252,6 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | mon-grafana-01 | Grafana | docker-aux | 3001 | Dashboards — métricas DORA, salud de infra |
 | mon-loki-01 | Loki | docker-aux | 3100 | Agregación centralizada de logs |
 | mon-uptime-01 | Uptime Kuma | docker-aux | 3002 | Monitorización de disponibilidad |
-| mon-speedtest-01 | Speedtest Tracker | docker-aux | 8765 | Tests de velocidad automatizados |
 | mon-homepage-01 | Homepage | docker-aux | 3003 | Dashboard de inicio |
 | mon-nodeexp-01 | Node Exporter | Todos los hosts | 9100 | Métricas CPU, RAM, disco |
 | mon-ipmi-01 | IPMI Exporter | docker-aux | 9290 | Métricas de hardware Dell |
@@ -333,7 +334,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — Agente IA *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, homelab-check
+- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, homelab-check, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB tras Phase 4+) ✅ — Monitorización, servicios cloud

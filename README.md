@@ -241,6 +241,8 @@ Running on `docker-main` (diun also on `docker-nas`):
 | mon-diun-01 | diun | docker-main, docker-nas | — | ✅ Operational | Notifies ntfy of new versions of the images in use (no auto-update) |
 | mon-homarr-01 | Homarr | docker-main | 7575 | ✅ Operational | Homelab dashboard |
 | mon-check-01 | homelab-check | docker-main | — | ✅ Operational | Custom image (build → Trivy → Forgejo registry) that checks URLs and alerts ntfy |
+| mon-beszel-01 | Beszel (hub + agents) | docker-main; agents on every node, the NAS and the Docker LXCs | 8090 | 🚧 In progress | Hardware monitoring: CPU, RAM, load, network, temperatures, S.M.A.R.T. and per-container usage, with history |
+| mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | 🚧 In progress | Scheduled Internet speed tests (every 6 h); moved forward from Phase 8 |
 
 > Phase 8 — planned on `docker-aux`, macvlan range `.42–.57`
 
@@ -250,7 +252,6 @@ Running on `docker-main` (diun also on `docker-nas`):
 | mon-grafana-01 | Grafana | docker-aux | 3001 | Dashboards — DORA metrics, infra health |
 | mon-loki-01 | Loki | docker-aux | 3100 | Centralized log aggregation |
 | mon-uptime-01 | Uptime Kuma | docker-aux | 3002 | Service availability monitoring |
-| mon-speedtest-01 | Speedtest Tracker | docker-aux | 8765 | Automated speed tests |
 | mon-homepage-01 | Homepage | docker-aux | 3003 | Landing dashboard |
 | mon-nodeexp-01 | Node Exporter | All hosts | 9100 | CPU, RAM, disk metrics |
 | mon-ipmi-01 | IPMI Exporter | docker-aux | 9290 | Dell hardware metrics |
@@ -333,7 +334,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — AI agent *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, homelab-check
+- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, homelab-check, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB after Phase 4+) ✅ — Monitoring, cloud services
