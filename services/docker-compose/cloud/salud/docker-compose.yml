@@ -1,0 +1,39 @@
+# salud — descarga cada día por la API personal de Garmin Connect las métricas (sueño, FC, HRV, Body Battery,
+# estrés, SpO2, actividad) a SQLite y las sirve por HTTP al panel de Salud de Obsidian.
+# No toca el vault. Tokens de Garmin y base de datos en ${APPDATA}/data.
+networks:
+  srv-net:
+    external: true
+services:
+  salud:
+    container_name: salud
+    image: python:3.13.3-slim
+    command: ["python", "/app/salud.py", "run"]
+    restart: unless-stopped
+    user: "3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    labels:
+      # Tags tipo 3.13.3-slim: diun solo vigila los de la rama 3.13
+      - 'diun.include_tags=^3\.13\.\d+-slim$$'
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+    environment:
+      - TZ=${TZ}
+      - GARMIN_API_KEY=${GARMIN_API_KEY}
+      - SYNC_HORAS=${SYNC_HORAS}
+      - NTFY_URL=${NTFY_URL}
+      - DATOS=/data
+    volumes:
+      - ./salud.py:/app/salud.py:ro
+      - ${APPDATA}/data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8080/health', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

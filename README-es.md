@@ -265,6 +265,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | app-syncthing-01 | Syncthing | docker-nas | Docker macvlan | ✅ Sync P2P con dispositivos móviles |
 | app-paperless-01 | Paperless-ngx | docker-main | Docker | Gestión documental con OCR |
 | app-agenda-01 | Agenda | docker-main | Docker macvlan | ✅ API propia para crear citas en el calendario de iCloud (CalDAV) desde Obsidian y la terminal |
+| app-salud-01 | Salud | docker-main | Docker macvlan | ✅ API propia que descarga a diario las métricas del Garmin (API personal de Garmin Connect) a SQLite para un panel de salud en Obsidian |
 
 ### 4.6 Multimedia (VLAN 30 — SRV)
 
@@ -334,7 +335,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — Agente IA *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, homelab-check, Beszel, Speedtest Tracker
+- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB tras Phase 4+) ✅ — Monitorización, servicios cloud
