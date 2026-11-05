@@ -1,26 +1,37 @@
 #!/usr/bin/env python3
-"""Métricas diarias de Garmin Connect (API personal) a SQLite, servidas por HTTP al panel de Salud.
+"""Métricas de Garmin Connect (API personal) a SQLite, servidas por HTTP al panel de Salud.
 
   salud.py sync [días]          descarga los últimos días (por defecto 3)
   salud.py backfill <días>      descarga el histórico hacia atrás, por bloques
   salud.py dia AAAA-MM-DD       muestra el registro guardado de un día
   salud.py remapear             rehace los registros desde las respuestas originales guardadas
+  salud.py refit                vuelve a procesar los FIT guardados (tras cambiar procesar_fit())
   salud.py crudo AAAA-MM-DD     vuelca lo que devuelve Garmin para un día (depurar)
   salud.py run                  servidor HTTP + sincronización a las SYNC_HORAS (modo contenedor)
 
-HTTP: GET /health · GET /estado · GET /dias?desde=AAAA-MM-DD&hasta=AAAA-MM-DD
+HTTP: GET /health · GET /estado
+      GET /dias?desde=AAAA-MM-DD&hasta=AAAA-MM-DD   un registro por día + zonas de FC
+      GET /fc?fecha=AAAA-MM-DD                      FC del día cada 2 min ([minuto del día, ppm])
+      GET /actividad?id=N                           detalle, vueltas, series y recorrido del FIT
+
+Qué guarda: por día el resumen (pasos, calorías, FC, estrés, Body Battery, SpO2, respiración),
+el sueño, la HRV, el peso y la composición corporal, la FC intradía y las actividades; por
+actividad el detalle de Garmin y su FIT (ZIP original en $DATOS/fit y lo procesado en SQLite).
 
 Autenticación: la clave personal (GARMIN_API_KEY, connect.garmin.com → Personal API) se
 canjea por un token de 24 h. La clave caduca (máximo un año): si la sincronización falla,
 avisa por NTFY_URL y el panel muestra la fecha del último dato.
 """
 import datetime as dt
+import io
 import json
+import math
 import os
 import sqlite3
 import sys
 import threading
 import time
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -31,6 +42,7 @@ from zoneinfo import ZoneInfo
 TZ = ZoneInfo(os.environ.get("TZ", "Europe/Madrid"))
 DATOS = Path(os.environ.get("DATOS", "datos"))
 DB = DATOS / "salud.db"
+FIT = DATOS / "fit"
 PUERTO = int(os.environ.get("PUERTO", "8080"))
 HORAS = sorted({int(h) for h in os.environ.get("SYNC_HORAS", "7,13,22").split(",") if h.strip()})
 NTFY = os.environ.get("NTFY_URL", "")
@@ -38,6 +50,9 @@ API = "https://personal.connectapi.garmin.com"
 TOKEN_URL = f"{API}/personalapitoken-service/personal-api/personal-api-key/token"
 BLOQUE = 28  # días por petición de rango
 PAUSA = 1.0  # segundos entre llamadas
+MAX_SERIE = 1500  # puntos como máximo de las series de una actividad
+MAX_RUTA = 800  # puntos como máximo del recorrido
+PIE = ("running", "walking", "hiking", "trail_running", "treadmill_running", "indoor_running")
 
 _token = {"valor": None, "caduca": 0.0}
 _lock = threading.Lock()
@@ -50,6 +65,9 @@ def db():
     con = sqlite3.connect(DB)
     con.execute("CREATE TABLE IF NOT EXISTS dias (fecha TEXT PRIMARY KEY, datos TEXT NOT NULL, actualizado TEXT NOT NULL)")
     con.execute("CREATE TABLE IF NOT EXISTS estado (clave TEXT PRIMARY KEY, valor TEXT)")
+    con.execute("CREATE TABLE IF NOT EXISTS fc_dia (fecha TEXT PRIMARY KEY, valores TEXT NOT NULL)")
+    con.execute("CREATE TABLE IF NOT EXISTS actividades (id INTEGER PRIMARY KEY, fecha TEXT, lista TEXT, "
+                "detalle TEXT, fit TEXT, actualizado TEXT)")
     if "crudo" not in [c[1] for c in con.execute("PRAGMA table_info(dias)")]:
         con.execute("ALTER TABLE dias ADD COLUMN crudo TEXT")  # respuesta original de Garmin del día
     return con
@@ -71,8 +89,9 @@ def remapear():
     pares = []
     for fecha, crudo_dia in filas:
         c = json.loads(crudo_dia)
-        pares += registros(fecha, fecha, {"resumen": {"data": [c["resumen"]]}, "sueno": [c["sueno"]],
-                                          "hrv": {"hrvSummaries": [c["hrv"]]}, "actividades": c["actividades"]})
+        pares += registros(fecha, fecha, {
+            "resumen": {"data": [c["resumen"]]}, "sueno": [c["sueno"]], "hrv": {"hrvSummaries": [c["hrv"]]},
+            "actividades": c["actividades"], "peso": {"dailyWeightSummaries": [c["peso"]] if c.get("peso") else []}})
     guardar(pares)
     print(f"remapeados {len(pares)} días", flush=True)
 
@@ -93,6 +112,8 @@ def leer_estado():
         e = dict(con.execute("SELECT clave, valor FROM estado"))
         e["ultimo_dia"] = con.execute("SELECT max(fecha) FROM dias").fetchone()[0]
         e["dias_guardados"] = con.execute("SELECT count(*) FROM dias").fetchone()[0]
+        e["actividades_guardadas"] = con.execute("SELECT count(*) FROM actividades WHERE fit IS NOT NULL").fetchone()[0]
+    e.pop("zonas", None)  # va aparte en /dias
     return e
 
 
@@ -119,16 +140,15 @@ def token():
     return valor
 
 
-def get(ruta, **params):
-    """GET a la API; None si ese recurso no tiene datos (404/204)."""
+def pedir(ruta, accept="application/json", **params):
+    """Bytes de un GET a la API; None si ese recurso no tiene datos (404/204)."""
     time.sleep(PAUSA)
     url = f"{API}{ruta}" + (f"?{urlencode(params)}" if params else "")
     for intento in range(2):
-        req = Request(url, headers={"Authorization": f"Bearer {token()}", "Accept": "application/json"})
+        req = Request(url, headers={"Authorization": f"Bearer {token()}", "Accept": accept})
         try:
-            with urlopen(req, timeout=60) as r:
-                cuerpo = r.read()
-                return json.loads(cuerpo) if cuerpo else None
+            with urlopen(req, timeout=120) as r:
+                return r.read() or None
         except HTTPError as e:
             if e.code == 401 and intento == 0:
                 _token["valor"] = None  # token revocado o caducado: canjear la clave otra vez
@@ -137,6 +157,11 @@ def get(ruta, **params):
                 return None
             raise RuntimeError(f"{e.code} en {ruta}: {e.read()[:200]!r}") from None
     return None
+
+
+def get(ruta, **params):
+    cuerpo = pedir(ruta, **params)
+    return json.loads(cuerpo) if cuerpo else None
 
 
 def crudo(desde, hasta):
@@ -148,6 +173,7 @@ def crudo(desde, hasta):
         "hrv": get(f"/hrv-service/hrv/daily/{desde}/{hasta}"),
         "actividades": get("/activitylist-service/activities/search/activities",
                            start=0, limit=100, startDate=desde, endDate=hasta),
+        "peso": get(f"/weight-service/weight/range/{desde}/{hasta}", includeAll="true"),
     }
 
 
@@ -165,6 +191,14 @@ def minutos(seg):
     return round(seg / 60) if isinstance(seg, (int, float)) else None
 
 
+def redondear(v, n=1):
+    return round(v, n) if isinstance(v, (int, float)) else None
+
+
+def gramos(v, n=1):
+    return round(v / 1000, n) if isinstance(v, (int, float)) else None
+
+
 def hora(ms):
     """Los *TimestampLocal del sueño son milisegundos con la hora local tal cual: AAAA-MM-DDTHH:MM."""
     if not isinstance(ms, (int, float)):
@@ -176,11 +210,47 @@ def nonneg(v):
     return v if isinstance(v, (int, float)) and v >= 0 else None  # Garmin usa -1/-2 para "sin datos"
 
 
+def actividad_breve(x):
+    """Lo que el panel enseña de una actividad en la lista del día (sale de la lista de Garmin)."""
+    zonas = [x.get(f"hrTimeInZone_{i}") for i in range(1, 6)]
+    return {
+        "id": x.get("activityId"),
+        "nombre": x.get("activityName"),
+        "tipo": g(x, "activityType", "typeKey"),
+        "km": round((x.get("distance") or 0) / 1000, 2),
+        "min": minutos(x.get("duration")),
+        "fc_media": x.get("averageHR"),
+        "fc_max": x.get("maxHR"),
+        "kcal": x.get("calories"),
+        "inicio": x.get("startTimeLocal"),
+        "efecto": x.get("trainingEffectLabel"),
+        "efecto_aerobico": x.get("aerobicTrainingEffect"),
+        "efecto_anaerobico": x.get("anaerobicTrainingEffect"),
+        "carga": redondear(x.get("activityTrainingLoad")),
+        "zonas_min": [round(z / 60, 1) for z in zonas] if any(zonas) else None,
+        "vo2max": x.get("vO2MaxValue"),
+    }
+
+
+def peso_dia(p):
+    """Último pesaje del día. Grasa y agua en %, masas en kg. Sin báscula conectada solo llega el peso."""
+    w = (p or {}).get("latestWeight") or {}
+    if not w.get("weight"):
+        return None
+    return {
+        "kg": gramos(w.get("weight")), "imc": redondear(w.get("bmi")), "grasa_pct": redondear(w.get("bodyFat")),
+        "agua_pct": redondear(w.get("bodyWater")), "musculo_kg": gramos(w.get("muscleMass")),
+        "hueso_kg": gramos(w.get("boneMass")), "visceral": w.get("visceralFat"),
+        "edad_metabolica": w.get("metabolicAge"), "fuente": w.get("sourceType"),
+    }
+
+
 def registros(desde, hasta, c):
     """Por cada día del rango con datos: (registro con los nombres propios del panel, respuesta original del día)."""
     resumen = {r.get("calendarDate"): r for r in g(c, "resumen", "data") or []}
     sueno = {s.get("calendarDate"): s for s in c.get("sueno") or []}
     hrv = {h.get("calendarDate"): h for h in g(c, "hrv", "hrvSummaries") or []}
+    pesos = {p.get("summaryDate"): p for p in g(c, "peso", "dailyWeightSummaries") or []}
     acts = {}
     for a in c.get("actividades") or []:
         acts.setdefault((a.get("startTimeLocal") or "")[:10], []).append(a)
@@ -188,11 +258,11 @@ def registros(desde, hasta, c):
     out, d = [], dt.date.fromisoformat(desde)
     while d <= dt.date.fromisoformat(hasta):
         f = d.isoformat()
-        r, s, h, a = resumen.get(f) or {}, sueno.get(f) or {}, hrv.get(f) or {}, sorted(
-            acts.get(f, []), key=lambda x: x.get("startTimeLocal") or "")
+        r, s, h, p = resumen.get(f) or {}, sueno.get(f) or {}, hrv.get(f) or {}, pesos.get(f)
+        a = sorted(acts.get(f, []), key=lambda x: x.get("startTimeLocal") or "")
         d += dt.timedelta(days=1)
         pasos = g(r, "movement", "steps") or {}
-        if not (pasos.get("value") or s.get("sleepTimeSeconds") or a):
+        if not (pasos.get("value") or s.get("sleepTimeSeconds") or a or peso_dia(p)):
             continue  # el reloj no ha subido nada de ese día
         vo2 = [x["vO2MaxValue"] for x in a if x.get("vO2MaxValue")]
         out.append(({
@@ -230,19 +300,169 @@ def registros(desde, hasta, c):
                                    + 2 * (g(r, "intensityMinutes", "vigorous") or 0)) or None,
                 "pisos": g(r, "movement", "floorsAscended", "value"),
             },
+            "peso": peso_dia(p),
             "vo2max": vo2[-1] if vo2 else None,
-            "actividades": [{
-                "nombre": x.get("activityName"),
-                "tipo": g(x, "activityType", "typeKey"),
-                "km": round((x.get("distance") or 0) / 1000, 2),
-                "min": minutos(x.get("duration")),
-                "fc_media": x.get("averageHR"),
-                "kcal": x.get("calories"),
-                "inicio": x.get("startTimeLocal"),
-                "efecto": x.get("trainingEffectLabel"),
-            } for x in a],
-        }, {"resumen": r, "sueno": s, "hrv": h, "actividades": a}))
+            "actividades": [actividad_breve(x) for x in a],
+        }, {"resumen": r, "sueno": s, "hrv": h, "actividades": a, "peso": p}))
     return out
+
+
+# ── FC intradía ───────────────────────────────────────────────────────────────
+
+def guardar_fc(fecha):
+    """FC del día cada 2 min como [minuto del día, ppm] (los timestamps de Garmin van en UTC)."""
+    r = get("/wellness-service/wellness/dailyHeartRate", date=fecha) or {}
+    vals = []
+    for ts, fc in r.get("heartRateValues") or []:
+        if fc:
+            local = dt.datetime.fromtimestamp(ts / 1000, TZ)
+            vals.append([(local.date() - dt.date.fromisoformat(fecha)).days * 1440 + local.hour * 60 + local.minute, fc])
+    if vals:
+        with db() as con:
+            con.execute("INSERT OR REPLACE INTO fc_dia VALUES (?, ?)", (fecha, json.dumps(vals)))
+
+
+def fc_de(fecha):
+    with db() as con:
+        f = con.execute("SELECT valores FROM fc_dia WHERE fecha = ?", (fecha,)).fetchone()
+    return json.loads(f[0]) if f else []
+
+
+# ── Actividades: detalle de Garmin y FIT ──────────────────────────────────────
+
+FIT_EPOCH = 631065600  # 1989-12-31T00:00:00Z, origen de los timestamps FIT
+SEMI = 180 / 2 ** 31  # semicírculos FIT → grados
+
+
+def procesar_fit(zip_bytes):
+    """Del ZIP con el FIT: resumen de la sesión, vueltas, series (submuestreadas) y recorrido."""
+    from garmin_fit_sdk import Decoder, Stream  # solo hace falta al procesar FIT
+    z = zipfile.ZipFile(io.BytesIO(zip_bytes))
+    nombre = next(n for n in z.namelist() if n.lower().endswith(".fit"))
+    msgs, errores = Decoder(Stream.from_byte_array(bytearray(z.read(nombre)))).read(convert_datetimes_to_dates=False)
+    ses = (msgs.get("session_mesgs") or [{}])[0]
+    deporte = ses.get("sport")
+    pie = str(deporte) in ("running", "walking", "hiking") or str(ses.get("sub_sport")) in PIE
+    cad = lambda m, base, frac: (None if m.get(base) is None else
+                                 round((m[base] + (m.get(frac) or 0)) * (2 if pie else 1)))  # pasos/min a pie
+
+    vueltas = []
+    for i, l in enumerate(msgs.get("lap_mesgs") or []):
+        dist, tiempo = l.get("total_distance") or 0, l.get("total_timer_time") or 0
+        vueltas.append({
+            "n": i + 1, "km": round(dist / 1000, 3), "seg": round(tiempo),
+            "ritmo_s_km": round(tiempo / (dist / 1000)) if dist > 50 else None,
+            "fc_media": l.get("avg_heart_rate"), "fc_max": l.get("max_heart_rate"),
+            "cadencia": cad(l, "avg_running_cadence" if l.get("avg_running_cadence") is not None else "avg_cadence",
+                            "avg_fractional_cadence"),
+            "subida": l.get("total_ascent"), "bajada": l.get("total_descent"),
+            "potencia": l.get("avg_power"), "zancada_m": redondear((l.get("avg_step_length") or 0) / 1000, 2) or None,
+        })
+
+    recs = [r for r in msgs.get("record_mesgs") or [] if r.get("timestamp")]
+    t0 = recs[0]["timestamp"] if recs else 0
+    paso = max(1, math.ceil(len(recs) / MAX_SERIE))
+    series = {"t": [], "km": [], "fc": [], "ritmo_s_km": [], "cadencia": [], "altitud": [], "potencia": []}
+    for r in recs[::paso]:
+        v = r.get("enhanced_speed") if r.get("enhanced_speed") is not None else r.get("speed")
+        series["t"].append(r["timestamp"] - t0)
+        series["km"].append(redondear((r.get("distance") or 0) / 1000, 3))
+        series["fc"].append(r.get("heart_rate"))
+        series["ritmo_s_km"].append(round(1000 / v) if v and v > 0.5 else None)
+        series["cadencia"].append(cad(r, "cadence", "fractional_cadence"))
+        alt = r.get("enhanced_altitude") if r.get("enhanced_altitude") is not None else r.get("altitude")
+        series["altitud"].append(redondear(alt))
+        series["potencia"].append(r.get("power"))
+    series = {k: v for k, v in series.items() if any(x is not None for x in v)}  # fuera las que el reloj no mide
+
+    gps = [(r["position_lat"] * SEMI, r["position_long"] * SEMI) for r in recs
+           if r.get("position_lat") is not None and r.get("position_long") is not None]
+    ruta = [[round(a, 6), round(b, 6)] for a, b in gps[::max(1, math.ceil(len(gps) / MAX_RUTA))]]
+
+    sesion = {
+        "deporte": str(deporte) if deporte is not None else None, "subdeporte": str(ses.get("sub_sport") or ""),
+        "inicio_utc": dt.datetime.fromtimestamp(FIT_EPOCH + ses["start_time"], dt.timezone.utc).isoformat()
+        if ses.get("start_time") else None,
+        "km": redondear((ses.get("total_distance") or 0) / 1000, 2), "seg": redondear(ses.get("total_timer_time"), 0),
+        "seg_total": redondear(ses.get("total_elapsed_time"), 0),
+        "fc_media": ses.get("avg_heart_rate"), "fc_max": ses.get("max_heart_rate"),
+        "subida": ses.get("total_ascent"), "bajada": ses.get("total_descent"),
+        "cadencia": cad(ses, "avg_running_cadence" if ses.get("avg_running_cadence") is not None else "avg_cadence",
+                        "avg_fractional_cadence"),
+        "potencia": ses.get("avg_power"), "potencia_normalizada": ses.get("normalized_power"),
+        "efecto_aerobico": ses.get("total_training_effect"),
+        "efecto_anaerobico": ses.get("total_anaerobic_training_effect"),
+        "oscilacion_mm": redondear(ses.get("avg_vertical_oscillation")),
+        "contacto_ms": redondear(ses.get("avg_stance_time")),
+        "zancada_m": redondear((ses.get("avg_step_length") or 0) / 1000, 2) or None,
+        "ratio_vertical": redondear(ses.get("avg_vertical_ratio")),
+        "kcal": ses.get("total_calories"),
+    }
+    return {"sesion": sesion, "vueltas": vueltas, "series": series, "ruta": ruta,
+            "intervalo_s": paso, "errores_fit": [str(e) for e in errores][:3]}
+
+
+def detalle_breve(d):
+    """Del detalle de Garmin: los campos escalares del resumen con valor y los tramos por tipo."""
+    s = {k: v for k, v in (g(d, "summaryDTO") or {}).items() if isinstance(v, (int, float, str)) and v not in (0, "", None)}
+    tramos = [{"tipo": x.get("splitType"), "veces": x.get("noOfSplits"), "km": redondear((x.get("distance") or 0) / 1000, 2),
+               "seg": redondear(x.get("duration"), 0), "fc_media": x.get("averageHR")}
+              for x in g(d, "splitSummaries") or []]
+    return {"resumen": s, "tramos": tramos, "lugar": d.get("locationName") if d else None}
+
+
+def guardar_actividades(lista, forzar=False):
+    """Guarda la lista y, para las que aún no lo tienen, el detalle y el FIT (una vez por actividad)."""
+    FIT.mkdir(parents=True, exist_ok=True)
+    for a in lista or []:
+        aid = a.get("activityId")
+        if not aid:
+            continue
+        with db() as con:
+            tiene = con.execute("SELECT fit IS NOT NULL FROM actividades WHERE id = ?", (aid,)).fetchone()
+            con.execute("INSERT INTO actividades (id, fecha, lista, actualizado) VALUES (?, ?, ?, ?) "
+                        "ON CONFLICT(id) DO UPDATE SET lista = excluded.lista, actualizado = excluded.actualizado",
+                        (aid, (a.get("startTimeLocal") or "")[:10], json.dumps(a, ensure_ascii=False), ahora()))
+        if tiene and tiene[0] and not forzar:
+            continue
+        detalle = get(f"/activity-service/activity/{aid}")
+        z = pedir(f"/download-service/files/activity/{aid}", accept="*/*")
+        fit = None
+        if z:
+            (FIT / f"{aid}.zip").write_bytes(z)
+            try:
+                fit = procesar_fit(z)
+            except Exception as e:  # noqa: BLE001 — un FIT raro no tumba la sincronización
+                print(f"aviso: FIT de {aid}: {e!r}", flush=True)
+                fit = {"error": str(e)[:200]}
+        with db() as con:
+            con.execute("UPDATE actividades SET detalle = ?, fit = ?, actualizado = ? WHERE id = ?",
+                        (json.dumps(detalle, ensure_ascii=False), json.dumps(fit, ensure_ascii=False), ahora(), aid))
+        print(f"actividad {aid} {a.get('activityName')}", flush=True)
+
+
+def refit():
+    """Vuelve a procesar los ZIP de FIT guardados, sin descargar."""
+    n = 0
+    for z in sorted(FIT.glob("*.zip")):
+        try:
+            fit = procesar_fit(z.read_bytes())
+        except Exception as e:  # noqa: BLE001
+            fit = {"error": str(e)[:200]}
+        with db() as con:
+            con.execute("UPDATE actividades SET fit = ? WHERE id = ?", (json.dumps(fit, ensure_ascii=False), int(z.stem)))
+        n += 1
+    print(f"reprocesados {n} FIT", flush=True)
+
+
+def actividad(aid):
+    with db() as con:
+        f = con.execute("SELECT lista, detalle, fit FROM actividades WHERE id = ?", (aid,)).fetchone()
+    if not f:
+        return None
+    lista = json.loads(f[0]) if f[0] else {}
+    return {"actividad": actividad_breve(lista), "detalle": detalle_breve(json.loads(f[1]) if f[1] else None),
+            "fit": json.loads(f[2]) if f[2] else None}
 
 
 # ── Sincronización ────────────────────────────────────────────────────────────
@@ -257,8 +477,16 @@ def bloques(desde, hasta):
 
 def descargar(desde, hasta):
     for d, h in bloques(desde, hasta):
-        guardar(registros(d.isoformat(), h.isoformat(), crudo(d.isoformat(), h.isoformat())))
+        c = crudo(d.isoformat(), h.isoformat())
+        regs = registros(d.isoformat(), h.isoformat(), c)
+        guardar(regs)
+        for r, _ in regs:
+            guardar_fc(r["fecha"])
+        guardar_actividades(c.get("actividades"))
         print(f"guardado {d} → {h}", flush=True)
+    zonas = get("/biometric-service/heartRateZones/v2")
+    if zonas:
+        poner_estado("zonas", json.dumps(zonas))
 
 
 def sync(n_dias=3, revisar=False):
@@ -314,22 +542,31 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urlparse(self.path)
         q = parse_qs(url.query)
-        if url.path == "/health":
-            self._json(200, {"ok": True})
-        elif url.path == "/estado":
-            self._json(200, leer_estado())
-        elif url.path == "/dias":
-            try:
+        try:
+            if url.path == "/health":
+                self._json(200, {"ok": True})
+            elif url.path == "/estado":
+                self._json(200, leer_estado())
+            elif url.path == "/dias":
                 hoy = dt.datetime.now(TZ).date()
                 hasta = dt.date.fromisoformat(q.get("hasta", [hoy.isoformat()])[0])
                 desde = dt.date.fromisoformat(q.get("desde", [(hasta - dt.timedelta(days=62)).isoformat()])[0])
                 if not 0 <= (hasta - desde).days <= 800:
                     raise ValueError("rango de fechas no válido (máximo 800 días)")
-                self._json(200, {"dias": dias(desde.isoformat(), hasta.isoformat()), "estado": leer_estado()})
-            except ValueError as e:
-                self._json(400, {"error": str(e)})
-        else:
-            self._json(404, {"error": "no existe"})
+                with db() as con:
+                    z = con.execute("SELECT valor FROM estado WHERE clave = 'zonas'").fetchone()
+                self._json(200, {"dias": dias(desde.isoformat(), hasta.isoformat()), "estado": leer_estado(),
+                                 "zonas": json.loads(z[0]) if z else None})
+            elif url.path == "/fc":
+                fecha = dt.date.fromisoformat(q["fecha"][0]).isoformat()
+                self._json(200, {"fecha": fecha, "valores": fc_de(fecha)})
+            elif url.path == "/actividad":
+                a = actividad(int(q["id"][0]))
+                self._json(200 if a else 404, a or {"error": "no existe esa actividad"})
+            else:
+                self._json(404, {"error": "no existe"})
+        except (KeyError, ValueError) as e:
+            self._json(400, {"error": f"parámetro no válido: {e}"})
 
     def log_message(self, fmt, *args):
         print("http", fmt % args, flush=True)
@@ -345,6 +582,8 @@ def main():
         descargar(hoy - dt.timedelta(days=int(a[0]) - 1), hoy)
     elif cmd == "remapear":
         remapear()
+    elif cmd == "refit":
+        refit()
     elif cmd == "dia" and a:
         print(json.dumps(dias(a[0], a[0]), ensure_ascii=False, indent=1))
     elif cmd == "crudo" and a:
