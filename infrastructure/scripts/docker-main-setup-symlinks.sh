@@ -7,11 +7,16 @@
 # Despliegue:
 #   cd /opt/appdata/<svc>/compose && docker compose -p <svc> up -d
 # Gatus y Forgejo tienen aún un docker-compose.yml propio; Portainer vive en /opt/portainer.
+# Una imagen construida aquí (build: .) necesita el Dockerfile como fichero normal, no enlace:
+# BuildKit no lee un Dockerfile enlazado fuera del contexto. Se copia a mano (cambia poco).
+# El clon del NAS se actualiza desde el NAS (el LXC no puede escribir en él):
+#   git -C /mnt/vault/git-storage/homelab pull --ff-only https://github.com/GuillePerales/homelab.git main
 GIT_ROOT="/mnt/nas/git-storage/homelab/services/docker-compose"
 APPDATA_ROOT="/opt/appdata"
 
 declare -A SERVICES=(
   ["agenda"]="cloud/agenda"
+  ["salud"]="cloud/salud"
   ["diun"]="monitoring/diun"
   ["homarr"]="monitoring/homarr"
   ["ntfy"]="monitoring/ntfy"
@@ -22,6 +27,7 @@ declare -A SERVICES=(
 # Ficheros montados con ruta relativa, además del compose
 declare -A EXTRA_FILES=(
   ["agenda"]="agenda.py"
+  ["salud"]="salud.py"
 )
 
 for svc in "${!SERVICES[@]}"; do
