@@ -375,9 +375,10 @@ def procesar_fit(zip_bytes):
         series["potencia"].append(r.get("power"))
     series = {k: v for k, v in series.items() if any(x is not None for x in v)}  # fuera las que el reloj no mide
 
-    gps = [(r["position_lat"] * SEMI, r["position_long"] * SEMI) for r in recs
+    # Recorrido como [lat, lon, FC] (FC None si el punto no la trae) para colorearlo por zona en el panel.
+    gps = [(r["position_lat"] * SEMI, r["position_long"] * SEMI, r.get("heart_rate")) for r in recs
            if r.get("position_lat") is not None and r.get("position_long") is not None]
-    ruta = [[round(a, 6), round(b, 6)] for a, b in gps[::max(1, math.ceil(len(gps) / MAX_RUTA))]]
+    ruta = [[round(a, 6), round(b, 6), fc] for a, b, fc in gps[::max(1, math.ceil(len(gps) / MAX_RUTA))]]
 
     sesion = {
         "deporte": str(deporte) if deporte is not None else None, "subdeporte": str(ses.get("sub_sport") or ""),
