@@ -265,7 +265,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 | app-syncthing-01 | Syncthing | docker-nas | Docker macvlan | ✅ P2P file sync to mobile devices |
 | app-paperless-01 | Paperless-ngx | docker-main | Docker | Document management with OCR |
 | app-agenda-01 | Agenda | docker-main | Docker macvlan | ✅ Small custom API to create iCloud calendar events (CalDAV) from Obsidian and the terminal |
-| app-salud-01 | Salud | docker-main | Docker macvlan | ✅ Small custom API that pulls daily Garmin metrics (Garmin Connect Personal API) into SQLite for an Obsidian health dashboard |
+| app-salud-01 | Salud | docker-main | Docker macvlan | ✅ Small custom API that pulls daily Garmin metrics (Garmin Connect Personal API) into SQLite for an Obsidian health dashboard, with rule-based signals against a personal baseline and a monthly PDF report |
 
 ### 4.6 Media (VLAN 30 — SRV)
 

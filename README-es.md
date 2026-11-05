@@ -265,7 +265,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | app-syncthing-01 | Syncthing | docker-nas | Docker macvlan | ✅ Sync P2P con dispositivos móviles |
 | app-paperless-01 | Paperless-ngx | docker-main | Docker | Gestión documental con OCR |
 | app-agenda-01 | Agenda | docker-main | Docker macvlan | ✅ API propia para crear citas en el calendario de iCloud (CalDAV) desde Obsidian y la terminal |
-| app-salud-01 | Salud | docker-main | Docker macvlan | ✅ API propia que descarga a diario las métricas del Garmin (API personal de Garmin Connect) a SQLite para un panel de salud en Obsidian |
+| app-salud-01 | Salud | docker-main | Docker macvlan | ✅ API propia que descarga a diario las métricas del Garmin (API personal de Garmin Connect) a SQLite para un panel de salud en Obsidian, con señales por reglas frente a la línea base propia y un informe mensual en PDF |
 
 ### 4.6 Multimedia (VLAN 30 — SRV)
 

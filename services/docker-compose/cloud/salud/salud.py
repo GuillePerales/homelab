@@ -7,12 +7,21 @@
   salud.py remapear             rehace los registros desde las respuestas originales guardadas
   salud.py refit                vuelve a procesar los FIT guardados (tras cambiar procesar_fit())
   salud.py crudo AAAA-MM-DD     vuelca lo que devuelve Garmin para un día (depurar)
+  salud.py senales [AAAA-MM-DD] señales por reglas de los 7 días que acaban ese día (por defecto hoy)
+  salud.py informe [AAAA-MM]    genera y guarda el informe PDF del mes (por defecto el anterior)
   salud.py run                  servidor HTTP + sincronización a las SYNC_HORAS (modo contenedor)
 
 HTTP: GET /health · GET /estado
       GET /dias?desde=AAAA-MM-DD&hasta=AAAA-MM-DD   un registro por día + zonas de FC
       GET /fc?fecha=AAAA-MM-DD                      FC del día cada 2 min ([minuto del día, ppm])
       GET /actividad?id=N                           detalle, vueltas, series y recorrido del FIT
+      GET /senales?hasta=AAAA-MM-DD                 señales por reglas (7 días frente a los 28 anteriores)
+      GET /mes?mes=AAAA-MM                          resumen del mes en JSON (cifras, semanas, señales)
+      GET /informe?mes=AAAA-MM                      informe del mes en PDF (el guardado; el mes en curso, al vuelo)
+      GET /informes                                 meses con informe guardado
+
+Informe mensual: el día INFORME_DIA de cada mes, en la primera sincronización, se genera el PDF del
+mes anterior en $DATOS/informes y se avisa por NTFY_URL. Reglas y PDF en informe.py.
 
 Qué guarda: por día el resumen (pasos, calorías, FC, estrés, Body Battery, SpO2, respiración),
 el sueño, la HRV, el peso y la composición corporal, la FC intradía y las actividades; por
@@ -39,6 +48,8 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
+import informe
+
 TZ = ZoneInfo(os.environ.get("TZ", "Europe/Madrid"))
 DATOS = Path(os.environ.get("DATOS", "datos"))
 DB = DATOS / "salud.db"
@@ -46,6 +57,9 @@ FIT = DATOS / "fit"
 PUERTO = int(os.environ.get("PUERTO", "8080"))
 HORAS = sorted({int(h) for h in os.environ.get("SYNC_HORAS", "7,13,22").split(",") if h.strip()})
 NTFY = os.environ.get("NTFY_URL", "")
+INFORMES = DATOS / "informes"
+INFORME_DIA = int(os.environ.get("INFORME_DIA", "2"))  # el día 1 Garmin aún completa el último día del mes
+URL_PUBLICA = os.environ.get("URL_PUBLICA", "")  # para el enlace del aviso de ntfy
 API = "https://personal.connectapi.garmin.com"
 TOKEN_URL = f"{API}/personalapitoken-service/personal-api/personal-api-key/token"
 BLOQUE = 28  # días por petición de rango
@@ -509,24 +523,65 @@ def sync(n_dias=3, revisar=False):
             avisar(f"La sincronización con Garmin ha fallado: {msg}")
 
 
-def avisar(texto):
+def avisar(texto, titulo="salud: Garmin", tags="warning", prioridad="4", enlace=None):
     if not NTFY:
         return
+    cab = {"Title": titulo, "Tags": tags, "Priority": prioridad}
+    if enlace:
+        cab["Click"] = enlace
     try:
-        urlopen(Request(NTFY, data=texto.encode(), headers={"Title": "salud: Garmin", "Tags": "warning"}), timeout=10)
+        urlopen(Request(NTFY, data=texto.encode(), headers=cab), timeout=10)
     except Exception as e:  # noqa: BLE001
         print(f"no se pudo avisar por ntfy: {e!r}", flush=True)
 
 
+# ── Informe mensual ───────────────────────────────────────────────────────────
+
+def dias_informe(mes):
+    """Registros del mes, del anterior (para comparar) y de los 35 días previos (línea base)."""
+    ini, fin = informe.limites(mes)
+    ant, _ = informe.limites(informe.mes_anterior(mes))
+    return dias((min(ant, ini - dt.timedelta(days=35))).isoformat(), fin.isoformat())
+
+
+def ruta_informe(mes):
+    return INFORMES / f"{mes}.pdf"
+
+
+def generar_informe(mes):
+    INFORMES.mkdir(parents=True, exist_ok=True)
+    ruta_informe(mes).write_bytes(informe.pdf(dias_informe(mes), mes))
+    print(f"informe {mes} generado", flush=True)
+
+
+def informe_pendiente():
+    """Desde el día INFORME_DIA, genera el informe del mes anterior si aún no existe y avisa."""
+    hoy = dt.datetime.now(TZ).date()
+    mes = informe.mes_anterior(hoy.strftime("%Y-%m"))
+    if hoy.day < INFORME_DIA or ruta_informe(mes).exists():
+        return
+    try:
+        generar_informe(mes)
+        n = len([s for s in informe.senales(dias_informe(mes), informe.limites(mes)[1]) if s["nivel"] in ("alerta", "aviso")])
+        avisar(f"Informe de salud de {informe.nombre_mes(mes).lower()} listo ({n} avisos al cierre).",
+               titulo="salud: informe mensual", tags="bar_chart", prioridad="2",
+               enlace=f"{URL_PUBLICA}/informe?mes={mes}" if URL_PUBLICA else None)
+    except Exception as e:  # noqa: BLE001 — un fallo del informe no para la sincronización
+        print(f"error en el informe {mes}: {e!r}", flush=True)
+        avisar(f"No se pudo generar el informe de salud de {mes}: {e!r}"[:300], titulo="salud: informe mensual")
+
+
 def programador():
-    """Sincroniza al arrancar y luego a cada hora de SYNC_HORAS."""
+    """Sincroniza al arrancar y luego a cada hora de SYNC_HORAS; tras sincronizar, el informe pendiente."""
     sync()
+    informe_pendiente()
     while True:
         t = dt.datetime.now(TZ)
         hoy = [t.replace(hour=h, minute=5, second=0, microsecond=0) for h in HORAS]
         prox = min(s for s in hoy + [s + dt.timedelta(days=1) for s in hoy] if s > t)
         time.sleep((prox - t).total_seconds())
         sync(revisar=prox.hour == HORAS[0])
+        informe_pendiente()
 
 
 # ── HTTP ──────────────────────────────────────────────────────────────────────
@@ -536,6 +591,14 @@ class Handler(BaseHTTPRequestHandler):
         datos = json.dumps(cuerpo, ensure_ascii=False).encode("utf8")
         self.send_response(codigo)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(datos)))
+        self.end_headers()
+        self.wfile.write(datos)
+
+    def _pdf(self, datos, nombre):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Disposition", f'inline; filename="{nombre}"')
         self.send_header("Content-Length", str(len(datos)))
         self.end_headers()
         self.wfile.write(datos)
@@ -564,6 +627,20 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path == "/actividad":
                 a = actividad(int(q["id"][0]))
                 self._json(200 if a else 404, a or {"error": "no existe esa actividad"})
+            elif url.path == "/senales":
+                hasta = dt.date.fromisoformat(q.get("hasta", [dt.datetime.now(TZ).date().isoformat()])[0])
+                ds = dias((hasta - dt.timedelta(days=40)).isoformat(), hasta.isoformat())
+                self._json(200, {"hasta": hasta.isoformat(), "senales": informe.senales(ds, hasta)})
+            elif url.path == "/mes":
+                mes = dt.date.fromisoformat(q["mes"][0] + "-01").strftime("%Y-%m")
+                self._json(200, informe.resumen_mes(dias_informe(mes), mes))
+            elif url.path == "/informe":
+                mes = dt.date.fromisoformat(q["mes"][0] + "-01").strftime("%Y-%m")
+                r = ruta_informe(mes)
+                datos = r.read_bytes() if r.exists() and "regenerar" not in q else informe.pdf(dias_informe(mes), mes)
+                self._pdf(datos, f"salud-{mes}.pdf")
+            elif url.path == "/informes":
+                self._json(200, {"informes": sorted(p.stem for p in INFORMES.glob("*.pdf")) if INFORMES.exists() else []})
             else:
                 self._json(404, {"error": "no existe"})
         except (KeyError, ValueError) as e:
@@ -589,6 +666,12 @@ def main():
         print(json.dumps(dias(a[0], a[0]), ensure_ascii=False, indent=1))
     elif cmd == "crudo" and a:
         print(json.dumps(crudo(a[0], a[1] if len(a) > 1 else a[0]), ensure_ascii=False, indent=1))
+    elif cmd == "senales":
+        h = dt.date.fromisoformat(a[0]) if a else hoy
+        print(json.dumps(informe.senales(dias((h - dt.timedelta(days=40)).isoformat(), h.isoformat()), h),
+                         ensure_ascii=False, indent=1))
+    elif cmd == "informe":
+        generar_informe(a[0] if a else informe.mes_anterior(hoy.strftime("%Y-%m")))
     elif cmd == "run":
         threading.Thread(target=programador, daemon=True).start()
         ThreadingHTTPServer(("0.0.0.0", PUERTO), Handler).serve_forever()

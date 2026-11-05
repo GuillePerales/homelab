@@ -1,5 +1,6 @@
 # salud — descarga cada día por la API personal de Garmin Connect las métricas (sueño, FC, HRV, Body Battery,
-# estrés, SpO2, actividad) a SQLite y las sirve por HTTP al panel de Salud de Obsidian.
+# estrés, SpO2, actividad) a SQLite y las sirve por HTTP al panel de Salud de Obsidian. Calcula señales por reglas
+# y genera cada mes un informe en PDF (informe.py) en ${APPDATA}/data/informes.
 # No toca el vault. Tokens de Garmin y base de datos en ${APPDATA}/data.
 networks:
   srv-net:
@@ -14,7 +15,7 @@ services:
     user: "3000:3000"
     read_only: true
     tmpfs:
-      - /tmp:size=16m
+      - /tmp:size=64m  # caché de fuentes de matplotlib (MPLCONFIGDIR)
     labels:
       # Imagen construida aquí (Python + SDK de FIT de Garmin): diun no tiene registro que vigilar
       - "diun.enable=false"
@@ -28,9 +29,13 @@ services:
       - GARMIN_API_KEY=${GARMIN_API_KEY}
       - SYNC_HORAS=${SYNC_HORAS}
       - NTFY_URL=${NTFY_URL}
+      - INFORME_DIA=${INFORME_DIA:-2}
+      - URL_PUBLICA=${URL_PUBLICA:-}
+      - MPLCONFIGDIR=/tmp/matplotlib
       - DATOS=/data
     volumes:
       - ./salud.py:/app/salud.py:ro
+      - ./informe.py:/app/informe.py:ro
       - ${APPDATA}/data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8080/health', timeout=5)"]
