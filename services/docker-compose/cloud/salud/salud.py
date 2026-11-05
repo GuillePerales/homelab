@@ -4,6 +4,7 @@
   salud.py sync [días]          descarga los últimos días (por defecto 3)
   salud.py backfill <días>      descarga el histórico hacia atrás, por bloques
   salud.py dia AAAA-MM-DD       muestra el registro guardado de un día
+  salud.py remapear             rehace los registros desde las respuestas originales guardadas
   salud.py crudo AAAA-MM-DD     vuelca lo que devuelve Garmin para un día (depurar)
   salud.py run                  servidor HTTP + sincronización a las SYNC_HORAS (modo contenedor)
 
@@ -49,13 +50,31 @@ def db():
     con = sqlite3.connect(DB)
     con.execute("CREATE TABLE IF NOT EXISTS dias (fecha TEXT PRIMARY KEY, datos TEXT NOT NULL, actualizado TEXT NOT NULL)")
     con.execute("CREATE TABLE IF NOT EXISTS estado (clave TEXT PRIMARY KEY, valor TEXT)")
+    if "crudo" not in [c[1] for c in con.execute("PRAGMA table_info(dias)")]:
+        con.execute("ALTER TABLE dias ADD COLUMN crudo TEXT")  # respuesta original de Garmin del día
     return con
 
 
-def guardar(registros):
+def guardar(pares):
+    """pares: (registro, respuesta original de Garmin de ese día). Se guarda también lo original
+    para poder sacar métricas nuevas sin volver a descargar (salud.py remapear)."""
     with db() as con:
-        con.executemany("INSERT OR REPLACE INTO dias VALUES (?, ?, ?)",
-                        [(r["fecha"], json.dumps(r, ensure_ascii=False), ahora()) for r in registros])
+        con.executemany("INSERT OR REPLACE INTO dias (fecha, datos, actualizado, crudo) VALUES (?, ?, ?, ?)",
+                        [(r["fecha"], json.dumps(r, ensure_ascii=False), ahora(), json.dumps(c, ensure_ascii=False))
+                         for r, c in pares])
+
+
+def remapear():
+    """Rehace los registros a partir de las respuestas originales guardadas (tras cambiar registros())."""
+    with db() as con:
+        filas = con.execute("SELECT fecha, crudo FROM dias WHERE crudo IS NOT NULL").fetchall()
+    pares = []
+    for fecha, crudo_dia in filas:
+        c = json.loads(crudo_dia)
+        pares += registros(fecha, fecha, {"resumen": {"data": [c["resumen"]]}, "sueno": [c["sueno"]],
+                                          "hrv": {"hrvSummaries": [c["hrv"]]}, "actividades": c["actividades"]})
+    guardar(pares)
+    print(f"remapeados {len(pares)} días", flush=True)
 
 
 def dias(desde, hasta):
@@ -158,7 +177,7 @@ def nonneg(v):
 
 
 def registros(desde, hasta, c):
-    """Un registro por día del rango, con los nombres propios del panel."""
+    """Por cada día del rango con datos: (registro con los nombres propios del panel, respuesta original del día)."""
     resumen = {r.get("calendarDate"): r for r in g(c, "resumen", "data") or []}
     sueno = {s.get("calendarDate"): s for s in c.get("sueno") or []}
     hrv = {h.get("calendarDate"): h for h in g(c, "hrv", "hrvSummaries") or []}
@@ -176,7 +195,7 @@ def registros(desde, hasta, c):
         if not (pasos.get("value") or s.get("sleepTimeSeconds") or a):
             continue  # el reloj no ha subido nada de ese día
         vo2 = [x["vO2MaxValue"] for x in a if x.get("vO2MaxValue")]
-        out.append({
+        out.append(({
             "fecha": f,
             "sueno": {
                 "total_min": minutos(s.get("sleepTimeSeconds")),
@@ -222,7 +241,7 @@ def registros(desde, hasta, c):
                 "inicio": x.get("startTimeLocal"),
                 "efecto": x.get("trainingEffectLabel"),
             } for x in a],
-        })
+        }, {"resumen": r, "sueno": s, "hrv": h, "actividades": a}))
     return out
 
 
@@ -324,6 +343,8 @@ def main():
         print(json.dumps(leer_estado(), ensure_ascii=False))
     elif cmd == "backfill" and a:
         descargar(hoy - dt.timedelta(days=int(a[0]) - 1), hoy)
+    elif cmd == "remapear":
+        remapear()
     elif cmd == "dia" and a:
         print(json.dumps(dias(a[0], a[0]), ensure_ascii=False, indent=1))
     elif cmd == "crudo" and a:
