@@ -45,6 +45,9 @@ services:
     depends_on:
       gluetun:
         condition: service_healthy
+        # Si Gluetun se recrea o se reinicia con compose, qBittorrent se reinicia con él:
+        # comparte su red y, sin esto, se queda con el espacio de red viejo o en Created
+        restart: true
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
