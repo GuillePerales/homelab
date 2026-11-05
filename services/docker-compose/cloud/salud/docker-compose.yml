@@ -7,7 +7,8 @@ networks:
 services:
   salud:
     container_name: salud
-    image: python:3.13.3-slim
+    build: .
+    image: salud:local
     command: ["python", "/app/salud.py", "run"]
     restart: unless-stopped
     user: "3000:3000"
@@ -15,8 +16,8 @@ services:
     tmpfs:
       - /tmp:size=16m
     labels:
-      # Tags tipo 3.13.3-slim: diun solo vigila los de la rama 3.13
-      - 'diun.include_tags=^3\.13\.\d+-slim$$'
+      # Imagen construida aquí (Python + SDK de FIT de Garmin): diun no tiene registro que vigilar
+      - "diun.enable=false"
     security_opt:
       - no-new-privileges:true
     networks:
