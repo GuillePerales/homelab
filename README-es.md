@@ -2,8 +2,12 @@
 
 Homelab personal gestionado íntegramente como Infraestructura como Código. Dos objetivos en paralelo: un stack self-hosted privado que sustituye servicios cloud, y un pipeline DevOps de nivel productivo construido con las mismas herramientas que se usan en entornos enterprise.
 
-**Versión:** 3.2 — Marzo 2026
-**Estado:** Phase 4 completada
+**Versión:** 3.3 — Noviembre 2026
+**Estado:** Fases 0–4 y 7 completadas
+
+![Mapa de infraestructura del homelab: red, hosts, máquinas virtuales, contenedores y servicios](docs/diagrama/homelab-es.png)
+
+*Mapa generado desde el inventario del homelab, sin IP, puertos ni rutas internas. [English version](docs/diagrama/homelab-en.png).*
 
 ---
 
@@ -94,34 +98,14 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 - Conecta: OPNsense ↔ todo el hardware físico en VLAN 5
 - **Justificación:** Hardware físico aquí = independiente de OPNsense
 
-```
-                      INTERNET
-                          │
-                   Router ISP (XX.XX)
-                   └─ Gestión Proxmox (em0)
-                   └─ WAN OPNsense (igb0, DHCP)
-                          │
-                  HW-SRV-02 (pve-router)
-                          │
-                igb3 → TL-SG108E (aware de VLANs)
-                          │
-         ┌────────────────┼──────────────────┐
-      VLAN 5           VLAN 10            VLAN 30
-      (INFRA)          (MGMT)             (SRV)
-    bare metal      virtualizado         servicios
-    nas-01          fw-01                docker-main
-    pve-main        prx-01               docker-aux
-    pve-aux         auth-01              K3s (planificado)
-    wks-01/02
-    rpi-dns
-```
+La topología completa, de internet a cada contenedor, está en el [mapa del principio](docs/diagrama/homelab-es.png).
 
 ### 3.2 Segmentación VLAN
 
 | VLAN | Nombre | Subred | Salida | Propósito |
 |---|---|---|---|---|
-| 5 | INFRA | XX.XX | ISP directo | Hardware físico: Proxmox, TrueNAS, IPMI, RPi |
-| 10 | MGMT | XX.XX | ISP directo | Servicios virtualizados: OPNsense, NGINX, Authentik |
+| 5 | INFRA | XX.XX | ISP directo | Hardware físico: Proxmox, TrueNAS, IPMI |
+| 10 | MGMT | XX.XX | ISP directo | Gestión: OPNsense |
 | 15 | AI | XX.XX | ISP directo | Agentes AI (OpenClaw) — firewall estricto |
 | 20 | DEVICES | XX.XX | ProtonVPN | Dispositivos personales |
 | 30 | SRV | XX.XX | ProtonVPN + kill switch | Stacks Docker, workloads K3s |
@@ -160,8 +144,8 @@ Todos los nodos de producción funcionan 24/7. El consumo total en idle es infer
 
 | VLAN | Rango dinámico | Reservas estáticas |
 |---|---|---|
-| 5 (INFRA) | .100–.200 | nas-01, pve-main, pve-aux, wks-01, wks-02, rpi-dns |
-| 10 (MGMT) | .100–.200 | OPNsense, NGINX, Authentik |
+| 5 (INFRA) | .100–.200 | nas-01, pve-main, pve-aux, wks-01, wks-02 |
+| 10 (MGMT) | .100–.200 | OPNsense |
 | 30 (SRV) | .100–.254 | `.10–.57` reservado para contenedores macvlan |
 | 50 (IOT) | .100–.200 | — |
 
@@ -211,22 +195,18 @@ Categorías:
 | infra-pve-03 | Proxmox VE | pve-aux | Bare Metal | Hipervisor secundario |
 | nas-01 | TrueNAS Scale | nas-01 | Bare Metal | NAS — ZFS, NFS, Docker |
 | infra-ipmi-01 | iDRAC/IPMI | nas-01 | Firmware | Gestión de hardware Dell |
-| infra-rpi-01 | Raspberry Pi | rpi-dns | Bare Metal | DNS failover + utilidades |
 
 ### 4.2 Gestión (VLAN 10 — MGMT)
 
 | ID | Servicio | Host | Tipo | Puerto | Función |
 |---|---|---|---|---|---|
 | fw-opnsense-01 | OPNsense | pve-router | VM | 443 | **Firewall, NAT, DHCP, VLANs, Tailscale** |
-| prx-nginx-01 | NGINX Proxy Manager | pve-router | LXC | 81 | Reverse proxy + SSL Let's Encrypt |
-| auth-authentik-01 | Authentik | pve-router | LXC | 9000 | SSO / Identity Provider |
 
 ### 4.3 DNS
 
 | ID | Servicio | Host | Función |
 |---|---|---|---|
 | dns-unbound-01 | Unbound (integrado en OPNsense) | fw-01 | Resolver recursivo + DNSSEC + split-horizon |
-| dns-rpi-01 | Unbound backup | rpi-dns | DNS failover (futuro) |
 
 > **Decisión de diseño:** Unbound integrado en OPNsense en lugar de AdGuard Home. Justificación: sin servicios adicionales que mantener, soporte nativo de DNSSEC y split-horizon para el dominio `.homelab`.
 
@@ -251,7 +231,6 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | mon-prometheus-01 | Prometheus | docker-aux | 9090 | Base de datos de métricas + alertas |
 | mon-grafana-01 | Grafana | docker-aux | 3001 | Dashboards — métricas DORA, salud de infra |
 | mon-loki-01 | Loki | docker-aux | 3100 | Agregación centralizada de logs |
-| mon-uptime-01 | Uptime Kuma | docker-aux | 3002 | Monitorización de disponibilidad |
 | mon-homepage-01 | Homepage | docker-aux | 3003 | Dashboard de inicio |
 | mon-nodeexp-01 | Node Exporter | Todos los hosts | 9100 | Métricas CPU, RAM, disco |
 | mon-ipmi-01 | IPMI Exporter | docker-aux | 9290 | Métricas de hardware Dell |
@@ -260,7 +239,6 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 
 | ID | Servicio | Host | Tipo | Función |
 |---|---|---|---|---|
-| app-nextcloud-01 | Nextcloud | docker-main | Docker | Cloud personal: archivos, calendario, contactos |
 | app-immich-01 | Immich | docker-nas | Docker macvlan | ✅ Gestión de fotos/vídeo (alternativa a Google Photos) |
 | app-syncthing-01 | Syncthing | docker-nas | Docker macvlan | ✅ Sync P2P con dispositivos móviles |
 | app-paperless-01 | Paperless-ngx | docker-main | Docker | Gestión documental con OCR |
@@ -330,8 +308,6 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 
 **pve-router (20GB)**
 - `fw-opnsense-01` (VM, 4GB) — Firewall OPNsense
-- `prx-nginx-01` (LXC, 512MB) — Reverse proxy *(Phase 5)*
-- `auth-authentik-01` (LXC, 1GB) — SSO *(Phase 5)*
 - `ai-openclaw-01` (LXC, 4GB) — Agente IA *(Phase 9)*
 
 **pve-main (16GB)**
@@ -447,7 +423,7 @@ El stack DevOps replica un entorno enterprise real usando exclusivamente herrami
 | UI Ansible | **AWX** | RBAC + historial de ejecución, upstream gratuito de Ansible Tower |
 | Estrategia de branches | **Trunk-based** | Main protegido, feature branches de vida corta, PR obligatorio |
 
-> **Por qué dos capas de orquestación:** Los servicios personales (Jellyfin, \*arr, Nextcloud) son estables y no se benefician del scheduling, auto-healing ni rolling updates de K8s. Docker Compose es más sencillo de operar y depurar. K3s se reserva para el stack DevOps donde sí aporta valor real: despliegues declarativos, GitOps y operaciones Kubernetes demostrables.
+> **Por qué dos capas de orquestación:** Los servicios personales (Jellyfin, \*arr, Immich) son estables y no se benefician del scheduling, auto-healing ni rolling updates de K8s. Docker Compose es más sencillo de operar y depurar. K3s se reserva para el stack DevOps donde sí aporta valor real: despliegues declarativos, GitOps y operaciones Kubernetes demostrables.
 
 ### 8.2 Arquitectura por capas
 
@@ -501,7 +477,6 @@ El stack DevOps replica un entorno enterprise real usando exclusivamente herrami
 │  Docker Compose │         │  Vault (runtime K8s)   │
 │  ├── Stack *arr │         └──────────────────────┘
 │  ├── Jellyfin   │
-│  ├── Nextcloud  │
 │  └── Immich     │
 └─────────────────┘
 ```
