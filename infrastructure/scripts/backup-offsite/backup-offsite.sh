@@ -150,11 +150,12 @@ STEP="subida a Proton Drive"
 # Un fichero cada vez y con reintentos: Proton responde con 502 sueltos. Los paquetes de
 # restic no cambian una vez escritos, así que cada noche solo sube lo nuevo.
 # replace-existing-draft: si una subida anterior dejó el fichero a medias, se reemplaza.
-upload_proton() {
+upload_proton() {  # upload_proton [args extra de rclone, p. ej. --exclude]
   with_stall_guard nice -n 19 ionice -c3 rclone sync "$RESTIC_REPOSITORY" "$RCLONE_DEST" \
     --transfers 1 --checkers 2 --retries "${PROTON_RETRIES:-3}" --retries-sleep 30s \
-    --low-level-retries 20 --protondrive-replace-existing-draft --stats 10m --stats-one-line -v
+    --low-level-retries 20 --protondrive-replace-existing-draft --stats 10m --stats-one-line -v "$@"
 }
+pendientes=()
 log_start=$(wc -l <"$LOG")
 if ! upload_proton; then
   # Tras un 400 o 502 suelto, Proton deja el fichero como borrador roto y todos los
@@ -164,11 +165,18 @@ if ! upload_proton; then
   mapfile -t rotos < <(tail -n +"$((log_start + 1))" "$LOG" \
     | sed -nE 's/.* ERROR : ([^ ]+): Failed to copy: (400|422|502).*/\1/p' | sort -u)
   [ "${#rotos[@]}" -gt 0 ] || false
+  excluir=()
   for f in "${rotos[@]}"; do
     echo "$(date -Is) borrando el borrador roto en Proton: $f"
-    rclone deletefile "$RCLONE_DEST/$f" || true
+    # 2026-11-08: a veces Proton da 422 «ya existe» al subir y «no encontrado» al borrar
+    # el mismo fichero (borrador invisible). Ese paquete se salta esta noche para que el
+    # resto suba, y se reintenta la siguiente; el aviso final lo lista.
+    if ! rclone deletefile "$RCLONE_DEST/$f"; then
+      pendientes+=("$f")
+      excluir+=(--exclude "/$f")
+    fi
   done
-  upload_proton
+  upload_proton "${excluir[@]}"
 fi
 
 STEP="comprobación de Proton Drive"
@@ -179,5 +187,10 @@ fi
 
 STEP="resumen"
 SUMMARY=$(restic stats latest --mode raw-data 2>/dev/null | awk '/Total Size/ {print $3, $4}')
-notify 1 white_check_mark "Backup externo correcto" "Copia local y subida a Proton Drive terminadas. Último snapshot: ${SUMMARY:-?}."
+if [ "${#pendientes[@]}" -gt 0 ]; then
+  notify 3 warning "Backup externo incompleto" "Copia local correcta, pero Proton rechaza ${#pendientes[@]} paquete(s) (borrador invisible): ${pendientes[*]}. Se reintentan la próxima noche."
+  echo "$(date -Is) paquetes pendientes en Proton: ${pendientes[*]}"
+else
+  notify 1 white_check_mark "Backup externo correcto" "Copia local y subida a Proton Drive terminadas. Último snapshot: ${SUMMARY:-?}."
+fi
 echo "=== $(date -Is) fin"
