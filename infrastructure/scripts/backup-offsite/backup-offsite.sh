@@ -142,18 +142,27 @@ else
 fi
 
 STEP="restic check"
+# Cada noche, antes de subir: estructura e índices del repo (rápido, no lee los datos). Si
+# falla, el script aborta aquí y no replica en Proton un repo dañado. El día 1, además,
+# se leen y verifican el 10 % de los datos.
 if [ "$(date +%d)" = 01 ]; then
   restic check --read-data-subset=10%
+else
+  restic check
 fi
 
 STEP="subida a Proton Drive"
 # Un fichero cada vez y con reintentos: Proton responde con 502 sueltos. Los paquetes de
 # restic no cambian una vez escritos, así que cada noche solo sube lo nuevo.
+# max-delete: la poda semanal borra paquetes viejos de verdad, pero un repo local vacío o
+# dañado haría que el sync vaciara también Proton; por encima de ese número aborta (tras
+# subir, por --delete-after) y avisa. Para una poda grande, subir PROTON_MAX_DELETE en el .env.
 # replace-existing-draft: si una subida anterior dejó el fichero a medias, se reemplaza.
 upload_proton() {  # upload_proton [args extra de rclone, p. ej. --exclude]
   with_stall_guard nice -n 19 ionice -c3 rclone sync "$RESTIC_REPOSITORY" "$RCLONE_DEST" \
     --transfers 1 --checkers 2 --retries "${PROTON_RETRIES:-3}" --retries-sleep 30s \
-    --low-level-retries 20 --protondrive-replace-existing-draft --stats 10m --stats-one-line -v "$@"
+    --low-level-retries 20 --protondrive-replace-existing-draft --stats 10m --stats-one-line -v \
+    --delete-after --max-delete "${PROTON_MAX_DELETE:-300}" "$@"
 }
 pendientes=()
 log_start=$(wc -l <"$LOG")
