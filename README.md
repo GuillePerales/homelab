@@ -42,7 +42,7 @@ Personal homelab managed entirely as Infrastructure as Code. Two parallel object
 |---|---|
 | NAS | TrueNAS Scale on Dell R230 |
 | Storage | ZFS pools: `tank` (HDD stripe) + `vault` (SSD mirror) |
-| Media stack | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated, Shelfmark — all operational |
+| Media stack | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated, Shelfmark, Romm — all operational |
 | Backup | Proxmox Backup Server (PBS) in Docker on NAS |
 | Sync | Syncthing for mobile device sync |
 
@@ -146,7 +146,7 @@ The full topology, from the internet to every container, is in the [map at the t
 |---|---|---|
 | 5 (INFRA) | .100–.200 | nas-01, pve-main, pve-aux, wks-01, wks-02 |
 | 10 (MGMT) | .100–.200 | OPNsense |
-| 30 (SRV) | .100–.254 | `.10–.57` reserved for macvlan containers |
+| 30 (SRV) | .100–.254 | `.10–.63` reserved for macvlan containers |
 | 50 (IOT) | .100–.200 | — |
 
 ### 3.5 Macvlan address ranges (VLAN 30 — no overlap)
@@ -264,6 +264,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 | media-mularr-01 | Mularr | docker-nas | Docker macvlan | 8940 | ✅ Operational | aMule (eD2k) bridged to Sonarr and Radarr as download client and indexer (behind its own Gluetun) |
 | media-crossseed-01 | cross-seed | docker-nas | Docker | — | ✅ Operational | Finds the same torrents on other trackers and seeds them from existing files |
 | media-shelfmark-01 | Shelfmark | docker-nas | Docker macvlan | 8084 | ✅ Operational | Ebook search and download, feeding the Calibre-Web Automated ingest folder |
+| media-romm-01 | Romm | docker-nas | Docker macvlan | 8080 | ✅ Operational | ROM library with metadata scraping and in-browser play, reading the games share on the NAS |
 
 ### 4.7 DevOps (VLAN 30 — SRV)
 
@@ -648,7 +649,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube and AWX under review | ⏳ Planned |
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
-| **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library planned | ✅ Done |
+| **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library (Romm ✅ deployed) | ✅ Done |
 | **Phase 8** | Observability & operations: Prometheus, Grafana, Alertmanager, exporters, job scheduler; Loki under evaluation | ⏳ Planned |
 | **Phase 9** | Restricted, always-on AI agent with least privilege (replanned) | ⏳ Planned |
 | **Post-deployment** | Data-engineering practice on real homelab data: lakehouse, CDC streaming | ⏳ Ideas |
