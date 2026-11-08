@@ -42,7 +42,7 @@ Homelab personal gestionado íntegramente como Infraestructura como Código. Dos
 |---|---|
 | NAS | TrueNAS Scale en Dell R230 |
 | Almacenamiento | Pools ZFS: `tank` (stripe HDD) + `vault` (mirror SSD) |
-| Stack multimedia | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated, Shelfmark — todos operativos |
+| Stack multimedia | Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, qBittorrent, Calibre-Web Automated, Shelfmark, Romm — todos operativos |
 | Backup | Proxmox Backup Server (PBS) en Docker en el NAS |
 | Sincronización | Syncthing para sync con dispositivos móviles |
 
@@ -146,7 +146,7 @@ La topología completa, de internet a cada contenedor, está en el [mapa del pri
 |---|---|---|
 | 5 (INFRA) | .100–.200 | nas-01, pve-main, pve-aux, wks-01, wks-02 |
 | 10 (MGMT) | .100–.200 | OPNsense |
-| 30 (SRV) | .100–.254 | `.10–.57` reservado para contenedores macvlan |
+| 30 (SRV) | .100–.254 | `.10–.63` reservado para contenedores macvlan |
 | 50 (IOT) | .100–.200 | — |
 
 ### 3.5 Rangos de direcciones macvlan (VLAN 30 — sin solapamiento)
@@ -264,6 +264,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | media-mularr-01 | Mularr | docker-nas | Docker macvlan | 8940 | ✅ Operativo | aMule (eD2k) conectado a Sonarr y Radarr como cliente de descargas e indexer (detrás de su propio Gluetun) |
 | media-crossseed-01 | cross-seed | docker-nas | Docker | — | ✅ Operativo | Busca los mismos torrents en otros trackers y los siembra desde los ficheros existentes |
 | media-shelfmark-01 | Shelfmark | docker-nas | Docker macvlan | 8084 | ✅ Operativo | Búsqueda y descarga de ebooks hacia la carpeta de ingesta de Calibre-Web Automated |
+| media-romm-01 | Romm | docker-nas | Docker macvlan | 8080 | ✅ Operativo | Biblioteca de ROMs con metadatos y juego en el navegador, sobre la carpeta de juegos del NAS |
 
 ### 4.7 DevOps (VLAN 30 — SRV)
 
@@ -648,7 +649,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube y AWX en revisión | ⏳ Planificada |
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
-| **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos prevista | ✅ Completada |
+| **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |
 | **Phase 8** | Observabilidad y operación: Prometheus, Grafana, Alertmanager, exporters, planificador de tareas; Loki en evaluación | ⏳ Planificada |
 | **Phase 9** | Agente IA acotado y siempre encendido, con mínimo privilegio (replanteada) | ⏳ Planificada |
 | **Postimplantación** | Práctica de data engineering con datos reales del homelab: lakehouse, streaming CDC | ⏳ Ideas |
