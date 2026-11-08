@@ -7,11 +7,14 @@
 - qBittorrent no conectable (sin puerto reenviado) durante dos pasadas seguidas: recrea el
   proyecto de compose (Gluetun + qBittorrent) para que Gluetun coja otro servidor, como mucho
   RECREAR_MAX_DIA veces al día; pasado ese límite solo avisa.
+- Contenedores parados: si Gluetun o qBittorrent no están en marcha (p. ej. una recreación que
+  dejó qBittorrent en «Created» porque Gluetun tardó en pasar el healthcheck), los arranca con
+  `docker compose up -d` y avisa. No gasta el cupo de recreaciones.
 - Resumen semanal: lo sembrado y lo subido por tracker, desde el lado del cliente.
 
 Lo lanza cada 15 min un cron de TrueNAS en nas-01. Habla con qBittorrent por `docker exec`
 contra 127.0.0.1, que entra sin contraseña (bypass_local_auth), y solo lee: lo único que
-cambia es recrear los contenedores. Cada aviso se manda una vez; el estado vive en STATE_FILE.
+cambia es arrancar o recrear los contenedores. Cada aviso se manda una vez; el estado vive en STATE_FILE.
 Configuración privada (no versionada): /mnt/vault/secrets/qbit-vigia.env
 Uso: qbit-vigia.py [--resumen]   (--resumen manda el resumen semanal ya, para probarlo)
 """
@@ -21,6 +24,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -75,7 +79,35 @@ def recrear():
     se engancha a su red nueva (si solo se reinicia Gluetun, qBittorrent se queda sin red)."""
     r = subprocess.run(["docker", "compose", "-p", RECREAR_PROYECTO, "up", "-d", "--force-recreate"],
                        cwd=RECREAR_DIR, capture_output=True, text=True, timeout=600)
-    return r.returncode == 0, (r.stderr or r.stdout).strip()[-300:]
+    if r.returncode == 0 and not parados():
+        return True, ""
+    # compose aborta si Gluetun no pasa el healthcheck a tiempo y deja qBittorrent en «Created»
+    ok, salida = levantar()
+    return ok, salida or (r.stderr or r.stdout).strip()[-300:]
+
+
+def parados():
+    """Servicios del proyecto de compose que no están en marcha (Created, Exited…)."""
+    r = subprocess.run(["docker", "compose", "-p", RECREAR_PROYECTO, "ps", "-a", "--format", "{{.Name}} {{.State}}"],
+                       cwd=RECREAR_DIR, capture_output=True, text=True, timeout=60, check=True)
+    lineas = [l.split() for l in r.stdout.splitlines() if l.strip()]
+    if not lineas:
+        return ["(ningún contenedor)"]
+    return [f"{n} ({s})" for n, s in lineas if s != "running"]
+
+
+def levantar(intentos=3, espera=60):
+    """`docker compose up -d` sin recrear, reintentando mientras Gluetun pasa el healthcheck."""
+    salida = ""
+    for i in range(intentos):
+        if i:
+            time.sleep(espera)
+        r = subprocess.run(["docker", "compose", "-p", RECREAR_PROYECTO, "up", "-d"],
+                           cwd=RECREAR_DIR, capture_output=True, text=True, timeout=600)
+        salida = (r.stderr or r.stdout).strip()[-300:]
+        if r.returncode == 0 and not parados():
+            return True, ""
+    return False, salida
 
 
 def tracker_de(trackers):
@@ -109,6 +141,20 @@ def main():
     avisados = state.setdefault("avisados", {})       # clave → fecha del aviso
     pendientes = state.setdefault("pendientes", {})   # hash → torrent privado sin cumplir el seed
     primera = "conexion" not in state
+
+    # contenedores parados: arrancarlos y dejar el resto de comprobaciones para la pasada siguiente
+    caidos = parados()
+    if caidos:
+        ok, salida = levantar()
+        if ok:
+            notify(TOPIC_ALERTAS, 3, ["arrows_counterclockwise"], "qBittorrent arrancado",
+                   f"Estaba parado: {', '.join(caidos)}. Arrancado con docker compose up -d.")
+        else:
+            notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no arranca",
+                   f"Parado: {', '.join(caidos)}. Falló docker compose up -d tras 3 intentos: {salida}")
+        state["conexion"] = 0   # que no cuente como «no conectable» mientras arranca
+        guardar(state)
+        return
 
     torrents = qbit("torrents/info")
     vivos = {t["hash"] for t in torrents}
@@ -218,7 +264,10 @@ def main():
     # olvidar avisos de más de 30 días
     limite = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
     state["avisados"] = {k: v for k, v in avisados.items() if v >= limite}
+    guardar(state)
 
+
+def guardar(state):
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     with open(STATE_FILE + ".tmp", "w") as f:
         json.dump(state, f)
