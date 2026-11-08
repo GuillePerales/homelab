@@ -1,9 +1,23 @@
----
+# homelab/services/docker-compose/gaming/romm/docker-compose.yml
+# Romm — biblioteca web de ROMs con metadatos (IGDB, ScreenScraper, Hasheous) y juego en navegador.
+# Las ROMs viven en el NAS (estructura A: roms/<plataforma>/ y bios/<plataforma>/); Romm las lee y
+# guarda carátulas y saves subidos en su appdata. Redis va dentro de la imagen.
+# Sale a internet por Digi (sin VPN): solo consulta APIs de metadatos.
+# .env: ver .env.example (los secretos, en sops.env).
+networks:
+  srv-net:
+    external: true
+  romm-internal:
+    internal: true
+
 services:
   romm:
     image: rommapp/romm:5.4.1
     container_name: romm
     restart: unless-stopped
+    # La imagen corre como uid 1000; las ROMs son de media (3000) y los demás no pueden entrar
+    user: "${PUID}:${PGID}"
+    mem_limit: 1536m
     environment:
       - TZ=${TZ}
       - DB_HOST=romm-db
@@ -11,15 +25,24 @@ services:
       - DB_USER=romm
       - DB_PASSWD=${DB_PASS}
       - ROMM_AUTH_SECRET_KEY=${SECRET_KEY}
-      - ROMM_AUTH_ENABLED=true
       - IGDB_CLIENT_ID=${IGDB_CLIENT_ID}
       - IGDB_CLIENT_SECRET=${IGDB_CLIENT_SECRET}
+      - SCREENSCRAPER_USER=${SCREENSCRAPER_USER}
+      - SCREENSCRAPER_PASSWORD=${SCREENSCRAPER_PASSWORD}
+      - HASHEOUS_API_ENABLED=true
+      - SCAN_WORKERS=2
+      - WEB_SERVER_CONCURRENCY=2
     volumes:
-      - ${APPDATA}/config:/romm/config
+      - ${APPDATA}/resources:/romm/resources
+      - ${APPDATA}/redis:/redis-data
       - ${APPDATA}/assets:/romm/assets
-      - ${ROMS_PATH}:/romm/library
+      - ${APPDATA}/config:/romm/config
+      # Biblioteca: contiene roms/ y bios/ (y saves/, que Romm ignora)
+      - ${LIBRARY_PATH}:/romm/library
     depends_on:
-      - romm-db
+      romm-db:
+        condition: service_healthy
+        restart: true
     networks:
       srv-net:
         ipv4_address: ${CONTAINER_IP}
@@ -29,19 +52,21 @@ services:
     image: mariadb:11.8.9
     container_name: romm-db
     restart: unless-stopped
+    mem_limit: 768m
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}
-      - MYSQL_DATABASE=romm
-      - MYSQL_USER=romm
-      - MYSQL_PASSWORD=${DB_PASS}
+      - TZ=${TZ}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASS}
+      - MARIADB_DATABASE=romm
+      - MARIADB_USER=romm
+      - MARIADB_PASSWORD=${DB_PASS}
     volumes:
       - ${APPDATA}/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      start_interval: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - romm-internal
-
-networks:
-  srv-net:
-    external: true
-    name: srv-net
-  romm-internal:
-    internal: true
