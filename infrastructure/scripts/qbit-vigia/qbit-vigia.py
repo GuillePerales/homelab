@@ -4,9 +4,13 @@
 - Riesgo de H&R: un torrent privado completo que no está sembrando (parado, con error o
   sin ficheros) o que ha desaparecido antes de cumplir el seed mínimo de su tracker.
 - Torrent rechazado por el tracker (unregistered, passkey inválida, cuenta desactivada…).
-- qBittorrent no conectable (sin puerto reenviado) durante dos pasadas seguidas: recrea el
-  proyecto de compose (Gluetun + qBittorrent) para que Gluetun coja otro servidor, como mucho
-  RECREAR_MAX_DIA veces al día; pasado ese límite solo avisa.
+- Sin puerto reenviado (Gluetun no tiene puerto o qBittorrent no escucha en él): pasa cuando
+  Gluetun cambia de servidor y la pasarela NAT-PMP nueva no contesta a la primera, porque
+  Gluetun no reintenta. Reinicia la VPN por la API de control de Gluetun (sin recrear
+  contenedores), como mucho VPN_MAX_DIA veces al día; si no recupera el puerto, recrea el
+  proyecto de compose (Gluetun + qBittorrent), como mucho RECREAR_MAX_DIA veces al día.
+- Con puerto pero «firewalled» FIREWALLED_PASADAS pasadas seguidas: solo avisa (tras un cambio
+  de puerto es normal unos minutos, hasta que entra la primera conexión).
 - Contenedores parados: si Gluetun o qBittorrent no están en marcha (p. ej. una recreación que
   dejó qBittorrent en «Created» porque Gluetun tardó en pasar el healthcheck), los arranca con
   `docker compose up -d` y avisa. No gasta el cupo de recreaciones.
@@ -18,7 +22,7 @@
 
 Lo lanza cada 15 min un cron de TrueNAS en nas-01. Habla con qBittorrent por `docker exec`
 contra 127.0.0.1, que entra sin contraseña (bypass_local_auth), y solo lee: lo único que
-cambia es arrancar o recrear los contenedores. Cada aviso se manda una vez; el estado vive en STATE_FILE.
+cambia es reiniciar la VPN de Gluetun o arrancar y recrear los contenedores. Cada aviso se manda una vez; el estado vive en STATE_FILE.
 Configuración privada (no versionada): /mnt/vault/secrets/qbit-vigia.env
 Uso: qbit-vigia.py [--resumen]   (--resumen manda el resumen semanal ya, para probarlo)
 """
@@ -62,6 +66,10 @@ RECREAR_MAX_DIA = int(ENV.get("RECREAR_MAX_DIA", "3"))
 GLUETUN_CONTAINER = ENV.get("GLUETUN_CONTAINER", "gluetun-qbittorrent")
 LOG_DIR = ENV.get("LOG_DIR", "/mnt/vault/cache/qbit-vigia/logs")
 LOG_DIAS = int(ENV.get("LOG_DIAS", "14"))
+VPN_MAX_DIA = int(ENV.get("VPN_MAX_DIA", "8"))
+FIREWALLED_PASADAS = int(ENV.get("FIREWALLED_PASADAS", "4"))   # 4 pasadas de 15 min = 45-60 min
+ESPERA_PUERTO = 60          # s antes de dar el puerto por perdido (Gluetun puede estar reconectando)
+GLUETUN_API = "http://127.0.0.1:8000/v1/vpn/status"
 
 SEMBRANDO = {"uploading", "stalledUP", "forcedUP", "queuedUP", "checkingUP"}
 RIESGO = {"stoppedUP", "pausedUP", "error", "missingFiles"}
@@ -131,24 +139,99 @@ def guardar_logs_gluetun(motivo):
         return ""
 
 
-def apuntar_conexion(estado):
+def estado_puerto():
+    """(puerto reenviado de Gluetun o "", (puerto de escucha de qBittorrent, interfaz))."""
+    try:
+        r = subprocess.run(["docker", "exec", GLUETUN_CONTAINER, "cat", "/tmp/gluetun/forwarded_port"],
+                           capture_output=True, text=True, timeout=30)
+        puerto = r.stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        puerto = ""
+    try:
+        prefs = qbit("app/preferences")
+        escucha = (prefs.get("listen_port"), prefs.get("current_network_interface") or "")
+    except Exception:
+        escucha = (None, "")
+    return puerto, escucha
+
+
+def sin_puerto(puerto, escucha):
+    """Sin puerto útil: Gluetun no tiene, o qBittorrent no escucha en él (el comando de subida
+    de Gluetun falló, p. ej. porque qBittorrent aún no había arrancado)."""
+    return not puerto or str(escucha[0]) != puerto or escucha[1] == "lo"
+
+
+def apuntar_conexion(estado, puerto, escucha):
     """Una línea en LOG_DIR/conexion.log: estado de qBittorrent, puerto reenviado de Gluetun
     y puerto e interfaz de escucha de qBittorrent. Nunca falla."""
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
-        r = subprocess.run(["docker", "exec", GLUETUN_CONTAINER, "cat", "/tmp/gluetun/forwarded_port"],
-                           capture_output=True, text=True, timeout=30)
-        puerto_vpn = r.stdout.strip() or "-"
-        try:
-            prefs = qbit("app/preferences")
-            escucha = f"{prefs.get('listen_port')} {prefs.get('current_network_interface') or '-'}"
-        except Exception:
-            escucha = "? ?"
         with open(os.path.join(LOG_DIR, "conexion.log"), "a") as f:
             f.write(f"{datetime.datetime.now():%Y-%m-%d %H:%M} estado={estado} "
-                    f"puerto_gluetun={puerto_vpn} qbit={escucha}\n")
+                    f"puerto_gluetun={puerto or '-'} qbit={escucha[0]} {escucha[1] or '-'}\n")
     except Exception:
         pass
+
+
+def api_vpn(status):
+    subprocess.run(["docker", "exec", GLUETUN_CONTAINER, "wget", "-qO-", "--method=PUT",
+                    "--header=Content-Type: application/json", f'--body-data={{"status":"{status}"}}',
+                    GLUETUN_API], capture_output=True, text=True, timeout=60, check=True)
+
+
+def reiniciar_vpn(espera=90):
+    """Para y arranca la VPN de Gluetun (vuelve a pedir el puerto) sin tocar los contenedores.
+    Devuelve el puerto nuevo cuando qBittorrent ya escucha en él, o "" si no llega a tiempo."""
+    try:
+        api_vpn("stopped")
+        time.sleep(5)
+        api_vpn("running")
+    except (subprocess.SubprocessError, OSError):
+        return ""
+    fin = time.time() + espera
+    while time.time() < fin:
+        time.sleep(10)
+        puerto, escucha = estado_puerto()
+        if not sin_puerto(puerto, escucha):
+            return puerto
+    return ""
+
+
+def recuperar_puerto(state, hoy):
+    """Sin puerto: reiniciar la VPN (hasta VPN_MAX_DIA al día); si no basta, recrear el proyecto
+    (hasta RECREAR_MAX_DIA al día); agotado todo, avisar una vez y esperar al día siguiente."""
+    vpn = state.get("vpn_reinicios", {})
+    n = vpn.get("n", 0) if vpn.get("fecha") == hoy else 0
+    if n < VPN_MAX_DIA:
+        guardar_logs_gluetun("sin-puerto")
+        state["vpn_reinicios"] = {"fecha": hoy, "n": n + 1}
+        puerto = reiniciar_vpn()
+        if puerto:
+            notify(TOPIC_ALERTAS, 2, ["arrows_counterclockwise"], "qBittorrent: puerto recuperado",
+                   f"Gluetun se había quedado sin puerto reenviado. Reiniciada la VPN: puerto {puerto} "
+                   f"({n + 1}/{VPN_MAX_DIA} hoy).")
+            return
+    recreados = state.get("recreados", {})
+    hechos = recreados.get("n", 0) if recreados.get("fecha") == hoy else 0
+    if hechos < RECREAR_MAX_DIA:
+        if n >= VPN_MAX_DIA:
+            guardar_logs_gluetun("recrear")
+        ok, salida = recrear()
+        state["recreados"] = {"fecha": hoy, "n": hechos + 1}
+        if ok:
+            notify(TOPIC_ALERTAS, 3, ["arrows_counterclockwise"], "qBittorrent recreado",
+                   "Sin puerto reenviado y reiniciar la VPN no bastó. Recreados Gluetun y qBittorrent "
+                   f"para coger otro servidor ({hechos + 1}/{RECREAR_MAX_DIA} hoy).")
+        else:
+            notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
+                   f"Falló la recreación automática: {salida}")
+    elif hechos == RECREAR_MAX_DIA:
+        guardar_logs_gluetun("cupo")
+        state["recreados"] = {"fecha": hoy, "n": hechos + 1}
+        notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
+               f"Sigue sin puerto reenviado tras {VPN_MAX_DIA} reinicios de la VPN y {RECREAR_MAX_DIA} "
+               f"recreaciones hoy: no lo vuelvo a intentar hasta mañana. Logs en {LOG_DIR} "
+               "(¿caída de ProtonVPN o de su reenvío de puertos?).")
 
 
 def limpiar_logs():
@@ -253,42 +336,38 @@ def main():
                            "descarga otra vez el .torrent y vuelve a añadirlo para sembrar.")
     state["pendientes"] = nuevos_pendientes
 
-    # conectable: a la segunda pasada seguida sin puerto (30 min con el cron de 15 min) recrear
-    # Gluetun + qBittorrent; si sigue igual, recrear en cada pasada hasta RECREAR_MAX_DIA al día
+    # conexión: dos fallos distintos
+    # - sin puerto (Gluetun sin puerto reenviado, o qBittorrent sin escuchar en él): Gluetun no lo
+    #   recupera solo; se reinicia la VPN por su API y, si no basta, se recrea el proyecto
+    # - con puerto pero sin «connected»: normal unos minutos tras cambiar de puerto (qBittorrent
+    #   sigue «firewalled» hasta que le entra una conexión); solo avisa si dura FIREWALLED_PASADAS
     info = qbit("transfer/info")
+    estado = info["connection_status"]
+    puerto, escucha = estado_puerto()
+    if sin_puerto(puerto, escucha):
+        time.sleep(ESPERA_PUERTO)   # puede estar a mitad de una reconexión de Gluetun
+        puerto, escucha = estado_puerto()
     fallos = state.get("conexion", 0)
-    if info["connection_status"] == "connected":
-        if fallos >= 2:
+    if sin_puerto(puerto, escucha):
+        apuntar_conexion(f"{estado}/sin-puerto", puerto, escucha)
+        recuperar_puerto(state, hoy)
+        fallos = 0
+    elif estado == "connected":
+        if fallos >= FIREWALLED_PASADAS:
             notify(TOPIC_ALERTAS, 2, ["white_check_mark"], "qBittorrent conectable otra vez",
-                   "Vuelve a tener el puerto reenviado: los trackers ya pueden conectar contigo.")
+                   "Vuelven a entrar conexiones: los trackers ya pueden conectar contigo.")
         if fallos:
-            apuntar_conexion("connected")
+            apuntar_conexion(estado, puerto, escucha)
         fallos = 0
     else:
         fallos += 1
-        apuntar_conexion(info["connection_status"])
-        if fallos >= 2:
-            recreados = state.get("recreados", {})
-            hechos = recreados.get("n", 0) if recreados.get("fecha") == hoy else 0
-            if hechos < RECREAR_MAX_DIA:
-                guardar_logs_gluetun("recrear")
-                ok, salida = recrear()
-                state["recreados"] = {"fecha": hoy, "n": hechos + 1}
-                if ok:
-                    notify(TOPIC_ALERTAS, 3, ["arrows_counterclockwise"], "qBittorrent recreado",
-                           f"Llevaba más de 15 min en «{info['connection_status']}» (sin puerto reenviado). "
-                           f"Recreados Gluetun y qBittorrent para coger otro servidor "
-                           f"({hechos + 1}/{RECREAR_MAX_DIA} hoy).")
-                else:
-                    notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
-                           f"Falló la recreación automática: {salida}")
-            elif hechos == RECREAR_MAX_DIA:
-                guardar_logs_gluetun("cupo")
-                state["recreados"] = {"fecha": hoy, "n": hechos + 1}
-                notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
-                       f"Sigue en «{info['connection_status']}» tras {RECREAR_MAX_DIA} recreaciones hoy: "
-                       f"no lo vuelvo a intentar hasta mañana. Logs de Gluetun y de la conexión en {LOG_DIR} "
-                       "(¿caída de ProtonVPN o de su reenvío de puertos?).")
+        apuntar_conexion(estado, puerto, escucha)
+        if fallos == FIREWALLED_PASADAS:
+            guardar_logs_gluetun("firewalled")
+            notify(TOPIC_ALERTAS, 3, ["warning"], "qBittorrent sin conexiones entrantes",
+                   f"Tiene el puerto {puerto} reenviado, pero lleva {(fallos - 1) * 15} min o más en "
+                   f"«{estado}»: no entra nadie. Puede que el servidor de Proton no reenvíe de verdad. "
+                   f"Logs en {LOG_DIR}.")
     state["conexion"] = fallos
 
     # resumen semanal por tracker (lo que ve el cliente, no la cifra oficial del tracker)
