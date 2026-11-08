@@ -11,6 +11,10 @@
   dejó qBittorrent en «Created» porque Gluetun tardó en pasar el healthcheck), los arranca con
   `docker compose up -d` y avisa. No gasta el cupo de recreaciones.
 - Resumen semanal: lo sembrado y lo subido por tracker, desde el lado del cliente.
+- Diagnóstico de la conexión en LOG_DIR: en cada pasada sin conexión apunta en conexion.log el
+  estado, el puerto que tiene Gluetun y el que escucha qBittorrent (¿se perdió el puerto o está
+  bien y solo no ha entrado nadie?), y antes de recrear o arrancar guarda los logs de Gluetun,
+  que se pierden al recrear el contenedor. Se borran a los LOG_DIAS días.
 
 Lo lanza cada 15 min un cron de TrueNAS en nas-01. Habla con qBittorrent por `docker exec`
 contra 127.0.0.1, que entra sin contraseña (bypass_local_auth), y solo lee: lo único que
@@ -55,6 +59,9 @@ RESUMEN_HORA = int(ENV.get("RESUMEN_HORA", "9"))
 RECREAR_DIR = ENV.get("RECREAR_DIR", "/mnt/vault/apps/qbittorrent")
 RECREAR_PROYECTO = ENV.get("RECREAR_PROYECTO", "qbittorrent")
 RECREAR_MAX_DIA = int(ENV.get("RECREAR_MAX_DIA", "3"))
+GLUETUN_CONTAINER = ENV.get("GLUETUN_CONTAINER", "gluetun-qbittorrent")
+LOG_DIR = ENV.get("LOG_DIR", "/mnt/vault/cache/qbit-vigia/logs")
+LOG_DIAS = int(ENV.get("LOG_DIAS", "14"))
 
 SEMBRANDO = {"uploading", "stalledUP", "forcedUP", "queuedUP", "checkingUP"}
 RIESGO = {"stoppedUP", "pausedUP", "error", "missingFiles"}
@@ -110,6 +117,52 @@ def levantar(intentos=3, espera=60):
     return False, salida
 
 
+def guardar_logs_gluetun(motivo):
+    """Copia los logs de Gluetun a LOG_DIR antes de recrearlo (al recrear se pierden).
+    Nunca falla: el diagnóstico no puede tumbar la pasada. Devuelve la ruta o ""."""
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        ruta = os.path.join(LOG_DIR, f"gluetun-{datetime.datetime.now():%Y%m%d-%H%M}-{motivo}.log")
+        r = subprocess.run(["docker", "logs", GLUETUN_CONTAINER], capture_output=True, text=True, timeout=60)
+        with open(ruta, "w") as f:
+            f.write(r.stdout + r.stderr)
+        return ruta
+    except Exception:
+        return ""
+
+
+def apuntar_conexion(estado):
+    """Una línea en LOG_DIR/conexion.log: estado de qBittorrent, puerto reenviado de Gluetun
+    y puerto e interfaz de escucha de qBittorrent. Nunca falla."""
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        r = subprocess.run(["docker", "exec", GLUETUN_CONTAINER, "cat", "/tmp/gluetun/forwarded_port"],
+                           capture_output=True, text=True, timeout=30)
+        puerto_vpn = r.stdout.strip() or "-"
+        try:
+            prefs = qbit("app/preferences")
+            escucha = f"{prefs.get('listen_port')} {prefs.get('current_network_interface') or '-'}"
+        except Exception:
+            escucha = "? ?"
+        with open(os.path.join(LOG_DIR, "conexion.log"), "a") as f:
+            f.write(f"{datetime.datetime.now():%Y-%m-%d %H:%M} estado={estado} "
+                    f"puerto_gluetun={puerto_vpn} qbit={escucha}\n")
+    except Exception:
+        pass
+
+
+def limpiar_logs():
+    """Borra las copias de logs de Gluetun de más de LOG_DIAS días."""
+    try:
+        limite = time.time() - LOG_DIAS * 86400
+        for n in os.listdir(LOG_DIR):
+            ruta = os.path.join(LOG_DIR, n)
+            if n.startswith("gluetun-") and os.path.getmtime(ruta) < limite:
+                os.remove(ruta)
+    except OSError:
+        pass
+
+
 def tracker_de(trackers):
     """Dominio del tracker real (http/udp), sin subdominio de tracker."""
     for t in trackers:
@@ -145,6 +198,7 @@ def main():
     # contenedores parados: arrancarlos y dejar el resto de comprobaciones para la pasada siguiente
     caidos = parados()
     if caidos:
+        guardar_logs_gluetun("parado")
         ok, salida = levantar()
         if ok:
             notify(TOPIC_ALERTAS, 3, ["arrows_counterclockwise"], "qBittorrent arrancado",
@@ -207,13 +261,17 @@ def main():
         if fallos >= 2:
             notify(TOPIC_ALERTAS, 2, ["white_check_mark"], "qBittorrent conectable otra vez",
                    "Vuelve a tener el puerto reenviado: los trackers ya pueden conectar contigo.")
+        if fallos:
+            apuntar_conexion("connected")
         fallos = 0
     else:
         fallos += 1
+        apuntar_conexion(info["connection_status"])
         if fallos >= 2:
             recreados = state.get("recreados", {})
             hechos = recreados.get("n", 0) if recreados.get("fecha") == hoy else 0
             if hechos < RECREAR_MAX_DIA:
+                guardar_logs_gluetun("recrear")
                 ok, salida = recrear()
                 state["recreados"] = {"fecha": hoy, "n": hechos + 1}
                 if ok:
@@ -225,10 +283,11 @@ def main():
                     notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
                            f"Falló la recreación automática: {salida}")
             elif hechos == RECREAR_MAX_DIA:
+                guardar_logs_gluetun("cupo")
                 state["recreados"] = {"fecha": hoy, "n": hechos + 1}
                 notify(TOPIC_ALERTAS, 4, ["warning"], "qBittorrent no conectable",
                        f"Sigue en «{info['connection_status']}» tras {RECREAR_MAX_DIA} recreaciones hoy: "
-                       "no lo vuelvo a intentar hasta mañana. Mira los logs de gluetun-qbittorrent "
+                       f"no lo vuelvo a intentar hasta mañana. Logs de Gluetun y de la conexión en {LOG_DIR} "
                        "(¿caída de ProtonVPN o de su reenvío de puertos?).")
     state["conexion"] = fallos
 
@@ -264,6 +323,7 @@ def main():
     # olvidar avisos de más de 30 días
     limite = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
     state["avisados"] = {k: v for k, v in avisados.items() if v >= limite}
+    limpiar_logs()
     guardar(state)
 
 
