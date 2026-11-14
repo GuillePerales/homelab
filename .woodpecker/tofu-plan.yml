@@ -7,10 +7,12 @@
 # ramas pero no pull requests: por eso el evento es push (el plan corre al
 # sincronizar cada rama que toque infrastructure/opentofu/).
 
+# Desactivado (manual) hasta que exista código .tf: el espejo de Forgejo no informa
+# de los ficheros cambiados, el filtro de rutas no se aplica y el pipeline fallaba
+# en todas las ramas por falta de secretos, tumbando también a los demás.
+# Al añadir el .tf: volver a `event: push` con el filtro de rutas y crear los secretos.
 when:
-  event: push
-  path:
-    include: ["infrastructure/opentofu/**"]
+  event: manual
 
 steps:
   - name: tofu-fmt
