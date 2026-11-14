@@ -1,6 +1,6 @@
 # Imagen de práctica de la fase 4: build -> Trivy -> registro de Forgejo.
 # Se construye UNA vez en un tar; lo que se escanea es exactamente lo que se publica.
-#  - build: BuildKit rootless (sin docker.sock ni modo privileged); sustituye a kaniko, archivado por Google en 2025
+#  - build: kaniko sin privilegios (sin docker.sock ni modo privileged)
 #  - trivy: informe completo y puerta (falla con CVE HIGH o CRITICAL con arreglo disponible)
 #  - publish: skopeo sube el tar al registro de Forgejo; solo desde main
 # Dos variantes de la misma app para comparar CVE según la imagen base.
@@ -21,16 +21,15 @@ matrix:
 
 steps:
   - name: build
-    image: moby/buildkit:v0.35.0-rootless
-    environment:
-      BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    image: gcr.io/kaniko-project/executor:v1.23.2-debug
     commands:
-      - buildctl-daemonless.sh build
-        --frontend dockerfile.v0
-        --local context=services/images/homelab-check
-        --local dockerfile=services/images/homelab-check
-        --opt build-arg:BASE=$BASE
-        --output type=docker,name=homelab-check:$VARIANT,dest=image.tar
+      - /kaniko/executor
+        --context services/images/homelab-check
+        --dockerfile services/images/homelab-check/Dockerfile
+        --build-arg BASE=$BASE
+        --destination homelab-check:$VARIANT
+        --no-push
+        --tar-path image.tar
 
   - name: trivy
     image: aquasec/trivy:0.58.1
