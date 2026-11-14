@@ -6,7 +6,7 @@
 # Dos variantes de la misma app para comparar CVE según la imagen base.
 
 when:
-  - event: push
+  - event: [push, manual]
     path:
       include:
         - services/images/homelab-check/**
