@@ -1,7 +1,9 @@
 # infrastructure/ansible/inventory/group_vars/docker_hosts.yml
 ---
 # Red macvlan compartida por los hosts Docker (VLAN 30). Cada host fija su
-# docker_macvlan_ip_range en host_vars para que los rangos no se solapen.
+# docker_macvlan_ip_range en host_vars dentro de su bloque:
+#   docker-nas .10-.25 y .42-.49 · docker-main .26-.41 · docker-aux .50-.63
+# Todo servicio en srv-net lleva IP fija (lo comprueba srv-net-check en el CI).
 docker_macvlan_network: srv-net
 docker_macvlan_parent: eth0
 docker_macvlan_subnet: 10.0.30.0/24

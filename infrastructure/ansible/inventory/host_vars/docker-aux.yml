@@ -5,7 +5,8 @@ pve_vmid: 201
 
 nfs_binds: []
 
-docker_macvlan_ip_range: 10.0.30.32/28
+# Bloque de docker-aux: .50-.63. ip-range (solo para IPs automáticas) dentro de él
+docker_macvlan_ip_range: 10.0.30.56/29
 
 # Agente de Portainer en srv-net (lo registra a mano el server de docker-main)
-portainer_agent_ip: 10.0.30.43
+portainer_agent_ip: 10.0.30.50

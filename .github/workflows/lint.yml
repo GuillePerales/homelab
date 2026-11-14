@@ -73,6 +73,16 @@ jobs:
       # No necesita la clave age: comprueba los metadatos de SOPS
       - run: bash infrastructure/scripts/sops-env/sops-env.sh check
 
+  srv-net-check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # macvlan compartida entre hosts: todo servicio en srv-net con IP fija
+      - run: pip install pyyaml==6.0.2
+      - run: python3 infrastructure/scripts/srv-net-check/srv-net-check.py
+
   readme-check:
     runs-on: ubuntu-24.04
     steps:

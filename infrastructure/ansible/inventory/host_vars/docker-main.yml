@@ -14,6 +14,8 @@ nfs_binds:
     host_path: /mnt/nfs/git-storage
     ct_path: /mnt/nas/git-storage
 
+# Bloque de docker-main: .26-.41. El ip-range real no coincide con él, pero no se
+# recrea la red (pararía todos los servicios): todos llevan IP fija (srv-net-check)
 docker_macvlan_ip_range: 10.0.30.16/28
 
 # Shim: el host alcanza a sus propios contenedores macvlan
