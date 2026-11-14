@@ -3,3 +3,26 @@
 # Registro de Forgejo por HTTP: sin esto Docker no puede descargar homelab-check
 docker_insecure_registries:
   - 10.0.30.28:3000
+
+# CT en Proxmox (para los binds NFS, que se montan en el nodo)
+pve_node: pve-main
+pve_vmid: 200
+
+# NFS montado en el nodo y pasado al CT por bind (lxc.mount.entry)
+nfs_binds:
+  - src: 10.0.5.10:/mnt/vault/git-storage
+    host_path: /mnt/nfs/git-storage
+    ct_path: /mnt/nas/git-storage
+
+docker_macvlan_ip_range: 10.0.30.16/28
+
+# Shim: el host alcanza a sus propios contenedores macvlan
+macvlan_shim:
+  address: 10.0.30.98/32
+  routes:
+    - 10.0.30.26/31
+    - 10.0.30.28/30
+    - 10.0.30.32/29
+    - 10.0.30.40/31
+
+# Portainer server vive aquí (stack propio), así que sin agente

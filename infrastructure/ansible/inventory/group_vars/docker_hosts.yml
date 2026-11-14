@@ -1,0 +1,12 @@
+# infrastructure/ansible/inventory/group_vars/docker_hosts.yml
+---
+# Red macvlan compartida por los hosts Docker (VLAN 30). Cada host fija su
+# docker_macvlan_ip_range en host_vars para que los rangos no se solapen.
+docker_macvlan_network: srv-net
+docker_macvlan_parent: eth0
+docker_macvlan_subnet: 10.0.30.0/24
+docker_macvlan_gateway: 10.0.30.1
+
+# Reiniciar el CT desde su nodo si cambia un bind NFS en su .conf. Apagado por
+# defecto: en un host en producción el reinicio se decide a mano.
+lxc_restart_on_bind_change: false
