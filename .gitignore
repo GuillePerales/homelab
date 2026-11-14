@@ -18,6 +18,8 @@ keys.txt
 .terraform/
 *.tfstate
 *.tfstate.*
+# Estado cifrado con la encryption de OpenTofu (encryption.tf): se versiona
+!infrastructure/opentofu/proxmox/terraform.tfstate
 *.tfplan
 
 # === Ansible ===
