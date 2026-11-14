@@ -21,6 +21,11 @@ repos:
         language: system
         pass_filenames: false
         files: (^|/)sops\.env$
+      - id: srv-net-check
+        name: srv-net-check (IP fija en la macvlan compartida)
+        entry: python3 infrastructure/scripts/srv-net-check/srv-net-check.py
+        language: system
+        files: (^|/)docker-compose\.yml$
       - id: readme-check
         name: readme-check (README público sin IPs, rutas ni dominios internos)
         entry: bash infrastructure/scripts/readme-check/readme-check.sh

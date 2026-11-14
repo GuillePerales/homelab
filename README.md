@@ -224,7 +224,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 | mon-beszel-01 | Beszel (hub + agents) | docker-main; agents on every node, the NAS and the Docker LXCs | 8090 | ✅ Operational | Hardware monitoring: CPU, RAM, load, network, temperatures, S.M.A.R.T. and per-container usage, with history |
 | mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | ✅ Operational | Scheduled Internet speed tests (every 6 h); moved forward from Phase 8 |
 
-> Phase 8 — planned on `docker-aux`, macvlan range `.42–.57`
+> Phase 8 — planned on `docker-aux`, macvlan range `.50–.63`
 
 | ID | Service | Host | Port | Function |
 |---|---|---|---|---|
