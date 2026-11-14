@@ -51,8 +51,8 @@ Homelab personal gestionado íntegramente como Infraestructura como Código. Dos
 | Aspecto | Antes | Después |
 |---|---|---|
 | Proxmox | Nodo único | **Clúster de 3 nodos: pve-router + pve-main + pve-aux** |
-| docker-main | No existía | LXC Debian 12, VLAN 30, 4GB RAM |
-| docker-aux | No existía | LXC Debian 12, VLAN 30, 9GB RAM |
+| docker-main | No existía | LXC Debian 13, VLAN 30, 4GB RAM |
+| docker-aux | No existía | LXC Debian 13, VLAN 30, 9GB RAM |
 | Red macvlan | Solo NAS | Los 3 hosts Docker con rangos no solapados |
 | Portainer | No existía | Server en docker-main + Agents en aux y nas |
 | Almacenamiento NFS clúster | Solo NAS | `tank/vms/images` montado en pve-main y pve-aux |
