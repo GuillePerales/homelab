@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Macvlan shim: el host llega a sus contenedores de {{ docker_macvlan_network }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c "ip link add macvlan-shim link {{ docker_macvlan_parent }} type macvlan mode bridge 2>/dev/null || true; ip addr flush dev macvlan-shim; ip addr add {{ macvlan_shim.address }} dev macvlan-shim; ip link set macvlan-shim up; for n in {{ macvlan_shim.routes | join(' ') }}; do ip route replace $n dev macvlan-shim; done"
+ExecStop=/bin/sh -c "ip link del macvlan-shim"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,9 +1,74 @@
 # infrastructure/ansible/playbooks/docker-lxc-setup.yml
+#
+# Prepara un LXC Debian para Docker: instalación y daemon.json, binds NFS
+# (montados en el nodo Proxmox y pasados al CT), red macvlan con su shim y
+# agente de Portainer. Variables en inventory/group_vars/docker_hosts.yml y en
+# inventory/host_vars/<host>.yml.
+#
+# Uso:
+#   ansible-playbook playbooks/docker-lxc-setup.yml --check --diff
+#   ansible-playbook playbooks/docker-lxc-setup.yml --limit docker-aux
 ---
 - name: Configure Docker LXC hosts
   hosts: docker_hosts
 
   tasks:
+    # --- Binds NFS: el montaje NFS vive en el nodo y entra al CT por bind ---
+
+    - name: NFS mounts on the Proxmox node
+      ansible.posix.mount:
+        src: "{{ item.src }}"
+        path: "{{ item.host_path }}"
+        fstype: nfs4
+        opts: "{{ item.opts | default('defaults,nofail,soft,timeo=30') }}"
+        state: mounted
+      loop: "{{ nfs_binds | default([]) }}"
+      loop_control:
+        label: "{{ item.host_path }}"
+      delegate_to: "{{ pve_node }}"
+
+    # Antes de la primera sección [..] del .conf: al final caería dentro de
+    # [pve:pending] o de un snapshot.
+    - name: Bind NFS mounts into the CT
+      ansible.builtin.lineinfile:
+        path: "/etc/pve/lxc/{{ pve_vmid }}.conf"
+        regexp: '^lxc\.mount\.entry: {{ item.host_path | regex_escape }} '
+        line: "lxc.mount.entry: {{ item.host_path }} {{ item.ct_path | regex_replace('^/', '') }} none bind,create=dir 0 0"
+        insertbefore: '^\['
+        firstmatch: true
+      loop: "{{ nfs_binds | default([]) }}"
+      loop_control:
+        label: "{{ item.ct_path }}"
+      delegate_to: "{{ pve_node }}"
+      register: nfs_bind_entries
+
+    - name: Restart the CT so the new binds apply
+      ansible.builtin.command: "pct reboot {{ pve_vmid }}"
+      delegate_to: "{{ pve_node }}"
+      changed_when: true
+      when:
+        - nfs_bind_entries is changed
+        - lxc_restart_on_bind_change | bool
+        - not ansible_check_mode
+
+    - name: Wait for the CT after the restart
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 120
+      when:
+        - nfs_bind_entries is changed
+        - lxc_restart_on_bind_change | bool
+        - not ansible_check_mode
+
+    - name: Warn that the binds need a CT restart
+      ansible.builtin.debug:
+        msg: "Bind NFS nuevo en el CT {{ pve_vmid }}: no aplica hasta reiniciarlo (pct reboot {{ pve_vmid }})."
+      when:
+        - nfs_bind_entries is changed
+        - not lxc_restart_on_bind_change | bool
+
+    # --- Docker ---
+
     - name: Install dependencies
       ansible.builtin.apt:
         name: [curl, wget, vim, htop, ca-certificates, gnupg, lsb-release]
@@ -57,8 +122,110 @@
         enabled: true
         state: started
 
+    # Los handlers van al final del play; el de Docker tiene que aplicar antes
+    # de crear la red y levantar el agente.
+    - name: Apply pending Docker restart
+      ansible.builtin.meta: flush_handlers
+
+    # --- Red macvlan ---
+
+    # Solo se crea si falta: docker_network recrea la red si cambia el IPAM y
+    # eso desconecta todos los contenedores. Si ya existe, se compara y avisa.
+    - name: Read the macvlan network
+      ansible.builtin.command: >-
+        docker network inspect {{ docker_macvlan_network }}
+        --format '{% raw %}{{json .}}{% endraw %}'
+      register: macvlan_inspect
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Create the macvlan network
+      community.docker.docker_network:
+        name: "{{ docker_macvlan_network }}"
+        driver: macvlan
+        driver_options:
+          parent: "{{ docker_macvlan_parent }}"
+        ipam_config:
+          - subnet: "{{ docker_macvlan_subnet }}"
+            iprange: "{{ docker_macvlan_ip_range }}"
+            gateway: "{{ docker_macvlan_gateway }}"
+      when: macvlan_inspect.rc != 0
+
+    - name: Warn on macvlan drift
+      ansible.builtin.debug:
+        msg: >-
+          DERIVA en {{ docker_macvlan_network }}: el host tiene
+          '{{ macvlan_actual }}' y el inventario dice '{{ macvlan_expected }}'.
+          No se toca: recrearla desconectaría los contenedores.
+      vars:
+        macvlan_net: "{{ macvlan_inspect.stdout | from_json }}"
+        macvlan_ipam: "{{ macvlan_net.IPAM.Config | first | default({}) }}"
+        macvlan_actual: >-
+          {{ macvlan_net.Options.parent | default('') }}
+          {{ macvlan_ipam.Subnet | default('') }}
+          {{ macvlan_ipam.IPRange | default('') }}
+          {{ macvlan_ipam.Gateway | default('') }}
+        macvlan_expected: >-
+          {{ docker_macvlan_parent }} {{ docker_macvlan_subnet }}
+          {{ docker_macvlan_ip_range }} {{ docker_macvlan_gateway }}
+      when:
+        - macvlan_inspect.rc == 0
+        - macvlan_actual != macvlan_expected
+
+    - name: Install the macvlan shim unit
+      ansible.builtin.template:
+        src: templates/macvlan-shim.service.j2
+        dest: /etc/systemd/system/macvlan-shim.service
+        mode: "0644"
+      when: macvlan_shim is defined
+      notify: Restart macvlan shim
+
+    - name: Enable and start the macvlan shim
+      ansible.builtin.systemd:
+        name: macvlan-shim
+        enabled: true
+        state: started
+        daemon_reload: true
+      when: macvlan_shim is defined
+
+    # --- Agente de Portainer ---
+
+    - name: Portainer agent directory
+      ansible.builtin.file:
+        path: /opt/portainer-agent
+        state: directory
+        mode: "0755"
+      when: portainer_agent_ip is defined
+
+    - name: Portainer agent compose
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../services/docker-compose/devops/portainer/docker-aux/docker-compose.yml"
+        dest: /opt/portainer-agent/docker-compose.yml
+        mode: "0644"
+      when: portainer_agent_ip is defined
+
+    - name: Portainer agent .env
+      ansible.builtin.copy:
+        dest: /opt/portainer-agent/.env
+        content: "CONTAINER_IP={{ portainer_agent_ip }}\n"
+        mode: "0600"
+      when: portainer_agent_ip is defined
+
+    - name: Start the Portainer agent
+      community.docker.docker_compose_v2:
+        project_src: /opt/portainer-agent
+        state: present
+      when: portainer_agent_ip is defined
+
   handlers:
     - name: Restart Docker
       ansible.builtin.systemd:
         name: docker
         state: restarted
+
+    - name: Restart macvlan shim
+      ansible.builtin.systemd:
+        name: macvlan-shim
+        state: restarted
+        daemon_reload: true

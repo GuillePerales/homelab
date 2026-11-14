@@ -51,8 +51,8 @@ Homelab personal gestionado íntegramente como Infraestructura como Código. Dos
 | Aspecto | Antes | Después |
 |---|---|---|
 | Proxmox | Nodo único | **Clúster de 3 nodos: pve-router + pve-main + pve-aux** |
-| docker-main | No existía | LXC Debian 12, VLAN 30, 10GB RAM |
-| docker-aux | No existía | LXC Debian 12, VLAN 30, 9GB RAM |
+| docker-main | No existía | LXC Debian 13, VLAN 30, 4GB RAM |
+| docker-aux | No existía | LXC Debian 13, VLAN 30, 9GB RAM |
 | Red macvlan | Solo NAS | Los 3 hosts Docker con rangos no solapados |
 | Portainer | No existía | Server en docker-main + Agents en aux y nas |
 | Almacenamiento NFS clúster | Solo NAS | `tank/vms/images` montado en pve-main y pve-aux |
@@ -312,7 +312,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — Agente IA *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
+- `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB tras Phase 4+) ✅ — Monitorización, servicios cloud

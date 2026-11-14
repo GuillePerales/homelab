@@ -1,0 +1,11 @@
+# infrastructure/ansible/inventory/host_vars/docker-aux.yml
+---
+pve_node: pve-aux
+pve_vmid: 201
+
+nfs_binds: []
+
+docker_macvlan_ip_range: 10.0.30.32/28
+
+# Agente de Portainer en srv-net (lo registra a mano el server de docker-main)
+portainer_agent_ip: 10.0.30.43

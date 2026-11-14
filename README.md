@@ -51,8 +51,8 @@ Personal homelab managed entirely as Infrastructure as Code. Two parallel object
 | Aspect | Before | After |
 |---|---|---|
 | Proxmox | Single node | **3-node cluster: pve-router + pve-main + pve-aux** |
-| docker-main | Did not exist | LXC Debian 12, VLAN 30, 10GB RAM |
-| docker-aux | Did not exist | LXC Debian 12, VLAN 30, 9GB RAM |
+| docker-main | Did not exist | LXC Debian 13, VLAN 30, 4GB RAM |
+| docker-aux | Did not exist | LXC Debian 13, VLAN 30, 9GB RAM |
 | Macvlan networking | NAS only | All 3 Docker hosts with non-overlapping ranges |
 | Portainer | Did not exist | Server on docker-main + Agents on aux and nas |
 | NFS cluster storage | NAS only | `tank/vms/images` mounted on pve-main and pve-aux |
@@ -312,7 +312,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — AI agent *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 10GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
+- `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB after Phase 4+) ✅ — Monitoring, cloud services
