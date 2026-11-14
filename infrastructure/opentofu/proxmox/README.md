@@ -27,6 +27,12 @@ Usuario de Proxmox dedicado con dos tokens (`privsep`), cifrados con SOPS en `in
 | `plan` | `PVEAuditor` (solo lectura) | CI (`.woodpecker/tofu-plan.yml`) |
 | `apply` | Rol propio limitado a VMs, LXC y almacenamiento | Solo en el portátil de administración |
 
+## Estado
+
+El estado (`terraform.tfstate`) se versiona **cifrado** en este directorio con la encryption nativa de OpenTofu (`encryption.tf`: AES-GCM con clave PBKDF2, obligatoria también para los planes guardados). La frase está en `infrastructure/secrets/opentofu.yaml` (`opentofu_state_passphrase`) y en el secreto `tofu_state_passphrase` del CI.
+
+Git no bloquea el estado como haría un backend remoto: los `apply` se hacen solo desde el portátil (único escritor), y antes de cada uno, `git pull`. El estado modificado se commitea en la misma rama que el cambio de código. Si algún día hay dos escritores, el paso es un backend con bloqueo (`tofu init -migrate-state`).
+
 ## Uso
 
 ```bash
@@ -36,4 +42,4 @@ tofu init
 ./tofu.sh apply apply   # token de escritura
 ```
 
-`tofu.sh` descifra el token con SOPS al vuelo y lo pasa como `TF_VAR_*`; el endpoint llega por entorno para no publicar direcciones internas.
+`tofu.sh` descifra el token y la frase del estado con SOPS al vuelo y lo pasa como `TF_VAR_*`; el endpoint llega por entorno para no publicar direcciones internas.
