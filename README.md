@@ -220,7 +220,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 | mon-gatus-01 | Gatus | docker-main | 8080 | ✅ Operational | Service availability checks with ntfy alerts |
 | mon-diun-01 | diun | docker-main, docker-nas | — | ✅ Operational | Notifies ntfy of new versions of the images in use (no auto-update) |
 | mon-homarr-01 | Homarr | docker-main | 7575 | ✅ Operational | Homelab dashboard |
-| mon-check-01 | homelab-check | docker-main | — | ✅ Operational | Custom image (build → Trivy → Forgejo registry) that checks URLs and alerts ntfy |
+| mon-check-01 | homelab-check | K3s (k3s-01) | — | ✅ Operational | Custom image (build → Trivy → Forgejo registry) that checks URLs and alerts ntfy |
 | mon-beszel-01 | Beszel (hub + agents) | docker-main; agents on every node, the NAS and the Docker LXCs | 8090 | ✅ Operational | Hardware monitoring: CPU, RAM, load, network, temperatures, S.M.A.R.T. and per-container usage, with history |
 | mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | ✅ Operational | Scheduled Internet speed tests (every 6 h); moved forward from Phase 8 |
 
@@ -312,7 +312,7 @@ Running on `docker-main` (diun also on `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — AI agent *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
+- `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB after Phase 4+) ✅ — Monitoring, cloud services
