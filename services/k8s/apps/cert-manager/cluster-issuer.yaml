@@ -1,0 +1,35 @@
+# CA interna del homelab para K3s: un emisor self-signed firma una CA, y esa CA
+# (homelab-ca) firma los certificados de los Ingress. Se confía en una sola CA
+# (el secreto homelab-ca-tls del namespace cert-manager) en lugar de en cada certificado.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: homelab-ca
+  secretName: homelab-ca-tls
+  duration: 87600h # 10 años
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: homelab-ca
+spec:
+  ca:
+    secretName: homelab-ca-tls
