@@ -1,0 +1,19 @@
+# homelab-check en dev: sigue main, así que cada cambio fusionado se despliega solo.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-check-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://10.0.30.28:3000/root/homelab.git
+    targetRevision: main
+    path: services/k8s/apps/homelab-check/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,7 @@
+# Entorno prod: un namespace con cuota y aislamiento de red.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+  labels:
+    entorno: prod
