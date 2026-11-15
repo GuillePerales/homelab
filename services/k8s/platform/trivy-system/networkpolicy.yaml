@@ -1,0 +1,14 @@
+# Solo entra tráfico de pods del mismo namespace. Trivy Operator no recibe peticiones de fuera;
+# los escaneos solo salen (descarga de la base de datos de vulnerabilidades).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: solo-mismo-namespace
+  namespace: trivy-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
