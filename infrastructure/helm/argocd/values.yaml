@@ -1,10 +1,26 @@
 # ArgoCD — Helm values
-# Chart: argo/argo-cd
-# Namespace: devops
+# Chart: argo/argo-cd 10.18.0 (ArgoCD v3.6.1; fijada, subirla a propósito)
+# Namespace: argocd
 # Docs: https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+#
+# helm upgrade --install argocd argo/argo-cd --version 10.18.0 \
+#   -n argocd --create-namespace -f infrastructure/helm/argocd/values.yaml
+#
+# Nodo de 4 GB: sin Dex (login solo local), sin notificaciones y ApplicationSet a 0 réplicas.
+# El repositorio de manifiestos y la App of Apps se aplican aparte
+# (services/k8s/argocd/), porque llevan la credencial de lectura.
 
 global:
   domain: argocd.homelab.local
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  replicas: 0 # el chart no tiene interruptor: se deja sin pods
 
 server:
   ingress:
@@ -12,19 +28,16 @@ server:
     ingressClassName: traefik
     hostname: argocd.homelab.local
     tls: true
+    annotations:
+      cert-manager.io/cluster-issuer: homelab-ca
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
 
-configs:
-  params:
-    # Desactivar TLS interno (Traefik termina TLS)
-    server.insecure: true
-
-  repositories:
-    forgejo-homelab:
-      url: http://10.0.30.XX:3003/homelab/homelab.git
-      type: git
-      name: forgejo-homelab
-
-repoServer:
+controller:
   resources:
     requests:
       memory: 256Mi
@@ -32,9 +45,22 @@ repoServer:
     limits:
       memory: 512Mi
 
-applicationSet:
+repoServer:
   resources:
     requests:
       memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 384Mi
 
-# App of Apps root — ver services/k8s/argocd/apps/
+redis:
+  resources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+configs:
+  params:
+    # Traefik termina el TLS
+    server.insecure: true

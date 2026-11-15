@@ -1,0 +1,59 @@
+# infrastructure/ansible/playbooks/k3s-node-setup.yml
+#
+# Prepara la VM k3s-01 (Debian 13 genericcloud) para K3s: paquetes, módulos de kernel
+# y sysctl. K3s no se instala aquí: lo hace k3s-install.yml, con la versión fijada.
+#
+# Uso:
+#   ansible-playbook playbooks/k3s-node-setup.yml --check --diff
+#   ansible-playbook playbooks/k3s-node-setup.yml
+---
+- name: Prepare K3s node
+  hosts: k3s_nodes
+  become: true
+
+  vars:
+    k3s_kernel_modules:
+      - overlay
+      - br_netfilter
+    k3s_sysctl:
+      net.bridge.bridge-nf-call-iptables: "1"
+      net.bridge.bridge-nf-call-ip6tables: "1"
+      net.ipv4.ip_forward: "1"
+      net.ipv6.conf.all.forwarding: "1"
+      fs.inotify.max_user_watches: "524288"
+      fs.inotify.max_user_instances: "512"
+
+  tasks:
+    - name: Base packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - ca-certificates
+          - nfs-common
+          - iptables
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Kernel modules loaded at boot
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k3s.conf
+        content: "{{ k3s_kernel_modules | join('\n') }}\n"
+        mode: "0644"
+
+    - name: Kernel modules loaded now
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ k3s_kernel_modules }}"
+
+    - name: Sysctl for Kubernetes
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/90-k3s.conf
+        reload: true
+        state: present
+      loop: "{{ k3s_sysctl | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
