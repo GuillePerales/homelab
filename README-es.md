@@ -273,11 +273,11 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | dev-portainer-01 | Portainer | docker-main | Docker macvlan | 9443 | ✅ Operativo | UI de gestión multi-host de contenedores |
 | dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | ✅ Phase 4 | Servidor Git self-hosted |
 | dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | ✅ Phase 4 | Pipelines CI/CD |
-| dev-jenkins-01 | Jenkins | Worker K3s | Helm | 8080 | ⏳ Phase 4+ | Pipelines CI/CD de aplicaciones |
-| dev-argocd-01 | ArgoCD | Worker K3s | Helm | 443 | ⏳ Phase 4+ | Entrega continua GitOps |
-| dev-sonarqube-01 | SonarQube | Worker K3s | Helm | 9000 | ⏳ Phase 4+ | Quality gate de código |
-| dev-vault-01 | HashiCorp Vault | Worker K3s | Helm | 8200 | ⏳ Phase 4+ | Gestión de secretos dinámicos |
-| dev-awx-01 | AWX | Worker K3s | Operator | 80 | ⏳ Phase 4+ | UI de automatización Ansible |
+| dev-jenkins-01 | Jenkins | — | — | — | 🚫 Fuera del alcance | No cabe en el nodo de 4 GB; lo cubre Woodpecker |
+| dev-argocd-01 | ArgoCD | K3s (k3s-01) | Helm | 443 | ✅ Phase 4b | Entrega continua GitOps |
+| dev-sonarqube-01 | SonarQube | — | — | — | 🚫 Fuera del alcance | No cabe en el nodo de 4 GB |
+| dev-vault-01 | HashiCorp Vault | K3s (k3s-01) | Helm | 8200 | ✅ Phase 4b | Secretos de las apps en Kubernetes |
+| dev-awx-01 | AWX | — | — | — | 🚫 Fuera del alcance | Ansible se ejecuta desde la línea de comandos |
 
 ### 4.8 IA (VLAN 15 — AI)
 
@@ -302,8 +302,8 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | Nodo | Hardware | RAM | Rol |
 |---|---|---|---|
 | pve-router | Mini PC (quad-NIC) | 20GB | Router + servicios de gestión |
-| pve-main | Mini PC | 16GB | Cargas Docker principales, control plane K3s |
-| pve-aux | Mini PC | 10GB | Servicios auxiliares, worker K3s |
+| pve-main | Mini PC | 16GB | Cargas Docker principales, nodo K3s (k3s-01) |
+| pve-aux | Mini PC | 10GB | Servicios auxiliares |
 
 ### 5.2 Distribución de cargas
 
@@ -313,17 +313,17 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 
 **pve-main (16GB)**
 - `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, Beszel, Speedtest Tracker
+- `k3s-01` (VM, 4GB, apagable) ✅ — K3s de un nodo: ArgoCD, Vault, cert-manager, Trivy Operator, homelab-check
 
 **pve-aux (10GB)**
-- `docker-aux` (LXC, 6GB tras Phase 4+) ✅ — Monitorización, servicios cloud
-- VM worker K3s (3GB) — Stack DevOps *(Phase 4+)*
+- `docker-aux` (LXC, 6GB) ✅ — Monitorización, servicios cloud
 
 ### 5.3 Decisión VM vs LXC
 
 | Tipo de carga | Uso | Motivo |
 |---|---|---|
 | OPNsense | VM | Necesita su propio kernel |
-| Nodos K3s | VM | Requiere módulos de kernel (ip_tables, nf_conntrack, br_netfilter) que los LXCs restringen |
+| Nodo K3s | VM | Requiere módulos de kernel (ip_tables, nf_conntrack, br_netfilter) que los LXCs restringen |
 | Todo lo demás | LXC | Ahorra ~600MB RAM idle por instancia |
 
 ### 5.4 Configuración LXC para Docker
@@ -408,20 +408,17 @@ El stack DevOps replica un entorno enterprise real usando exclusivamente herrami
 | Git privado (IaC, configs) | **Forgejo** | Ligero, self-hosted, <200MB RAM |
 | Git público (proyectos, CV) | **GitHub / GitLab.com** | Visibilidad, Actions/CI gratuito |
 | CI/CD infraestructura | **Woodpecker CI** | Webhooks nativos con Forgejo, YAML idéntico a GitHub Actions |
-| CI/CD aplicaciones | **Jenkins** | Estándar de facto en empresas españolas, especialmente banca |
 | Registry de contenedores | **Registro de Forgejo** | Incluido en Forgejo (OCI): ningún servicio más que mantener; las imágenes se escanean en el pipeline antes de subirlas |
-| Orquestación (stack DevOps) | **K3s** | Mismo API que EKS/AKS/GKE, ~512MB idle |
+| Orquestación (stack DevOps) | **K3s, un nodo** | Mismo API que EKS/AKS/GKE, ~512MB idle; un nodo de 4 GB apagable, creado con OpenTofu |
 | Orquestación (servicios personales) | **Docker Compose** | Los servicios estables no necesitan scheduling ni rolling updates de K8s |
-| GitOps | **ArgoCD** | Pull-based, declarativo, usado directamente en producción enterprise |
+| GitOps | **ArgoCD** | Pull-based, declarativo; `main` despliega en dev y una etiqueta semver promociona a prod |
 | IaC provisioning | **OpenTofu** | Fork open-source de Terraform, 100% compatible HCL, licencia MPL-2.0 |
-| IaC configuración | **Ansible + AWX** | Estándar de la industria, igual en homelab que en empresas |
+| IaC configuración | **Ansible** | Estándar de la industria, igual en homelab que en empresas |
 | Gestor de paquetes K8s | **Helm** | Estándar para desplegar aplicaciones en Kubernetes |
 | Secretos de los servicios | **Fuera de Git** | Los `.env` reales solo viven en los hosts, cubiertos por snapshots ZFS y PBS (copia externa en preparación); SOPS + Age está preparado para lo que haya que versionar |
 | Secretos en K8s | **HashiCorp Vault** | Secretos dinámicos, auto-rotación, estándar enterprise |
-| Calidad de código | **SonarQube Community** | Quality gates en el pipeline |
-| Escaneo de vulnerabilidades | **Trivy** | Paso del pipeline en Woodpecker y Jenkins: falla con CVE críticos antes del push |
-| CNI Kubernetes | **Calico** | Aplica NetworkPolicies (Flannel no lo hace) |
-| UI Ansible | **AWX** | RBAC + historial de ejecución, upstream gratuito de Ansible Tower |
+| Escaneo de vulnerabilidades | **Trivy** | Paso del pipeline en Woodpecker (falla con CVE críticos antes de publicar) y Trivy Operator en el clúster |
+| CNI Kubernetes | **Flannel de K3s** | Con el controlador de NetworkPolicies de K3s: aplica las políticas sin un segundo CNI |
 | Estrategia de branches | **Trunk-based** | Main protegido, feature branches de vida corta, PR obligatorio |
 
 > **Por qué dos capas de orquestación:** Los servicios personales (Jellyfin, \*arr, Immich) son estables y no se benefician del scheduling, auto-healing ni rolling updates de K8s. Docker Compose es más sencillo de operar y depurar. K3s se reserva para el stack DevOps donde sí aporta valor real: despliegues declarativos, GitOps y operaciones Kubernetes demostrables.
@@ -439,47 +436,31 @@ El stack DevOps replica un entorno enterprise real usando exclusivamente herrami
 │   └── Secretos cifrados (SOPS+Age)                             │
 └────────────────────────┬───────────────────────────────────────┘
                          │ Webhooks
-         ┌───────────────┴───────────────┐
-         ▼                               ▼
-┌─────────────────┐           ┌──────────────────────┐
-│  CI/CD INFRA    │           │  CI/CD APLICACIONES  │
-│                 │           │                      │
-│  Woodpecker CI  │           │  Jenkins (en K3s)    │
-│  ├── tofu plan  │           │  ├── Tests unitarios  │
-│  ├── tofu apply │           │  ├── Quality gate SQ  │
-│  ├── ansible    │           │  ├── docker build     │
-│  └── compose up │           │  ├── Trivy scan       │
-└────────┬────────┘           │  └── push → Forgejo  │
-         │                   └──────────┬───────────┘
-         ▼                              │
-┌─────────────────┐           ┌──────────────────────┐
-│  CAPA IaC       │           │  REGISTRY            │
-│                 │           │                      │
-│  OpenTofu       │           │  Forgejo registry    │
-│  └── Proxmox    │           │  ├── Imágenes OCI     │
-│                 │           │  ├── Acceso por repo  │
-│  Ansible        │           │  └── Reglas limpieza  │
-│  └── Nodos K3s  │           └──────────┬───────────┘
-│  └── Docker     │                      │ ArgoCD pull
-│  └── Hardening  │                      ▼
-└────────┬────────┘          ┌──────────────────────┐
-         │                  │  CAPA GITOPS          │
-         ▼                  │                       │
-┌─────────────────┐         │  ArgoCD (en K3s)      │
-│  ORQUESTACIÓN   │         │  └── App of Apps      │
-│                 │         │  └── Auto-sync        │
-│  Clúster K3s    │◄────────│  └── Git = verdad     │
-│  ├── Jenkins    │         └──────────────────────┘
-│  ├── ArgoCD     │
-│  ├── SonarQube  │         ┌──────────────────────┐
-│  ├── Vault      │         │  CAPA DE SECRETOS    │
-│  └── Apps       │◄────────│                       │
-│                 │         │  SOPS+Age (Git)        │
-│  Docker Compose │         │  Vault (runtime K8s)   │
-│  ├── Stack *arr │         └──────────────────────┘
-│  ├── Jellyfin   │
-│  └── Immich     │
-└─────────────────┘
+                         ▼
+┌──────────────────────────────────────┐
+│  CI/CD (Woodpecker CI)               │
+│  ├── lint, tofu plan                 │
+│  └── imágenes propias: build → Trivy │
+│       → publicación en registro      │
+└──────────────────┬───────────────────┘
+                   │ etiqueta de imagen en Git
+                   ▼
+┌──────────────────────────────────────┐      ┌─────────────────────────┐
+│  GITOPS (ArgoCD en K3s)              │      │  SECRETOS               │
+│  ├── App of Apps, auto-sync          │      │  SOPS+Age (Git)         │
+│  ├── main       → namespace dev      │      │  Vault (runtime K8s)    │
+│  └── tag semver → namespace prod     │      └────────────┬────────────┘
+└──────────────────┬───────────────────┘                   │
+                   ▼                                       │
+┌──────────────────────────────────────┐                   │
+│  K3S (k3s-01, un nodo)               │◄──────────────────┘
+│  ├── ArgoCD, cert-manager, Vault     │
+│  ├── Trivy Operator                  │
+│  └── dev / prod (homelab-check)      │
+└──────────────────────────────────────┘
+
+IaC: OpenTofu (Proxmox, VM k3s-01) + Ansible (nodos, instalación de K3s)
+Servicios personales: Docker Compose en los hosts Docker, fuera de K3s
 ```
 
 ### 8.3 Pipelines CI/CD
@@ -500,67 +481,63 @@ Woodpecker CI
 
 > Los servicios de Docker Compose se despliegan uno a uno (`docker compose -p <servicio> up -d`), no desde CI: el despliegue continuo queda para ArgoCD en K3s. Un agente de CI con SSH a los hosts sería un riesgo mayor que la comodidad que aporta.
 
-#### Pipeline de aplicaciones (Jenkins + ArgoCD)
+#### Pipeline de aplicaciones (Woodpecker + ArgoCD)
 
 ```
-push a Forgejo
+push a Forgejo (fuentes de imagen)
         │
         ▼
-Jenkins (K3s)
-    ├── test        tests unitarios
-    ├── quality     quality gate SonarQube — falla en CRITICAL
-    ├── build       docker build
-    ├── scan        Trivy — falla en CVE CRITICAL
-    ├── push        docker push → registro de Forgejo
-    └── manifest    actualiza manifiesto K8s en Forgejo
-                          │
+Woodpecker CI
+    ├── build       kaniko
+    ├── scan        Trivy — falla con CVE CRITICAL
+    └── publish     skopeo → registro de Forgejo
+                          │ etiqueta de imagen en el overlay de dev (a mano por ahora)
                           ▼
                      ArgoCD (K3s)
-                          │ detecta diff con Git
+                          │ detecta el diff en Git
                           ▼
-                     K3s rolling update
+              main → dev   ·   tag semver → prod
 ```
+
+> Jenkins y SonarQube formaban parte del plan original. No caben en un nodo de 4 GB y el alcance se recortó (2026-11-15); Woodpecker cubre build y scan, y ArgoCD el despliegue.
 
 ### 8.4 Arquitectura del Clúster K3s
 
-K3s corre en VMs dedicadas en Proxmox (no en LXCs — K3s requiere acceso a módulos de kernel que los LXCs restringen por defecto):
+K3s corre en una sola VM de Proxmox (no en un LXC — K3s requiere acceso a módulos de kernel que los LXCs restringen por defecto). La VM se crea con OpenTofu, se puede apagar y cabe en 4 GB de RAM; el plan original de varios nodos no cabía en la memoria disponible.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                      Clúster K3s                          │
+│                 K3s (k3s-01, un nodo)                     │
+│                 VM en pve-main · VLAN 30 (SRV)            │
 │                                                          │
-│  ┌──────────────────────┐   ┌──────────────────────┐    │
-│  │   Control Plane      │   │    Worker Node        │    │
-│  │   VM en pve-main     │   │    VM en pve-aux      │    │
-│  │   VLAN 30 (SRV)      │   │    VLAN 30 (SRV)      │    │
-│  │                      │   │                       │    │
-│  │  • kube-apiserver    │   │  • Jenkins            │    │
-│  │  • etcd (SQLite)     │   │  • ArgoCD             │    │
-│  │  • kube-scheduler    │   │  • SonarQube          │    │
-│  │  • controller-mgr    │   │  • HashiCorp Vault     │    │
-│  │                      │   │  • AWX                │    │
-│  └──────────────────────┘   └──────────────────────┘    │
+│  • control plane + etcd (embebido, snapshots diarios)    │
+│  • ArgoCD (App of Apps)    • HashiCorp Vault              │
+│  • cert-manager (CA interna)                             │
+│  • Trivy Operator          • homelab-check (dev, prod)   │
 │                                                          │
-│  CNI:       Calico (aplicación de NetworkPolicies)        │
-│  Ingress:   Traefik (por defecto en K3s)                  │
-│  Storage:   NFS Subdir Provisioner → nas-01/tank          │
-│  TLS:       cert-manager                                  │
+│  CNI:       Flannel + controlador de NetworkPolicies K3s  │
+│  Ingress:   Traefik (por defecto en K3s)                 │
+│  Storage:   local-path                                   │
+│  TLS:       cert-manager                                 │
 └──────────────────────────────────────────────────────────┘
 ```
 
 **Estrategia de namespaces:**
 
 ```
-devops/       ← Jenkins, SonarQube
-platform/     ← ArgoCD, cert-manager
-vault/        ← HashiCorp Vault
-monitoring/   ← Prometheus, Grafana, Loki (Phase 8)
-database/     ← PostgreSQL (compartido, una BD por servicio)
-apps/         ← aplicaciones propias desplegadas por el pipeline
-awx/          ← AWX (upstream de Ansible Tower)
+argocd/        ← ArgoCD
+cert-manager/  ← cert-manager
+vault/         ← HashiCorp Vault
+trivy-system/  ← Trivy Operator (escanea dev y prod)
+dev/           ← entorno de desarrollo (sigue main)
+prod/          ← entorno de producción (sigue la etiqueta semver más alta)
 ```
 
-**Por qué Calico en lugar de Flannel (CNI por defecto de K3s):** Flannel no aplica Kubernetes NetworkPolicies — las define pero las ignora. Calico sí las aplica. Para un stack DevOps profesional, el aislamiento de namespaces es necesario: Jenkins no debería alcanzar Vault directamente, SonarQube no debería alcanzar la BD de otro servicio. La API de NetworkPolicy es agnóstica al CNI, por lo que las habilidades aplican directamente a EKS/AKS con Calico o Cilium.
+Todos los namespaces llevan NetworkPolicy; `dev` y `prod` además tienen ResourceQuota y secretos propios en Vault, y no se ven entre sí.
+
+**Por qué Flannel con el controlador de K3s (y no Calico):** K3s incluye un controlador de NetworkPolicies junto a Flannel, así que las políticas se aplican sin un segundo CNI. En un solo nodo de 4 GB Calico añade memoria y piezas sin aportar más aprendizaje. La API de NetworkPolicy es agnóstica al CNI, así que lo aprendido sirve directamente en EKS/AKS.
+
+**Fuera del alcance:** Jenkins, SonarQube, AWX y PostgreSQL (no caben en 4 GB) y Calico. Las métricas esperan a la fase de monitorización y Velero a un almacén S3.
 
 ### 8.5 Estructura del Repositorio
 
@@ -568,20 +545,18 @@ awx/          ← AWX (upstream de Ansible Tower)
 .
 ├── infrastructure/
 │   ├── opentofu/
-│   │   ├── proxmox/        ← Definiciones de LXCs y VMs
-│   │   └── k3s/            ← VMs nodos K3s (Phase 4+)
+│   │   └── proxmox/        ← Definiciones de LXCs y VMs (incluida k3s-01)
 │   ├── ansible/
 │   │   ├── inventory/
 │   │   ├── group_vars/
 │   │   ├── playbooks/
 │   │   └── roles/
-│   └── helm/               ← Values Helm para el stack K3s
+│   └── helm/               ← Helm values del stack K3s
 │       ├── argocd/
-│       ├── jenkins/
-│       ├── sonarqube/
+│       ├── cert-manager/
+│       ├── trivy-operator/
 │       ├── vault/
-│       ├── postgresql/
-│       └── awx/
+│       └── jenkins/, sonarqube/  ← fuera del alcance, pendientes de borrar
 ├── services/
 │   ├── docker-compose/     ← Servicios personales (stacks Compose)
 │   │   ├── media/
@@ -590,11 +565,13 @@ awx/          ← AWX (upstream de Ansible Tower)
 │   │   ├── cloud/
 │   │   ├── storage/
 │   │   └── devops/
-│   └── k8s/                ← Workloads K3s (Phase 4+)
-│       ├── argocd/apps/    ← Patrón App of Apps
-│       ├── apps/
-│       └── namespaces/     ← RBAC + NetworkPolicies
+│   └── k8s/                ← Workloads K3s
+│       ├── argocd/apps/    ← App of Apps pattern
+│       ├── platform/       ← ArgoCD, cert-manager, Vault, Trivy (+ NetworkPolicies)
+│       ├── envs/           ← dev y prod (cuota, NetworkPolicy)
+│       └── apps/           ← homelab-check (base Kustomize + overlays)
 └── .woodpecker/            ← Definiciones de pipelines CI/CD
+    ├── imagen-homelab-check.yml
     └── tofu-plan.yml
 ```
 
@@ -607,7 +584,7 @@ Todos los secretos siguen un modelo por capas:
 | Docker Compose | **`.env` solo en el host** | Los valores reales nunca entran en Git (el repo es público); solo se suben las plantillas `.env.example`. Se respaldan con los datos del host |
 | Git (si no hay alternativa) | **SOPS + Age** | Lo que haya que versionar se cifra antes del commit (`.sops.yaml`) |
 | K8s / Pods K3s | **HashiCorp Vault** | Secretos dinámicos en runtime — inyectados por Vault Agent |
-| Pipelines | **Secretos Woodpecker / Credentials Jenkins** | Credenciales de pipelines CI/CD |
+| Pipelines | **Secretos Woodpecker** | Credenciales de pipelines CI/CD |
 
 Cada servicio puede guardar su `.env` real en Git como `sops.env`, junto a su `docker-compose.yml`: solo se cifran los valores (age) y los nombres de las variables quedan legibles. La clave privada age no sale de la máquina de administración, así que los hosts reciben el fichero descifrado por SSH y nunca tienen la clave. Script: `infrastructure/scripts/sops-env/sops-env.sh`.
 
@@ -646,7 +623,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing — refuerzo de la protección de datos en curso | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
 | **Phase 4** | DevOps Core: Forgejo (espejo de GitHub), Woodpecker CI, imágenes propias escaneadas con Trivy y publicadas en el registro de Forgejo — el plan de OpenTofu y los runbooks de recuperación siguen en sus propios proyectos | ✅ Completada |
-| **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube y AWX en revisión | ⏳ Planificada |
+| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots al NAS. Pendientes: métricas y Velero; Jenkins, SonarQube y AWX, fuera del alcance | 🔄 En curso |
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
 | **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |

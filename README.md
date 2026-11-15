@@ -273,11 +273,11 @@ Running on `docker-main` (diun also on `docker-nas`):
 | dev-portainer-01 | Portainer | docker-main | Docker macvlan | 9443 | ✅ Operational | Multi-host container management UI |
 | dev-forgejo-01 | Forgejo | docker-main | Docker macvlan | 3000 | ✅ Phase 4 | Self-hosted Git server |
 | dev-woodpecker-01 | Woodpecker CI | docker-main | Docker macvlan | 8000 | ✅ Phase 4 | CI/CD pipelines |
-| dev-jenkins-01 | Jenkins | K3s worker | Helm | 8080 | ⏳ Phase 4+ | Application CI/CD pipelines |
-| dev-argocd-01 | ArgoCD | K3s worker | Helm | 443 | ⏳ Phase 4+ | GitOps continuous delivery |
-| dev-sonarqube-01 | SonarQube | K3s worker | Helm | 9000 | ⏳ Phase 4+ | Code quality gate |
-| dev-vault-01 | HashiCorp Vault | K3s worker | Helm | 8200 | ⏳ Phase 4+ | Dynamic secrets management |
-| dev-awx-01 | AWX | K3s worker | Operator | 80 | ⏳ Phase 4+ | Ansible automation UI |
+| dev-jenkins-01 | Jenkins | — | — | — | 🚫 Out of scope | Does not fit the 4 GB node; Woodpecker covers it |
+| dev-argocd-01 | ArgoCD | K3s (k3s-01) | Helm | 443 | ✅ Phase 4b | GitOps continuous delivery |
+| dev-sonarqube-01 | SonarQube | — | — | — | 🚫 Out of scope | Does not fit the 4 GB node |
+| dev-vault-01 | HashiCorp Vault | K3s (k3s-01) | Helm | 8200 | ✅ Phase 4b | Secrets for apps on Kubernetes |
+| dev-awx-01 | AWX | — | — | — | 🚫 Out of scope | Ansible runs from the command line |
 
 ### 4.8 AI (VLAN 15 — AI)
 
@@ -302,8 +302,8 @@ Running on `docker-main` (diun also on `docker-nas`):
 | Node | Hardware | RAM | Role |
 |---|---|---|---|
 | pve-router | Mini PC (quad-NIC) | 20GB | Router + management services |
-| pve-main | Mini PC | 16GB | Core Docker workloads, K3s control plane |
-| pve-aux | Mini PC | 10GB | Aux services, K3s worker |
+| pve-main | Mini PC | 16GB | Core Docker workloads, K3s node (k3s-01) |
+| pve-aux | Mini PC | 10GB | Aux services |
 
 ### 5.2 Workload distribution
 
@@ -313,17 +313,17 @@ Running on `docker-main` (diun also on `docker-nas`):
 
 **pve-main (16GB)**
 - `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, Beszel, Speedtest Tracker
+- `k3s-01` (VM, 4GB, can be powered off) ✅ — single-node K3s: ArgoCD, Vault, cert-manager, Trivy Operator, homelab-check
 
 **pve-aux (10GB)**
-- `docker-aux` (LXC, 6GB after Phase 4+) ✅ — Monitoring, cloud services
-- K3s worker VM (3GB) — DevOps stack *(Phase 4+)*
+- `docker-aux` (LXC, 6GB) ✅ — Monitoring, cloud services
 
 ### 5.3 VM vs LXC decision
 
 | Workload type | Use | Reason |
 |---|---|---|
 | OPNsense | VM | Needs own kernel |
-| K3s nodes | VM | Requires kernel modules (ip_tables, nf_conntrack, br_netfilter) that LXCs restrict |
+| K3s node | VM | Requires kernel modules (ip_tables, nf_conntrack, br_netfilter) that LXCs restrict |
 | Everything else | LXC | Saves ~600MB RAM idle per instance |
 
 ### 5.4 LXC configuration for Docker
@@ -408,20 +408,17 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 | Private Git (IaC, configs) | **Forgejo** | Lightweight, self-hosted, <200MB RAM |
 | Public Git (projects, CV) | **GitHub / GitLab.com** | Visibility, free Actions/CI |
 | CI/CD infrastructure | **Woodpecker CI** | Forgejo-native webhooks, YAML identical to GitHub Actions |
-| CI/CD applications | **Jenkins** | De facto standard in Spanish enterprises, especially banking |
 | Container registry | **Forgejo registry** | Built into Forgejo (OCI): no extra service to run; images are scanned in the pipeline before they are pushed |
-| Orchestration (DevOps stack) | **K3s** | Same API as EKS/AKS/GKE, ~512MB idle |
+| Orchestration (DevOps stack) | **K3s, single node** | Same API as EKS/AKS/GKE, ~512MB idle; one 4 GB node that can be powered off, created with OpenTofu |
 | Orchestration (personal services) | **Docker Compose** | Stable services don't need K8s scheduling or rolling updates |
-| GitOps | **ArgoCD** | Pull-based, declarative, used directly in enterprise production |
+| GitOps | **ArgoCD** | Pull-based, declarative; `main` deploys to dev and a semver tag promotes to prod |
 | IaC provisioning | **OpenTofu** | Open-source fork of Terraform, 100% HCL compatible, MPL-2.0 license |
-| IaC configuration | **Ansible + AWX** | Industry standard, same in homelab as in enterprises |
+| IaC configuration | **Ansible** | Industry standard, same in homelab as in enterprises |
 | K8s package manager | **Helm** | Standard for deploying applications on Kubernetes |
 | Service secrets | **Kept out of Git** | Real `.env` files live only on the hosts, covered by ZFS snapshots and PBS (off-site copy being set up); SOPS + Age is set up for files that must be versioned |
 | Secrets in K8s | **HashiCorp Vault** | Dynamic secrets, auto-rotation, enterprise standard |
-| Code quality | **SonarQube Community** | Quality gates in pipeline |
-| Vulnerability scanning | **Trivy** | Pipeline stage in Woodpecker and Jenkins — fails on critical CVEs before the push |
-| Kubernetes CNI | **Calico** | Enforces NetworkPolicies (Flannel does not) |
-| Ansible UI | **AWX** | RBAC + execution history, free upstream of Ansible Tower |
+| Vulnerability scanning | **Trivy** | Pipeline stage in Woodpecker (fails on critical CVEs before publishing) and Trivy Operator in the cluster |
+| Kubernetes CNI | **K3s Flannel** | With the K3s NetworkPolicy controller: enforces policies without a second CNI |
 | Branch strategy | **Trunk-based** | Protected main, short-lived feature branches, PR required |
 
 > **Why two orchestration layers:** Personal services (Jellyfin, \*arr, Immich) are stable and don't benefit from K8s scheduling, auto-healing, or rolling updates. Docker Compose is simpler to operate and debug. K3s is reserved for the DevOps stack where it adds real value: declarative deployments, GitOps, and demonstrable Kubernetes operations.
@@ -439,47 +436,31 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 │   └── Encrypted secrets (SOPS+Age)                            │
 └────────────────────────┬───────────────────────────────────────┘
                          │ Webhooks
-         ┌───────────────┴───────────────┐
-         ▼                               ▼
-┌─────────────────┐           ┌──────────────────────┐
-│  CI/CD INFRA    │           │  CI/CD APPLICATIONS  │
-│                 │           │                      │
-│  Woodpecker CI  │           │  Jenkins (on K3s)    │
-│  ├── tofu plan  │           │  ├── Unit tests       │
-│  ├── tofu apply │           │  ├── SonarQube gate   │
-│  ├── ansible    │           │  ├── docker build     │
-│  └── compose up │           │  ├── Trivy scan       │
-└────────┬────────┘           │  └── push → Forgejo  │
-         │                   └──────────┬───────────┘
-         ▼                              │
-┌─────────────────┐           ┌──────────────────────┐
-│  IaC LAYER      │           │  REGISTRY            │
-│                 │           │                      │
-│  OpenTofu       │           │  Forgejo registry    │
-│  └── Proxmox    │           │  ├── OCI images       │
-│                 │           │  ├── Per-repo access  │
-│  Ansible        │           │  └── Cleanup rules    │
-│  └── K3s nodes  │           └──────────┬───────────┘
-│  └── Docker     │                      │ ArgoCD pull
-│  └── Hardening  │                      ▼
-└────────┬────────┘          ┌──────────────────────┐
-         │                  │  GITOPS LAYER         │
-         ▼                  │                       │
-┌─────────────────┐         │  ArgoCD (on K3s)      │
-│  ORCHESTRATION  │         │  └── App of Apps      │
-│                 │         │  └── Auto-sync        │
-│  K3s Cluster    │◄────────│  └── Git = truth      │
-│  ├── Jenkins    │         └──────────────────────┘
-│  ├── ArgoCD     │
-│  ├── SonarQube  │         ┌──────────────────────┐
-│  ├── Vault      │         │  SECRETS LAYER        │
-│  └── Apps       │◄────────│                       │
-│                 │         │  SOPS+Age (Git)        │
-│  Docker Compose │         │  Vault (K8s runtime)   │
-│  ├── *arr stack │         └──────────────────────┘
-│  ├── Jellyfin   │
-│  └── Immich     │
-└─────────────────┘
+                         ▼
+┌──────────────────────────────────────┐
+│  CI/CD (Woodpecker CI)               │
+│  ├── lint, tofu plan                 │
+│  └── own images: build → Trivy scan  │
+│       → publish to Forgejo registry  │
+└──────────────────┬───────────────────┘
+                   │ image tag in Git
+                   ▼
+┌──────────────────────────────────────┐      ┌─────────────────────────┐
+│  GITOPS (ArgoCD on K3s)              │      │  SECRETS                │
+│  ├── App of Apps, auto-sync          │      │  SOPS+Age (Git)         │
+│  ├── main       → namespace dev      │      │  Vault (K8s runtime)    │
+│  └── semver tag → namespace prod     │      └────────────┬────────────┘
+└──────────────────┬───────────────────┘                   │
+                   ▼                                       │
+┌──────────────────────────────────────┐                   │
+│  K3S (k3s-01, one node)              │◄──────────────────┘
+│  ├── ArgoCD, cert-manager, Vault     │
+│  ├── Trivy Operator                  │
+│  └── dev / prod (homelab-check)      │
+└──────────────────────────────────────┘
+
+IaC: OpenTofu (Proxmox, k3s-01 VM) + Ansible (nodes, K3s install)
+Personal services: Docker Compose on the Docker hosts, outside K3s
 ```
 
 ### 8.3 CI/CD Pipelines
@@ -500,50 +481,43 @@ Woodpecker CI
 
 > Docker Compose services are deployed one by one (`docker compose -p <service> up -d`), not from CI: continuous deployment is left to ArgoCD on K3s. A CI agent with SSH access to the hosts would be a larger risk than the convenience it adds.
 
-#### Application pipeline (Jenkins + ArgoCD)
+#### Application pipeline (Woodpecker + ArgoCD)
 
 ```
-push to Forgejo
+push to Forgejo (image sources)
         │
         ▼
-Jenkins (K3s)
-    ├── test        unit tests
-    ├── quality     SonarQube gate — fails on CRITICAL
-    ├── build       docker build
+Woodpecker CI
+    ├── build       kaniko
     ├── scan        Trivy — fails on CVE CRITICAL
-    ├── push        docker push → Forgejo registry
-    └── manifest    update K8s manifest commit in Forgejo
-                          │
+    └── publish     skopeo → Forgejo registry
+                          │ image tag set in the dev overlay (by hand for now)
                           ▼
                      ArgoCD (K3s)
                           │ detects Git diff
                           ▼
-                     K3s rolling update
+              main → dev   ·   semver tag → prod
 ```
+
+> Jenkins and SonarQube were part of the original plan. They did not fit in a 4 GB node and the scope was cut (2026-11-15); Woodpecker covers build and scan, ArgoCD the deployment.
 
 ### 8.4 K3s Cluster Architecture
 
-K3s runs on dedicated VMs in Proxmox (not LXCs — K3s requires kernel module access that LXCs restrict by default):
+K3s runs on a single VM in Proxmox (not an LXC — K3s requires kernel module access that LXCs restrict by default). The VM is created with OpenTofu, can be powered off, and fits in 4 GB of RAM; the original multi-node plan did not fit the available memory.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                      K3s Cluster                          │
+│                  K3s (k3s-01, one node)                   │
+│                  VM on pve-main · VLAN 30 (SRV)           │
 │                                                          │
-│  ┌──────────────────────┐   ┌──────────────────────┐    │
-│  │   Control Plane      │   │    Worker Node        │    │
-│  │   VM on pve-main     │   │    VM on pve-aux      │    │
-│  │   VLAN 30 (SRV)      │   │    VLAN 30 (SRV)      │    │
-│  │                      │   │                       │    │
-│  │  • kube-apiserver    │   │  • Jenkins            │    │
-│  │  • etcd (SQLite)     │   │  • ArgoCD             │    │
-│  │  • kube-scheduler    │   │  • SonarQube          │    │
-│  │  • controller-mgr    │   │  • HashiCorp Vault     │    │
-│  │                      │   │  • AWX                │    │
-│  └──────────────────────┘   └──────────────────────┘    │
+│  • control plane + etcd (embedded, daily snapshots)      │
+│  • ArgoCD (App of Apps)    • HashiCorp Vault              │
+│  • cert-manager (internal CA)                            │
+│  • Trivy Operator          • homelab-check (dev, prod)   │
 │                                                          │
-│  CNI:     Calico (NetworkPolicies enforcement)            │
+│  CNI:     Flannel + K3s NetworkPolicy controller          │
 │  Ingress: Traefik (default K3s)                          │
-│  Storage: NFS Subdir Provisioner → nas-01/tank           │
+│  Storage: local-path                                     │
 │  TLS:     cert-manager                                   │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -551,16 +525,19 @@ K3s runs on dedicated VMs in Proxmox (not LXCs — K3s requires kernel module ac
 **Namespace strategy:**
 
 ```
-devops/       ← Jenkins, SonarQube
-platform/     ← ArgoCD, cert-manager
-vault/        ← HashiCorp Vault
-monitoring/   ← Prometheus, Grafana, Loki (Phase 8)
-database/     ← PostgreSQL (shared, one DB per service)
-apps/         ← own applications deployed through the pipeline
-awx/          ← AWX (Ansible Tower upstream)
+argocd/        ← ArgoCD
+cert-manager/  ← cert-manager
+vault/         ← HashiCorp Vault
+trivy-system/  ← Trivy Operator (scans dev and prod)
+dev/           ← development environment (follows main)
+prod/          ← production environment (follows the highest semver tag)
 ```
 
-**Why Calico instead of Flannel (K3s default):** Flannel does not enforce Kubernetes NetworkPolicies — it defines them but ignores them. Calico enforces them. For a professional DevOps stack, namespace isolation is required: Jenkins shouldn't reach Vault directly, SonarQube shouldn't reach another service's database. The NetworkPolicy API is CNI-agnostic, so skills transfer directly to EKS/AKS with Calico or Cilium.
+Every namespace has a NetworkPolicy; `dev` and `prod` also have a ResourceQuota and their own Vault secrets, and cannot reach each other.
+
+**Why Flannel with the K3s policy controller (not Calico):** K3s ships a NetworkPolicy controller alongside Flannel, so policies are enforced without a second CNI. On a single 4 GB node Calico adds memory and moving parts for no extra learning value. The NetworkPolicy API is CNI-agnostic, so the skills transfer directly to EKS/AKS.
+
+**Out of scope:** Jenkins, SonarQube, AWX and PostgreSQL (they do not fit in 4 GB), and Calico. Metrics wait for the monitoring phase, and Velero for an S3 store.
 
 ### 8.5 Repository Structure
 
@@ -568,20 +545,18 @@ awx/          ← AWX (Ansible Tower upstream)
 .
 ├── infrastructure/
 │   ├── opentofu/
-│   │   ├── proxmox/        ← LXC and VM definitions
-│   │   └── k3s/            ← K3s node VMs (Phase 4+)
+│   │   └── proxmox/        ← LXC and VM definitions (including k3s-01)
 │   ├── ansible/
 │   │   ├── inventory/
 │   │   ├── group_vars/
 │   │   ├── playbooks/
 │   │   └── roles/
-│   └── helm/               ← Helm values for K3s stack
+│   └── helm/               ← Helm values for the K3s stack
 │       ├── argocd/
-│       ├── jenkins/
-│       ├── sonarqube/
+│       ├── cert-manager/
+│       ├── trivy-operator/
 │       ├── vault/
-│       ├── postgresql/
-│       └── awx/
+│       └── jenkins/, sonarqube/  ← out of scope, pending removal
 ├── services/
 │   ├── docker-compose/     ← Personal services (Compose stacks)
 │   │   ├── media/
@@ -590,11 +565,13 @@ awx/          ← AWX (Ansible Tower upstream)
 │   │   ├── cloud/
 │   │   ├── storage/
 │   │   └── devops/
-│   └── k8s/                ← K3s workloads (Phase 4+)
+│   └── k8s/                ← K3s workloads
 │       ├── argocd/apps/    ← App of Apps pattern
-│       ├── apps/
-│       └── namespaces/     ← RBAC + NetworkPolicies
+│       ├── platform/       ← ArgoCD, cert-manager, Vault, Trivy (+ NetworkPolicies)
+│       ├── envs/           ← dev and prod (quota, NetworkPolicy)
+│       └── apps/           ← homelab-check (Kustomize base + overlays)
 └── .woodpecker/            ← CI/CD pipeline definitions
+    ├── imagen-homelab-check.yml
     └── tofu-plan.yml
 ```
 
@@ -607,7 +584,7 @@ All secrets follow a layered model:
 | Docker Compose | **Host-only `.env`** | Real values never enter Git (the repo is public); only `.env.example` templates are committed. Backed up with the host data |
 | Git (when unavoidable) | **SOPS + Age** | Files that must be versioned are encrypted before commit (`.sops.yaml`) |
 | K8s / K3s pods | **HashiCorp Vault** | Dynamic secrets at runtime — injected by Vault Agent |
-| Pipelines | **Woodpecker secrets / Jenkins credentials** | CI/CD pipeline credentials |
+| Pipelines | **Woodpecker secrets** | CI/CD pipeline credentials |
 
 Each service can keep its real `.env` in Git as `sops.env` next to its `docker-compose.yml`: only the values are encrypted (age), the variable names stay readable. The age private key never leaves the admin workstation, so hosts receive the decrypted file over SSH and never hold the key. Helper: `infrastructure/scripts/sops-env/sops-env.sh`.
 
@@ -646,7 +623,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — data protection hardening ongoing | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
 | **Phase 4** | DevOps Core: Forgejo (GitHub mirror), Woodpecker CI, own images scanned with Trivy and published to the Forgejo registry — OpenTofu plan and recovery runbooks continue in their own projects | ✅ Done |
-| **Phase 4+** | DevOps Enterprise: K3s, ArgoCD, Vault; Jenkins, SonarQube and AWX under review | ⏳ Planned |
+| **Phase 4b** | Single-node K3s with ArgoCD, Vault, cert-manager, NetworkPolicies, dev/prod environments and Trivy Operator; daily etcd snapshot copy to the NAS. Pending: metrics and Velero; Jenkins, SonarQube and AWX out of scope | 🔄 In progress |
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
 | **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library (Romm ✅ deployed) | ✅ Done |
