@@ -27,6 +27,14 @@
       etcd-snapshot-schedule-cron: "0 3 * * *"
       etcd-snapshot-retention: 7
 
+    # Registro de Forgejo: va en HTTP, así que containerd necesita saberlo. Las credenciales
+    # no van aquí: las lleva un imagePullSecret en cada namespace.
+    k3s_registries:
+      mirrors:
+        "10.0.30.28:3000":
+          endpoint:
+            - "http://10.0.30.28:3000"
+
   tasks:
     - name: K3s config directory
       ansible.builtin.file:
@@ -40,6 +48,13 @@
         content: "{{ k3s_config | to_nice_yaml }}"
         mode: "0600"
       register: k3s_config_file
+
+    - name: K3s registries file
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        content: "{{ k3s_registries | to_nice_yaml }}"
+        mode: "0600"
+      register: k3s_registries_file
 
     - name: Download the K3s installer
       ansible.builtin.get_url:
@@ -59,7 +74,7 @@
       ansible.builtin.systemd_service:
         name: k3s
         state: restarted
-      when: k3s_config_file is changed and k3s_installed is not changed
+      when: (k3s_config_file is changed or k3s_registries_file is changed) and k3s_installed is not changed
 
     - name: Wait for the node to be Ready
       ansible.builtin.command: k3s kubectl wait --for=condition=Ready node/k3s-01 --timeout=180s
