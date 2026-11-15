@@ -1,0 +1,18 @@
+# csi-driver-nfs — Helm values
+# Chart: csi-driver-nfs/csi-driver-nfs 4.13.6 (fijada, subirla a propósito)
+# Namespace: kube-system
+# Docs: https://github.com/kubernetes-csi/csi-driver-nfs
+#
+# helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+# helm upgrade --install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --version 4.13.6 \
+#   -n kube-system -f infrastructure/helm/csi-driver-nfs/values.yaml
+#
+# Nodo de 4 GB: una réplica del controlador y sin snapshot-controller. Los límites de
+# memoria por defecto del chart ya son bajos (requests de 20 Mi por contenedor).
+# La StorageClass `nfs-nas` está en services/k8s/platform/csi-driver-nfs (la gestiona ArgoCD).
+
+controller:
+  replicas: 1
+
+externalSnapshotter:
+  enabled: false
