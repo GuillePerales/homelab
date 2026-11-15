@@ -8,6 +8,7 @@ Patrón App of Apps: una Application raíz que gestiona el resto de Applications
 argocd/apps/
 ├── root-app.yaml          ← Application raíz: lo único que se aplica a mano
 ├── cert-manager.yaml      ← chart + ClusterIssuer (services/k8s/apps/cert-manager)
+├── platform.yaml          ← NetworkPolicies de argocd, cert-manager y vault (services/k8s/platform)
 ├── envs.yaml              ← namespaces dev y prod, con cuota y aislamiento (services/k8s/envs)
 ├── homelab-check-dev.yaml ← sigue main
 └── homelab-check-prod.yaml← sigue la etiqueta de versión más alta (semver)

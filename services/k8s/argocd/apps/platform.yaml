@@ -1,0 +1,19 @@
+# NetworkPolicies de los namespaces de plataforma (argocd, cert-manager, vault):
+# solo entra tráfico del mismo namespace, más lo explícito de services/k8s/platform.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://10.0.30.28:3000/root/homelab.git
+    targetRevision: main
+    path: services/k8s/platform
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
