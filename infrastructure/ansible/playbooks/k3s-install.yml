@@ -1,0 +1,91 @@
+# infrastructure/ansible/playbooks/k3s-install.yml
+#
+# Instala K3s en k3s-01 con la versión fijada y la configuración en
+# /etc/rancher/k3s/config.yaml. Antes: k3s-node-setup.yml. Sin --disable: se queda el
+# Traefik, el ServiceLB y el Flannel (con su controlador de NetworkPolicies) de K3s.
+# Base de datos: etcd embebido de un solo nodo (cluster-init), para tener el flujo
+# oficial de `k3s etcd-snapshot` y restauración.
+#
+# Uso:
+#   ansible-playbook playbooks/k3s-install.yml
+#   ansible-playbook playbooks/k3s-install.yml -e k3s_kubeconfig_dest=/ruta/k3s-01.yaml
+---
+- name: Install K3s
+  hosts: k3s_nodes
+  become: true
+
+  vars:
+    k3s_version: "v1.37.2+k3s1" # canal stable a 2026-11-15; subirla aquí a propósito
+    k3s_kubeconfig_dest: "{{ lookup('env', 'HOME') }}/.kube/k3s-01.yaml"
+    k3s_config:
+      cluster-init: true
+      node-name: k3s-01
+      write-kubeconfig-mode: "0600"
+      tls-san:
+        - k3s-01
+        - "{{ ansible_host | default(inventory_hostname) }}"
+      etcd-snapshot-schedule-cron: "0 3 * * *"
+      etcd-snapshot-retention: 7
+
+  tasks:
+    - name: K3s config directory
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: K3s config file
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        content: "{{ k3s_config | to_nice_yaml }}"
+        mode: "0600"
+      register: k3s_config_file
+
+    - name: Download the K3s installer
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: /usr/local/sbin/k3s-install.sh
+        mode: "0755"
+
+    - name: Install K3s
+      ansible.builtin.command: /usr/local/sbin/k3s-install.sh
+      environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+      args:
+        creates: /usr/local/bin/k3s
+      register: k3s_installed
+
+    - name: Restart K3s if the config changed
+      ansible.builtin.systemd_service:
+        name: k3s
+        state: restarted
+      when: k3s_config_file is changed and k3s_installed is not changed
+
+    - name: Wait for the node to be Ready
+      ansible.builtin.command: k3s kubectl wait --for=condition=Ready node/k3s-01 --timeout=180s
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Fetch the kubeconfig
+      ansible.builtin.fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ k3s_kubeconfig_dest }}"
+        flat: true
+      when: not ansible_check_mode
+
+    - name: Kubeconfig only readable by me
+      ansible.builtin.file:
+        path: "{{ k3s_kubeconfig_dest }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      when: not ansible_check_mode
+
+    - name: Point the kubeconfig at the node
+      ansible.builtin.replace:
+        path: "{{ k3s_kubeconfig_dest }}"
+        regexp: 'https://127\.0\.0\.1:6443'
+        replace: "https://{{ ansible_host | default(inventory_hostname) }}:6443"
+      delegate_to: localhost
+      become: false
+      when: not ansible_check_mode
