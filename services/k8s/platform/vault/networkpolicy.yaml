@@ -1,0 +1,53 @@
+# Solo entra tráfico de pods del mismo namespace; lo demás, con permisos explícitos abajo.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: solo-mismo-namespace
+  namespace: vault
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+---
+# Los agentes inyectados en pods de cualquier namespace leen sus secretos del puerto 8200,
+# y Traefik publica la UI.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-de-vault
+  namespace: vault
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vault
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: 8200
+---
+# El injector es un webhook que llama el API server (origen: el nodo).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: webhook-desde-el-api-server
+  namespace: vault
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vault-agent-injector
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 10.42.0.1/32 # gateway de los pods en el nodo (cni0)
+        - ipBlock:
+            cidr: 10.0.30.70/32 # IP del nodo
+      ports:
+        - port: 8080
