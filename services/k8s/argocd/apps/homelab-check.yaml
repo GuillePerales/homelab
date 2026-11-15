@@ -1,0 +1,19 @@
+# homelab-check: manifiestos de services/k8s/apps/homelab-check.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-check
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://10.0.30.28:3000/root/homelab.git
+    targetRevision: main
+    path: services/k8s/apps/homelab-check
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homelab-check
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
