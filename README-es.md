@@ -220,7 +220,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | mon-gatus-01 | Gatus | docker-main | 8080 | ✅ Operativo | Disponibilidad de los servicios con avisos a ntfy |
 | mon-diun-01 | diun | docker-main, docker-nas | — | ✅ Operativo | Avisa a ntfy de versiones nuevas de las imágenes en uso (no actualiza) |
 | mon-homarr-01 | Homarr | docker-main | 7575 | ✅ Operativo | Dashboard del homelab |
-| mon-check-01 | homelab-check | docker-main | — | ✅ Operativo | Imagen propia (build → Trivy → registro de Forgejo) que comprueba URLs y avisa a ntfy |
+| mon-check-01 | homelab-check | K3s (k3s-01) | — | ✅ Operativo | Imagen propia (build → Trivy → registro de Forgejo) que comprueba URLs y avisa a ntfy |
 | mon-beszel-01 | Beszel (hub + agentes) | docker-main; agentes en cada nodo, el NAS y los LXC con Docker | 8090 | ✅ Operativo | Monitorización de hardware: CPU, RAM, carga, red, temperaturas, S.M.A.R.T. y uso por contenedor, con historial |
 | mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | ✅ Operativo | Tests programados de velocidad a Internet (cada 6 h); adelantado de la fase 8 |
 
@@ -312,7 +312,7 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 - `ai-openclaw-01` (LXC, 4GB) — Agente IA *(Phase 9)*
 
 **pve-main (16GB)**
-- `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, homelab-check, Beszel, Speedtest Tracker
+- `docker-main` (LXC, 4GB) ✅ — Portainer, Forgejo, Woodpecker, Seerr, ntfy, Gatus, diun, Homarr, Agenda, Salud, Beszel, Speedtest Tracker
 
 **pve-aux (10GB)**
 - `docker-aux` (LXC, 6GB tras Phase 4+) ✅ — Monitorización, servicios cloud
