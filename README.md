@@ -515,9 +515,9 @@ K3s runs on a single VM in Proxmox (not an LXC — K3s requires kernel module ac
 │  • cert-manager (internal CA)                            │
 │  • Trivy Operator          • homelab-check (dev, prod)   │
 │                                                          │
-│  CNI:     Flannel + K3s NetworkPolicy controller          │
+│  CNI:     Flannel + K3s NetworkPolicy controller         │
 │  Ingress: Traefik (default K3s)                          │
-│  Storage: local-path                                     │
+│  Storage: local-path + NFS (csi-driver-nfs → NAS)        │
 │  TLS:     cert-manager                                   │
 └──────────────────────────────────────────────────────────┘
 ```
