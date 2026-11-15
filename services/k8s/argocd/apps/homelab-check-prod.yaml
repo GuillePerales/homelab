@@ -1,0 +1,20 @@
+# homelab-check en prod: sigue la etiqueta de versión más alta del repo (semver), no
+# main. Promover a prod es etiquetar una versión (git tag vX.Y.Z) cuando dev está probado.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-check-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://10.0.30.28:3000/root/homelab.git
+    targetRevision: "*"
+    path: services/k8s/apps/homelab-check/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

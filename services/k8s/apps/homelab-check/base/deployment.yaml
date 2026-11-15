@@ -1,0 +1,64 @@
+# homelab-check en K3s: la misma imagen que corre en Docker, desplegada por ArgoCD.
+# Base común a dev y prod; el namespace y las diferencias van en overlays/.
+# La configuración llega de Vault (injector) como fichero /vault/secrets/env; la
+# credencial de pull (forgejo-registry) es un Secret creado en cada namespace.
+# Para subir de versión se cambia la etiqueta de la imagen en el overlay de dev y,
+# cuando está probada, se etiqueta una versión del repo para promoverla a prod.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-check
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homelab-check
+  template:
+    metadata:
+      labels:
+        app: homelab-check
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: homelab-check
+        vault.hashicorp.com/agent-inject-secret-env: homelab/data/ENTORNO/homelab-check
+        vault.hashicorp.com/agent-inject-template-env: |
+          {{- with secret "homelab/data/ENTORNO/homelab-check" -}}
+          {{- range $k, $v := .Data.data }}
+          export {{ $k }}='{{ $v }}'
+          {{- end }}
+          {{- end }}
+        vault.hashicorp.com/agent-requests-cpu: 10m
+        vault.hashicorp.com/agent-requests-mem: 32Mi
+        vault.hashicorp.com/agent-limits-cpu: 100m
+        vault.hashicorp.com/agent-limits-mem: 64Mi
+        vault.hashicorp.com/agent-init-first: "true"
+    spec:
+      serviceAccountName: homelab-check
+      imagePullSecrets:
+        - name: forgejo-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: homelab-check
+          image: 10.0.30.28:3000/root/homelab-check:slim-92977beb
+          command: ["sh", "-c", ". /vault/secrets/env && exec python /app/check.py"]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 5m
+            limits:
+              memory: 64Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homelab-check

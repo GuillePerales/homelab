@@ -1,0 +1,18 @@
+# Entornos dev y prod: namespaces, cuotas y aislamiento de red (services/k8s/envs).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envs
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://10.0.30.28:3000/root/homelab.git
+    targetRevision: main
+    path: services/k8s/envs
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

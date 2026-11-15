@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dev
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+      name: homelab-check
+    patch: |-
+      - op: replace
+        path: /spec/template/metadata/annotations/vault.hashicorp.com~1role
+        value: homelab-check-dev
+      - op: replace
+        path: /spec/template/metadata/annotations/vault.hashicorp.com~1agent-inject-secret-env
+        value: homelab/data/dev/homelab-check
+      - op: replace
+        path: /spec/template/metadata/annotations/vault.hashicorp.com~1agent-inject-template-env
+        value: |
+          {{- with secret "homelab/data/dev/homelab-check" -}}
+          {{- range $k, $v := .Data.data }}
+          export {{ $k }}='{{ $v }}'
+          {{- end }}
+          {{- end }}
