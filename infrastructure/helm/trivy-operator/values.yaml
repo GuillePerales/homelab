@@ -1,0 +1,40 @@
+# Trivy Operator — Helm values
+# Chart: aqua/trivy-operator 0.38.1 (app 0.36.1; fijada, subirla a propósito)
+# Namespace: trivy-system
+# Docs: https://aquasecurity.github.io/trivy-operator/latest/
+#
+# helm repo add aqua https://aquasecurity.github.io/helm-charts/
+# helm upgrade --install trivy-operator aqua/trivy-operator --version 0.38.1 \
+#   -n trivy-system --create-namespace -f infrastructure/helm/trivy-operator/values.yaml
+#
+# Nodo de 4 GB: solo vulnerabilidades y configuración de dev y prod, un escaneo a la vez,
+# sin SBOM, sin RBAC ni infraestructura ni cumplimiento. Si el nodo pasa del 85 % de RAM, quitarlo.
+
+targetNamespaces: "dev,prod"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+operator:
+  scanJobsConcurrentLimit: 1
+  scanJobTimeout: 10m
+  sbomGenerationEnabled: false
+  rbacAssessmentScannerEnabled: false
+  infraAssessmentScannerEnabled: false
+  clusterComplianceEnabled: false
+  exposedSecretScannerEnabled: false
+
+trivy:
+  ignoreUnfixed: true
+  severity: HIGH,CRITICAL
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100M
+    limits:
+      cpu: 500m
+      memory: 400M
