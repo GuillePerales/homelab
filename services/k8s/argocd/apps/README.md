@@ -6,14 +6,12 @@ Patrón App of Apps: una Application raíz que gestiona el resto de Applications
 
 ```
 argocd/apps/
-├── root-app.yaml          ← Application raíz — apunta a este directorio
-├── jenkins.yaml
-├── sonarqube.yaml
-├── vault.yaml
-├── awx.yaml
-├── postgresql.yaml
-└── cert-manager.yaml
+├── root-app.yaml          ← Application raíz: lo único que se aplica a mano
+└── cert-manager.yaml      ← chart + ClusterIssuer (services/k8s/apps/cert-manager)
 ```
+
+Cada servicio nuevo es un fichero más en este directorio. Jenkins, SonarQube, AWX y
+PostgreSQL no se despliegan en el clúster (alcance de la fase 4b).
 
 ## Flujo
 

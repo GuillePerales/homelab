@@ -1,0 +1,26 @@
+# Application raíz (App of Apps): sincroniza este directorio, así que cada fichero
+# nuevo de apps/ pasa a ser una Application. Es lo único que se aplica a mano:
+#   kubectl apply -f services/k8s/argocd/apps/root-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: http://10.0.30.28:3000/root/homelab.git
+    targetRevision: main
+    path: services/k8s/argocd/apps
+    directory:
+      include: "*.yaml"
+      exclude: root-app.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
