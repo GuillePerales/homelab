@@ -1,0 +1,4 @@
+# infrastructure/ansible/inventory/host_vars/k3s-01.yml
+---
+# Export NFS del NAS para los snapshots de etcd (k3s-snapshots-nas.yml)
+k3s_nas_export: 10.0.5.10:/mnt/tank/backups/k3s

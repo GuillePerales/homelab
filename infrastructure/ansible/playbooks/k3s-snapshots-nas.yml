@@ -1,0 +1,90 @@
+# infrastructure/ansible/playbooks/k3s-snapshots-nas.yml
+#
+# Copia diaria de los snapshots de etcd de K3s (k3s-01) al NAS (tank/backups/k3s).
+# K3s los hace a las 3:00 con retención 7 en la propia VM (k3s-install.yml); esto
+# añade una copia fuera de la VM, a las 3:30, con 30 días de retención en el NAS.
+#
+# Requisito: el export NFS de /mnt/tank/backups/k3s en nas-01 solo para k3s-01
+# (se crea a mano en TrueNAS; el NAS es un appliance y no se gestiona desde aquí).
+# El montaje es automount con nofail: si el NAS no está, la VM arranca igual.
+#
+# Uso:
+#   ansible-playbook playbooks/k3s-snapshots-nas.yml --check --diff
+#   ansible-playbook playbooks/k3s-snapshots-nas.yml
+---
+- name: Copy K3s etcd snapshots to the NAS
+  hosts: k3s_nodes
+  become: true
+
+  vars:
+    # k3s_nas_export: en inventory/host_vars/k3s-01.yml
+    k3s_nas_mount: /mnt/nas-k3s
+    k3s_snapshots_dir: /var/lib/rancher/k3s/server/db/snapshots
+    k3s_nas_retention_days: 30
+
+  tasks:
+    - name: NFS client installed
+      ansible.builtin.apt:
+        name: nfs-common
+        state: present
+
+    - name: Mount point
+      ansible.builtin.file:
+        path: "{{ k3s_nas_mount }}"
+        state: directory
+        mode: "0755"
+
+    - name: NFS mount (automount, nofail, soft)
+      ansible.posix.mount:
+        src: "{{ k3s_nas_export }}"
+        path: "{{ k3s_nas_mount }}"
+        fstype: nfs4
+        opts: "soft,timeo=50,nofail,_netdev,x-systemd.automount,x-systemd.idle-timeout=60"
+        state: mounted
+
+    - name: Copy service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/k3s-snapshots-nas.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Copy K3s etcd snapshots to the NAS
+          RequiresMountsFor={{ k3s_nas_mount }}
+
+          [Service]
+          Type=oneshot
+          ExecStart=/bin/cp -a -u {{ k3s_snapshots_dir }}/. {{ k3s_nas_mount }}/
+          ExecStart=/usr/bin/find {{ k3s_nas_mount }} -maxdepth 1 -name "etcd-snapshot-*" -mtime +{{ k3s_nas_retention_days }} -delete
+      notify: Reload systemd
+
+    - name: Copy timer
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/k3s-snapshots-nas.timer
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Daily copy of K3s snapshots to the NAS
+
+          [Timer]
+          OnCalendar=*-*-* 03:30:00
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+      notify: Reload systemd
+
+    - name: Flush handlers before enabling the timer
+      ansible.builtin.meta: flush_handlers
+
+    - name: Timer enabled
+      ansible.builtin.systemd:
+        name: k3s-snapshots-nas.timer
+        enabled: true
+        state: started
+      # En --check la unidad aún no existe
+      ignore_errors: "{{ ansible_check_mode }}"
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
