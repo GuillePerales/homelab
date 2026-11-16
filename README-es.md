@@ -65,11 +65,10 @@ Homelab personal gestionado íntegramente como Infraestructura como Código. Dos
 
 | ID | Dispositivo | Especificaciones | Rol |
 |---|---|---|---|
-| HW-SRV-01 | Dell R230 | 16GB RAM, 6TB HDD, 800GB SSD | NAS / TrueNAS Scale |
+| HW-SRV-01 | Dell R230 | 16GB RAM, 2x 3TB HDD, 2x 480GB SSD | NAS / TrueNAS Scale |
 | HW-SRV-02 | Mini PC (quad-NIC) | 20GB RAM | Proxmox router + OPNsense VM |
 | HW-SRV-03 | Mini PC | 16GB RAM, 256GB SSD, 1TB HDD | Nodo Proxmox principal |
 | HW-SRV-04 | Mini PC | 10GB RAM | Nodo Proxmox secundario |
-| HW-IOT-01 | Raspberry Pi 4 | 4GB RAM | DNS failover / utilidades |
 
 Todos los nodos de producción funcionan 24/7. El consumo total en idle es inferior a 100W.
 
@@ -355,7 +354,7 @@ features: keyctl=1
 | Pool | Discos | Capacidad | Layout | Propósito |
 |---|---|---|---|---|
 | `tank` | 2x HDD 3TB | ~6TB | Stripe | Datos de alto volumen y reemplazables |
-| `vault` | 2x SSD 800GB | ~400GB útiles | Mirror RAID-1 | Datos críticos: rápido y redundante |
+| `vault` | 2x SSD 480GB | ~400GB útiles | Mirror RAID-1 | Datos críticos: rápido y redundante |
 
 ### 6.2 Estructura de datasets
 
