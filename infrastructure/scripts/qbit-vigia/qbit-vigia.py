@@ -14,6 +14,10 @@
 - Contenedores parados: si Gluetun o qBittorrent no están en marcha (p. ej. una recreación que
   dejó qBittorrent en «Created» porque Gluetun tardó en pasar el healthcheck), los arranca con
   `docker compose up -d` y avisa. No gasta el cupo de recreaciones.
+- Sesión caducada de Radarr/Sonarr en Mularr: Mularr pierde las sesiones al reiniciarse y
+  responde 401 a la cookie vieja; Radarr y Sonarr solo vuelven a iniciar sesión con un 403
+  (lo que da qBittorrent), así que se quedan sin ver la cola de eMule hasta reiniciarlos. Si el
+  log de Mularr muestra ese rechazo, reinicia la app (como mucho MULARR_REINICIOS_MAX_DIA al día).
 - Resumen semanal: lo sembrado y lo subido por tracker, desde el lado del cliente.
 - Diagnóstico de la conexión en LOG_DIR: en cada pasada sin conexión apunta en conexion.log el
   estado, el puerto que tiene Gluetun y el que escucha qBittorrent (¿se perdió el puerto o está
@@ -68,7 +72,12 @@ LOG_DIR = ENV.get("LOG_DIR", "/mnt/vault/cache/qbit-vigia/logs")
 LOG_DIAS = int(ENV.get("LOG_DIAS", "14"))
 VPN_MAX_DIA = int(ENV.get("VPN_MAX_DIA", "8"))
 FIREWALLED_PASADAS = int(ENV.get("FIREWALLED_PASADAS", "4"))   # 4 pasadas de 15 min = 45-60 min
-ESPERA_PUERTO = 60          # s antes de dar el puerto por perdido (Gluetun puede estar reconectando)
+# Mularr: contenedor y app por IP de origen de sus peticiones ("10.0.30.12=radarr,10.0.30.11=sonarr")
+MULARR_CONTAINER = ENV.get("MULARR_CONTAINER", "mularr")
+MULARR_APPS = dict(p.split("=") for p in ENV.get("MULARR_APPS", "").split(",") if p)
+MULARR_REINICIOS_MAX_DIA = int(ENV.get("MULARR_REINICIOS_MAX_DIA", "4"))
+MULARR_RECHAZO = re.compile(r"Unauthorized request .* from (?:::ffff:)?([\d.]+) \(credentials presented: [^)]*SID cookie")
+ESPERA_PUERTO = 60         # s antes de dar el puerto por perdido (Gluetun puede estar reconectando)
 GLUETUN_API = "http://127.0.0.1:8000/v1/vpn/status"
 
 SEMBRANDO = {"uploading", "stalledUP", "forcedUP", "queuedUP", "checkingUP"}
@@ -234,6 +243,44 @@ def recuperar_puerto(state, hoy):
                "(¿caída de ProtonVPN o de su reenvío de puertos?).")
 
 
+def vigilar_mularr(state, hoy):
+    """Reinicia Radarr o Sonarr si Mularr les rechaza la cookie de sesión (ver cabecera).
+    Lee el log desde la pasada anterior (la primera vez, 16 min), para no contar dos veces los
+    rechazos de antes de un reinicio. Nunca tumba la pasada."""
+    if not MULARR_APPS:
+        return
+    try:
+        ahora = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        r = subprocess.run(["docker", "logs", "--since", state.get("mularr_desde", "16m"), MULARR_CONTAINER],
+                           capture_output=True, text=True, timeout=60)
+        state["mularr_desde"] = ahora
+        ips = {m.group(1) for m in MULARR_RECHAZO.finditer(r.stdout + r.stderr)}
+        cupo = state.get("mularr_reinicios", {})
+        if cupo.get("fecha") != hoy:
+            cupo = {"fecha": hoy}
+        for ip in sorted(ips):
+            app = MULARR_APPS.get(ip)
+            if not app:
+                continue
+            n = cupo.get(app, 0)
+            if n < MULARR_REINICIOS_MAX_DIA:
+                ok = subprocess.run(["docker", "restart", app], capture_output=True, timeout=180).returncode == 0
+                cupo[app] = n + 1
+                notify(TOPIC_ALERTAS, 2 if ok else 4, ["arrows_counterclockwise" if ok else "warning"],
+                       f"{app}: sesión de Mularr renovada" if ok else f"{app}: no se pudo reiniciar",
+                       f"Mularr rechazaba su sesión (se reinició y la perdió). "
+                       f"{'Reiniciado' if ok else 'Falló docker restart'} ({n + 1}/{MULARR_REINICIOS_MAX_DIA} hoy). "
+                       "Volverá a leer la cola de eMule cuando acabe la pausa por fallos.")
+            elif n == MULARR_REINICIOS_MAX_DIA:
+                cupo[app] = n + 1
+                notify(TOPIC_ALERTAS, 4, ["warning"], f"{app} sigue sin entrar en Mularr",
+                       f"Mularr le rechaza la sesión tras {n} reinicios hoy: revisa las credenciales "
+                       "del cliente de descargas Mularr.")
+        state["mularr_reinicios"] = cupo
+    except Exception:
+        pass
+
+
 def limpiar_logs():
     """Borra las copias de logs de Gluetun de más de LOG_DIAS días."""
     try:
@@ -277,6 +324,8 @@ def main():
     avisados = state.setdefault("avisados", {})       # clave → fecha del aviso
     pendientes = state.setdefault("pendientes", {})   # hash → torrent privado sin cumplir el seed
     primera = "conexion" not in state
+
+    vigilar_mularr(state, datetime.date.today().isoformat())
 
     # contenedores parados: arrancarlos y dejar el resto de comprobaciones para la pasada siguiente
     caidos = parados()
