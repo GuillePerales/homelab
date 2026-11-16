@@ -15,7 +15,7 @@ source "$ENV_FILE"   # NAS_HOST, NAS_REPO, SSH_KEY, NTFY_URL
 export RESTIC_PASSWORD_FILE=/root/.restic-pass RESTIC_FROM_PASSWORD_FILE=/root/.restic-pass
 export RESTIC_REPOSITORY=/mnt/backup-restic/vault
 export RESTIC_FROM_REPOSITORY="sftp:root@${NAS_HOST}:${NAS_REPO}"
-S="sftp.command=ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o BatchMode=yes root@${NAS_HOST} -s sftp"
+S="sftp.command=ssh -i ${SSH_KEY} -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 root@${NAS_HOST} -s sftp"
 modo=${1:-copy}
 aviso() { curl -s -m 10 -H "Priority: $1" -H "Tags: $2" -H "Title: $3" -d "$4" "$NTFY_URL" >/dev/null || true; }
 exec 9>/run/restic-pull.lock
