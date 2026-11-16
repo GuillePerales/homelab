@@ -73,6 +73,14 @@ Homelab personal gestionado íntegramente como Infraestructura como Código. Dos
 
 Todos los nodos de producción funcionan 24/7. El consumo total en idle es inferior a 100W.
 
+### Nodo a demanda (planificado)
+
+| ID | Dispositivo | Especificaciones | Rol |
+|---|---|---|---|
+| HW-SRV-05 | PC de sobremesa | 32GB DDR4, i7-7700K, GTX 1070, 240GB SSD, 1TB HDD | Nodo Proxmox de laboratorio fuera del clúster |
+
+No está encendido 24/7: se despierta por Wake-on-LAN cuando hay trabajo y se apaga solo por inactividad. Aloja lo pesado y puntual (laboratorios, CI, GPU); lo que debe estar siempre disponible sigue en los nodos de producción.
+
 ### Estaciones de trabajo
 
 | ID | Dispositivo | Especificaciones | Rol |
@@ -623,7 +631,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing — refuerzo de la protección de datos en curso | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
 | **Phase 4** | DevOps Core: Forgejo (espejo de GitHub), Woodpecker CI, imágenes propias escaneadas con Trivy y publicadas en el registro de Forgejo — el plan de OpenTofu y los runbooks de recuperación siguen en sus propios proyectos | ✅ Completada |
-| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots al NAS. Pendientes: métricas y Velero; Jenkins, SonarQube y AWX, fuera del alcance | 🔄 En curso |
+| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots al NAS. Pendientes: métricas y Velero; Jenkins, SonarQube y AWX, fuera del alcance. Planificado: nodo Proxmox a demanda (Wake-on-LAN y apagado por inactividad) para un K3s de varios nodos, laboratorios de virtualización y ciberseguridad en una VLAN aislada, un agente de CI y la GPU para IA local | 🔄 En curso |
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
 | **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |

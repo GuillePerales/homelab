@@ -73,6 +73,14 @@ Personal homelab managed entirely as Infrastructure as Code. Two parallel object
 
 All production nodes run 24/7. Total idle power draw is under 100W.
 
+### On-demand node (planned)
+
+| ID | Device | Specs | Role |
+|---|---|---|---|
+| HW-SRV-05 | Desktop PC | 32GB DDR4, i7-7700K, GTX 1070, 240GB SSD, 1TB HDD | Standalone Proxmox lab node, outside the cluster |
+
+It does not run 24/7: it wakes via Wake-on-LAN when there is work and powers itself off when idle. It hosts heavy, occasional workloads (labs, CI, GPU); anything that must always be available stays on the production nodes.
+
 ### Workstations
 
 | ID | Device | Specs | Role |
@@ -623,7 +631,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — data protection hardening ongoing | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
 | **Phase 4** | DevOps Core: Forgejo (GitHub mirror), Woodpecker CI, own images scanned with Trivy and published to the Forgejo registry — OpenTofu plan and recovery runbooks continue in their own projects | ✅ Done |
-| **Phase 4b** | Single-node K3s with ArgoCD, Vault, cert-manager, NetworkPolicies, dev/prod environments and Trivy Operator; daily etcd snapshot copy to the NAS. Pending: metrics and Velero; Jenkins, SonarQube and AWX out of scope | 🔄 In progress |
+| **Phase 4b** | Single-node K3s with ArgoCD, Vault, cert-manager, NetworkPolicies, dev/prod environments and Trivy Operator; daily etcd snapshot copy to the NAS. Pending: metrics and Velero; Jenkins, SonarQube and AWX out of scope. Planned: on-demand Proxmox node (Wake-on-LAN and idle shutdown) for a multi-node K3s, virtualization and security labs on an isolated VLAN, a CI agent and the GPU for local AI | 🔄 In progress |
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
 | **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library (Romm ✅ deployed) | ✅ Done |
