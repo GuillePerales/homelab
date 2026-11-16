@@ -371,29 +371,6 @@ check_offsite() {
   esac
 }
 
-check_fan_control() {
-  [ -n "${FAN_CONTROL_STATE:-}" ] || return
-  # fan-control reescribe su estado en cada pasada correcta (cron de cada minuto);
-  # si falla vuelve a automático sin tocarlo, así que un estado viejo = no corre o falla
-  local out cron age estado
-  out=$(remote "$NAS" "
-    midclt call cronjob.query | python3 -c 'import json,sys; print(\"cron\", any(c[\"enabled\"] for c in json.load(sys.stdin) if \"fan-control\" in c[\"command\"]))'
-    if [ -f '$FAN_CONTROL_STATE' ]; then echo \"age \$(( \$(date +%s) - \$(stat -c %Y '$FAN_CONTROL_STATE') ))\"; echo \"estado \$(cat '$FAN_CONTROL_STATE')\"; else echo 'age -'; fi
-    echo \"log \$(journalctl -t fan-control -n 1 -o cat --no-pager 2>/dev/null)\"")
-  [ -n "$out" ] || { fail "Ventiladores" "no se puede leer $NAS"; return; }
-  cron=$(awk '$1=="cron"{print $2}' <<<"$out")
-  age=$(awk '$1=="age"{print $2}' <<<"$out")
-  estado=$(sed -n 's/^estado //p' <<<"$out")
-  [ "$cron" = True ] || { fail "Ventiladores" "el cron de fan-control no existe o está desactivado"; return; }
-  if [ "$age" = - ] || [ "$age" -gt 300 ]; then
-    fail "Ventiladores" "fan-control no ha pasado bien en los últimos 5 min; último log: $(sed -n 's/^log //p' <<<"$out")"
-  else case "$estado" in
-    manual:*) ok "Ventiladores" "fan-control activo (${estado#manual: })" ;;
-    *pausa*) warn "Ventiladores" "fan-control en pausa: el iDRAC manda y Fan1 va lento" ;;
-    *) warn "Ventiladores" "fan-control devolvió el control al iDRAC: ${estado#auto: }" ;;
-  esac; fi
-}
-
 check_snapshots() {
   remote "$NAS" "midclt call pool.snapshottask.query" >"$TMP/snaptasks.json" || { fail "Snapshots" "no se puede leer $NAS"; return; }
   python3 - "$TMP/snaptasks.json" <<'EOF'
@@ -444,7 +421,7 @@ check_resources() {
 # --- Ejecución ---------------------------------------------------------------
 
 # Todas a la vez: cada una tarda lo que tarde su host más lento
-CHECKS=(reachable network gatus containers alerts versions zfs smart backups forgejo_dump offsite fan_control snapshots resources)
+CHECKS=(reachable network gatus containers alerts versions zfs smart backups forgejo_dump offsite snapshots resources)
 for c in "${CHECKS[@]}"; do "check_$c" >"$TMP/$c.out" 2>/dev/null & done
 wait
 for c in "${CHECKS[@]}"; do cat "$TMP/$c.out"; done >"$TMP/all.txt"
@@ -460,7 +437,7 @@ from collections import OrderedDict
 sections = OrderedDict([
     ("Red", ["Hosts", "Gateways", "DNS", "Tailscale", "VPN", "Red"]),
     ("Servicios", ["Gatus", "Docker", "Imágenes", "Reinicios", "Alertas", "Versiones"]),
-    ("Discos", ["ZFS", "Scrub", "TRIM", "SMART", "Escrituras", "Ventiladores"]),
+    ("Discos", ["ZFS", "Scrub", "TRIM", "SMART", "Escrituras"]),
     ("Backups", ["PBS", "Forgejo", "Copia externa", "Snapshots"]),
     ("Recursos", ["Recursos", "Espacio"]),
 ])
