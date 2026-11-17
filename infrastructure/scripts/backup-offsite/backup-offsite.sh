@@ -13,6 +13,13 @@ source "$ENV_FILE"   # RESTIC_REPOSITORY (local), RCLONE_DEST, RESTIC_PASSWORD_F
 
 export RESTIC_REPOSITORY RESTIC_PASSWORD_FILE
 export RESTIC_CACHE_DIR=/mnt/vault/cache/restic
+# rclone propio, por delante del de TrueNAS: el del sistema (1.67.0, en /usr de solo lectura)
+# arrastra fallos del backend de Proton que las versiones ≥1.75.1 mejoran (reintentos,
+# subidas corruptas tras un reintento). Se instala a mano en RCLONE_DIR, que sobrevive a
+# las actualizaciones de TrueNAS: zip de downloads.rclone.org/vX.Y.Z/ comprobado contra su
+# SHA256SUMS e `install -m 0755 rclone "$RCLONE_DIR/"`. Si no existe, se usa el del sistema.
+RCLONE_DIR="${RCLONE_DIR:-/mnt/vault/cache/bin}"
+if [ -x "$RCLONE_DIR/rclone" ]; then export PATH="$RCLONE_DIR:$PATH"; fi
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 STAGING=/mnt/vault/cache/backup-staging
 LOG=/var/log/backup-offsite.log
@@ -117,7 +124,7 @@ exec 9>/run/backup-offsite.lock
 flock -n 9 || { echo "$(date -Is) ya hay una copia en marcha" >>"$LOG"; exit 0; }
 
 exec >>"$LOG" 2>&1
-echo "=== $(date -Is) inicio"
+echo "=== $(date -Is) inicio ($(rclone version 2>/dev/null | head -1))"
 
 STEP="appdata de docker-main"
 mkdir -p "$STAGING" "$RESTIC_CACHE_DIR"
