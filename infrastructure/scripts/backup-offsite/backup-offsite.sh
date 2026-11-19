@@ -136,8 +136,19 @@ mv "$STAGING/docker-main-appdata.tar.gz.tmp" "$STAGING/docker-main-appdata.tar.g
 
 STEP="restic backup"
 # Límite de escritura en el repo local (KiB/s): a ~11 MB/s el SSD caliente se quedó en 52 °C
+# Código 3 = snapshot guardado pero con ficheros que no se pudieron leer (p. ej. chunks que
+# la recolección de basura de PBS borra mientras restic los lee, 2026-11-19). El snapshot
+# vale: se sigue con check y subida y se avisa de que quedó incompleto. Otro código aborta.
+rc=0
 with_temp_guard nice -n 19 ionice -c3 restic backup --exclude-file "$SCRIPT_DIR/excludes.txt" \
-  --limit-upload "${RESTIC_LIMIT_UPLOAD:-10240}" --tag nocturno "${PATHS[@]}"
+  --limit-upload "${RESTIC_LIMIT_UPLOAD:-10240}" --tag nocturno "${PATHS[@]}" || rc=$?
+incompleto=0
+if [ "$rc" = 3 ]; then
+  incompleto=1
+  echo "$(date -Is) restic: snapshot guardado con ficheros sin leer (código 3); se sigue"
+elif [ "$rc" != 0 ]; then
+  false   # dispara el trap ERR con STEP="restic backup"
+fi
 
 STEP="restic forget"
 if [ "$(date +%u)" = 7 ]; then
@@ -206,6 +217,8 @@ SUMMARY=$(restic stats latest --mode raw-data 2>/dev/null | awk '/Total Size/ {p
 if [ "${#pendientes[@]}" -gt 0 ]; then
   notify 3 warning "Backup externo incompleto" "Copia local correcta, pero Proton rechaza ${#pendientes[@]} paquete(s) (borrador invisible): ${pendientes[*]}. Se reintentan la próxima noche."
   echo "$(date -Is) paquetes pendientes en Proton: ${pendientes[*]}"
+elif [ "$incompleto" = 1 ]; then
+  notify 3 warning "Backup externo incompleto" "Subida a Proton terminada, pero restic no pudo leer algunos ficheros (ver «error:» en $LOG). Último snapshot: ${SUMMARY:-?}."
 else
   notify 1 white_check_mark "Backup externo correcto" "Copia local y subida a Proton Drive terminadas. Último snapshot: ${SUMMARY:-?}."
 fi
