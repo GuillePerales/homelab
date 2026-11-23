@@ -562,8 +562,7 @@ Every namespace has a NetworkPolicy; `dev` and `prod` also have a ResourceQuota 
 │       ├── argocd/
 │       ├── cert-manager/
 │       ├── trivy-operator/
-│       ├── vault/
-│       └── jenkins/, sonarqube/  ← out of scope, pending removal
+│       └── vault/
 ├── services/
 │   ├── docker-compose/     ← Personal services (Compose stacks)
 │   │   ├── media/

@@ -562,8 +562,7 @@ Todos los namespaces llevan NetworkPolicy; `dev` y `prod` además tienen Resourc
 │       ├── argocd/
 │       ├── cert-manager/
 │       ├── trivy-operator/
-│       ├── vault/
-│       └── jenkins/, sonarqube/  ← fuera del alcance, pendientes de borrar
+│       └── vault/
 ├── services/
 │   ├── docker-compose/     ← Servicios personales (stacks Compose)
 │   │   ├── media/
