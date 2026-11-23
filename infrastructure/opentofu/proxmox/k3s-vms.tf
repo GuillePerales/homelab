@@ -11,8 +11,11 @@ resource "proxmox_virtual_environment_vm" "k3s_01" {
   vm_id     = 300
   tags      = ["k3s"]
   on_boot   = false # laboratorio apagable: se arranca a mano
-  machine   = "q35"
-  bios      = "seabios"
+  # Sin reinicio al aplicar: un cambio de cloud-init reinició la VM el 2026-11-23 y
+  # dejó Vault sellado. Los cambios que lo necesiten se aplican al reiniciar a mano.
+  reboot_after_update = false
+  machine             = "q35"
+  bios                = "seabios"
 
   scsi_hardware = "virtio-scsi-single"
   boot_order    = ["scsi0"]
