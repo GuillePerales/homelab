@@ -62,7 +62,7 @@ resource "proxmox_virtual_environment_container" "docker_main" {
   }
 
   operating_system {
-    template_file_id = ""
+    template_file_id = "nas-images:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst" # solo se usa al recrear (ignore_changes)
     type             = "debian"
   }
 
@@ -127,7 +127,7 @@ resource "proxmox_virtual_environment_container" "docker_aux" {
   }
 
   operating_system {
-    template_file_id = ""
+    template_file_id = "nas-images:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst" # solo se usa al recrear (ignore_changes)
     type             = "debian"
   }
 
