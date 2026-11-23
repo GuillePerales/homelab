@@ -628,7 +628,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 1.5** | VPN: Tailscale (remote) + ProtonVPN WireGuard (egress) | ✅ Done |
 | **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — data protection hardening ongoing | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
-| **Phase 4** | DevOps Core: Forgejo (GitHub mirror), Woodpecker CI, own images scanned with Trivy and published to the Forgejo registry — OpenTofu plan and recovery runbooks continue in their own projects | ✅ Done |
+| **Phase 4** | DevOps Core: Forgejo (GitHub mirror), Woodpecker CI, own images scanned with Trivy and published to the Forgejo registry; every Proxmox resource (firewall VM, Docker LXCs, K3s VM) in OpenTofu with an encrypted state and a read-only `tofu plan` on every PR; recovery runbook written. Next: a timed disaster-recovery drill | ✅ Done |
 | **Phase 4b** | Single-node K3s with ArgoCD, Vault, cert-manager, NetworkPolicies, dev/prod environments and Trivy Operator; daily etcd snapshot copy to the NAS. Pending: metrics and Velero; Jenkins, SonarQube and AWX out of scope. Planned: on-demand Proxmox node (Wake-on-LAN and idle shutdown) for a multi-node K3s, virtualization and security labs on an isolated VLAN, a CI agent and the GPU for local AI | 🔄 In progress |
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
