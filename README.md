@@ -241,12 +241,12 @@ Phase 8 — metrics stack on `docker-aux`, deployed with Ansible roles (`infrast
 | mon-nodeexp-01 | Node Exporter | Proxmox nodes, Docker hosts, K3s | 9100 | ✅ Operational | CPU, RAM, disk and network metrics (pinned binary, hardened systemd unit) |
 | mon-cadvisor-01 | cAdvisor | docker-main, docker-aux | 8080 | ✅ Operational | Per-container metrics |
 | mon-smartctl-01 | smartctl_exporter | Proxmox nodes, NAS | 9633 | ✅ Operational | Read-only S.M.A.R.T. health and temperature, with 12 alert rules; replaces Scrutiny |
+| mon-blackbox-01 | Blackbox Exporter | docker-aux | 9115 | ✅ Operational | HTTP probes of the same services Gatus watches (targets read from its config, so no addresses in the repo): availability, latency and certificate expiry in a dashboard; Gatus keeps the down alerts |
 
 Still planned in Phase 8:
 
 | ID | Service | Host | Port | Function |
 |---|---|---|---|---|
-| mon-blackbox-01 | Blackbox Exporter | docker-aux | 9115 | HTTP/TCP probing and an availability dashboard |
 | mon-loki-01 | Loki | docker-aux | 3100 | Centralized log aggregation |
 | mon-homepage-01 | Homepage | docker-aux | 3003 | Landing dashboard |
 | mon-ipmi-01 | IPMI Exporter | docker-aux | 9290 | Dell hardware metrics |
@@ -642,7 +642,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
 | **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library (Romm ✅ deployed) | ✅ Done |
-| **Phase 8** | Observability & operations: Prometheus, Alertmanager, Grafana (3 dashboards), node, container and S.M.A.R.T. exporters deployed with Ansible roles. Pending: Blackbox probing, power metrics, job scheduler; Loki under evaluation | 🔄 In progress |
+| **Phase 8** | Observability & operations: Prometheus, Alertmanager, Grafana (3 dashboards), node, container, S.M.A.R.T. and HTTP-probe exporters deployed with Ansible roles. Pending: power metrics, job scheduler; Loki under evaluation | 🔄 In progress |
 | **Phase 9** | Restricted, always-on AI agent with least privilege (replanned) | ⏳ Planned |
 | **Post-deployment** | Data-engineering practice on real homelab data: lakehouse, CDC streaming | ⏳ Ideas |
 
