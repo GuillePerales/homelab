@@ -1,0 +1,53 @@
+# Alertas basadas en node_exporter. Las de SMART, HTTP (Blackbox), certificados y
+# consumo se añaden con sus exporters.
+groups:
+  - name: nodos
+    rules:
+      - alert: NodeDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.host }} no responde"
+          description: "node_exporter de {{ $labels.host }} lleva más de 2 minutos sin contestar."
+
+      - alert: HighCPU
+        expr: 100 - (avg by (host) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU alta en {{ $labels.host }}"
+          description: "CPU al {{ $value | printf \"%.0f\" }} % durante más de 5 minutos."
+
+      - alert: HighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM alta en {{ $labels.host }}"
+          description: "RAM al {{ $value | printf \"%.0f\" }} %."
+
+      - alert: DiskAlmostFull
+        expr: |
+          (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs|ramfs"}
+               / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs|ramfs"}) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disco lleno al {{ $value | printf \"%.0f\" }} % en {{ $labels.host }}"
+          description: "{{ $labels.mountpoint }} supera el 80 %."
+
+      - alert: DiskFull
+        expr: |
+          (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs|ramfs"}
+               / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs|ramfs"}) * 100 > 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disco casi lleno ({{ $value | printf \"%.0f\" }} %) en {{ $labels.host }}"
+          description: "{{ $labels.mountpoint }} supera el 95 %."

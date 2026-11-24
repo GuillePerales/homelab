@@ -1,0 +1,30 @@
+# Generado por Ansible (rol prometheus): no editar a mano.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+{% if prometheus_alertmanagers %}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+{% for am in prometheus_alertmanagers %}
+            - {{ am }}
+{% endfor %}
+{% endif %}
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: node
+    static_configs:
+{% for h in prometheus_node_hosts %}
+      - targets: ["{{ hostvars[h].monitoring_address }}:{{ prometheus_node_port }}"]
+        labels:
+          host: {{ h }}
+{% endfor %}

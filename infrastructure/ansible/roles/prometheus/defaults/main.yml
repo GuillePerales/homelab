@@ -1,0 +1,20 @@
+---
+# Prometheus en docker-aux, desplegado como el resto de stacks: un compose por
+# servicio con `docker compose -p prometheus up -d`. La imagen y los volúmenes
+# salen del compose del repo (services/docker-compose/monitoring/prometheus).
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63; la .50 es el agente de Portainer)
+prometheus_container_ip: ""
+
+# Datos y configuración en el disco local del CT, no en vault/apps (NFS sobre los
+# SSD del NAS): Prometheus escribe sin parar y el desgaste de esos SSD ya preocupa.
+prometheus_appdata: /srv/prometheus
+prometheus_stack_dir: /opt/prometheus
+
+# Hosts con node_exporter que se recogen; cada uno necesita monitoring_address
+# en su host_vars (IP desde la que docker-aux llega a su :9100).
+prometheus_node_hosts: "{{ groups['proxmox'] + groups['docker_hosts'] + groups['k3s_nodes'] }}"
+prometheus_node_port: 9100
+
+# Alertmanagers a los que enviar alertas (host:puerto). Vacío hasta que exista el rol.
+prometheus_alertmanagers: []

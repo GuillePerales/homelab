@@ -10,3 +10,17 @@ docker_macvlan_ip_range: 10.0.30.56/29
 
 # Agente de Portainer en srv-net (lo registra a mano el server de docker-main)
 portainer_agent_ip: 10.0.30.50
+
+# Prometheus (rol prometheus): IP fija en srv-net
+prometheus_container_ip: 10.0.30.51
+
+# Shim: el host alcanza a sus contenedores macvlan y ellos a él (Prometheus lee
+# el node_exporter de docker-aux por esta IP)
+macvlan_shim:
+  address: 10.0.30.99/32
+  routes:
+    - 10.0.30.50/31
+    - 10.0.30.52/30
+
+# IP desde la que Prometheus alcanza el node_exporter de este host (el shim)
+monitoring_address: 10.0.30.99

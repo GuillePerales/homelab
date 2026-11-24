@@ -2,3 +2,6 @@
 ---
 # Export NFS del NAS para los snapshots de etcd (k3s-snapshots-nas.yml)
 k3s_nas_export: 10.0.5.10:/mnt/tank/backups/k3s
+
+# IP desde la que docker-aux alcanza el node_exporter (:9100)
+monitoring_address: 10.0.30.70
