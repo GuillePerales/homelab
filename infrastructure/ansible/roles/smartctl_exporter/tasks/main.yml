@@ -53,6 +53,23 @@
     state: link
   notify: Restart smartctl_exporter
 
+- name: Let the disk group open the NVMe devices
+  ansible.builtin.template:
+    src: smartctl-exporter-nvme.rules.j2
+    dest: "{{ smartctl_exporter_udev_rule }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: smartctl_exporter_nvme_udev
+  notify: Apply udev rules
+
+- name: Remove the NVMe udev rule when it is turned off
+  ansible.builtin.file:
+    path: "{{ smartctl_exporter_udev_rule }}"
+    state: absent
+  when: not smartctl_exporter_nvme_udev
+  notify: Apply udev rules
+
 - name: Install systemd unit
   ansible.builtin.template:
     src: smartctl_exporter.service.j2
@@ -85,3 +102,17 @@
   retries: 10
   delay: 3
   changed_when: false
+
+# Si el nodo tiene NVMe, tiene que salir en las métricas: sin acceso al dispositivo el
+# exporter arranca bien y simplemente no lo lista
+- name: Look for NVMe devices
+  ansible.builtin.stat:
+    path: /dev/nvme0
+  register: smartctl_exporter_nvme_stat
+
+- name: Check that the NVMe is in the metrics
+  ansible.builtin.assert:
+    that: "'device=\"nvme0\"' in smartctl_exporter_metrics.content"
+    fail_msg: "El nodo tiene /dev/nvme0 pero smartctl_exporter no lo lista (¿permisos del dispositivo?)"
+    quiet: true
+  when: smartctl_exporter_nvme_stat.stat.exists and not ansible_check_mode
