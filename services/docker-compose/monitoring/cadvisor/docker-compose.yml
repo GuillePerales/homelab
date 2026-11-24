@@ -1,0 +1,33 @@
+---
+# cAdvisor — métricas por contenedor (CPU, RAM, red, disco) de los hosts Docker.
+# Un contenedor por host Docker; lo despliega el rol cadvisor de Ansible y lo lee
+# Prometheus por la IP fija en srv-net.
+services:
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.61.1
+    container_name: cadvisor
+    restart: unless-stopped
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      # Etiquetas justas: el stack de compose y el servicio, sin el resto de labels
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service
+      # Métricas que no se usan y multiplican las series
+      - --disable_metrics=percpu,sched,tcp,udp,advtcp,process,hugetlb,referenced_memory,cpu_topology,resctrl
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    environment:
+      - TZ=${TZ}
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

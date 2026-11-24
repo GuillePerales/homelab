@@ -8,6 +8,13 @@
     quiet: true
   loop: "{{ prometheus_node_hosts }}"
 
+- name: Check that every Docker host has a cAdvisor address
+  ansible.builtin.assert:
+    that: hostvars[item].cadvisor_container_ip is defined
+    fail_msg: "Falta cadvisor_container_ip de {{ item }}"
+    quiet: true
+  loop: "{{ prometheus_cadvisor_hosts }}"
+
 - name: Create directories
   ansible.builtin.file:
     path: "{{ item.path }}"

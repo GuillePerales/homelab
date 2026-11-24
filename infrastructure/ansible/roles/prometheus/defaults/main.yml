@@ -18,3 +18,7 @@ prometheus_node_port: 9100
 
 # Alertmanagers a los que enviar alertas (host:puerto). Vacío hasta que exista el rol.
 prometheus_alertmanagers: []
+
+# Hosts Docker con cAdvisor (cadvisor_container_ip en su host_vars)
+prometheus_cadvisor_hosts: "{{ groups['docker_hosts'] }}"
+prometheus_cadvisor_port: 8080

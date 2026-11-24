@@ -32,3 +32,6 @@ prometheus_alertmanagers: ["{{ alertmanager_container_ip }}:9093"]
 
 # Grafana (rol grafana): IP fija en srv-net
 grafana_container_ip: 10.0.30.53
+
+# cAdvisor (rol cadvisor): IP fija en srv-net
+cadvisor_container_ip: 10.0.30.54
