@@ -1,0 +1,3 @@
+---
+# smartctl_exporter en el NAS: contenedor en srv-net (IP fija del segundo bloque del NAS)
+smartctl_address: 10.0.30.43

@@ -1,0 +1,134 @@
+# Alertas de salud de discos con smartctl_exporter (solo lectura del SMART).
+# Umbrales de temperatura como los de TrueNAS: SSD 55/65 °C y HDD 45/50 °C.
+# `host` lo pone el job de Prometheus y `device` el exporter.
+groups:
+  - name: discos
+    rules:
+      - alert: SmartHealthFailed
+        expr: smartctl_device_smart_status == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SMART en fallo: {{ $labels.device }} de {{ $labels.host }}"
+          description: "El disco {{ $labels.device }} de {{ $labels.host }} no pasa la comprobación de salud SMART."
+
+      # El exit status de smartctl es una máscara de bits: el bit 7 (128) indica que el
+      # registro de autotests contiene errores. Persiste mientras el error siga en el registro.
+      - alert: SmartSelfTestFailed
+        expr: smartctl_device_smartctl_exit_status >= 128
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Autotest SMART con errores: {{ $labels.device }} de {{ $labels.host }}"
+          description: "El registro de autotests de {{ $labels.device }} en {{ $labels.host }} contiene errores."
+
+      # Bit 4 (16): un atributo de pre-fallo está por debajo de su umbral ahora mismo
+      - alert: SmartAttributeFailing
+        expr: (smartctl_device_smartctl_exit_status % 32) >= 16
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Atributo SMART bajo su umbral: {{ $labels.device }} de {{ $labels.host }}"
+          description: "Un atributo de pre-fallo de {{ $labels.device }} en {{ $labels.host }} está por debajo de su umbral."
+
+      # Atributos que en un disco sano valen 0 (HDD). Los SSD llevan otros nombres y se
+      # vigilan con SmartErrorsGrowing: sdb del NAS ya arrastra 187, 196 y 182 distintos de cero.
+      - alert: SmartSectorsBad
+        expr: |
+          smartctl_device_attribute{attribute_value_type="raw",
+            attribute_name=~"Reallocated_Sector_Ct|Current_Pending_Sector|Offline_Uncorrectable"} > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.attribute_name }} = {{ $value }} en {{ $labels.device }} de {{ $labels.host }}"
+          description: "Sectores reasignados o pendientes en {{ $labels.device }} de {{ $labels.host }}."
+
+      # Errores que han aumentado en las últimas 24 h, aunque ya hubiera algunos de antes
+      - alert: SmartErrorsGrowing
+        expr: |
+          delta(smartctl_device_attribute{attribute_value_type="raw",
+            attribute_name=~"Reported_Uncorrect|Reallocated_Event_Count|Erase_Fail_Count|Program_Fail_Count"}[1d]) > 0
+          or
+          delta(smartctl_device_attribute{attribute_value_type="raw",
+            attribute_name=~"UDMA_CRC_Error_Count|SATA_CRC_Error_Count|Runtime_Bad_Block"}[1d]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.attribute_name }} ha aumentado en {{ $labels.device }} de {{ $labels.host }}"
+          description: "{{ $labels.attribute_name }} de {{ $labels.device }} en {{ $labels.host }} ha subido {{ $value }} en 24 horas."
+
+      - alert: SmartNvmeCriticalWarning
+        expr: smartctl_device_critical_warning > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Aviso crítico del NVMe {{ $labels.device }} de {{ $labels.host }}"
+          description: "El NVMe {{ $labels.device }} de {{ $labels.host }} activa una bandera de aviso crítico."
+
+      - alert: SmartNvmeSpareLow
+        expr: smartctl_device_available_spare <= smartctl_device_available_spare_threshold
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Espacio de reserva del NVMe agotado en {{ $labels.host }}"
+          description: "El espacio de reserva de {{ $labels.device }} en {{ $labels.host }} ha llegado a su umbral."
+
+      - alert: SmartNvmeWear
+        expr: smartctl_device_percentage_used > 80
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Desgaste del NVMe al {{ $value }} % en {{ $labels.host }}"
+          description: "{{ $labels.device }} de {{ $labels.host }} ha consumido el {{ $value }} % de su vida útil."
+
+      - alert: SmartHddTempHigh
+        expr: |
+          smartctl_device_temperature{temperature_type="current"} > 45
+            and on (host, device) (smartctl_device_rotation_rate > 0)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HDD a {{ $value }} °C: {{ $labels.device }} de {{ $labels.host }}"
+          description: "{{ $labels.device }} de {{ $labels.host }} lleva más de 15 minutos por encima de 45 °C."
+
+      - alert: SmartHddTempCritical
+        expr: |
+          smartctl_device_temperature{temperature_type="current"} > 50
+            and on (host, device) (smartctl_device_rotation_rate > 0)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HDD a {{ $value }} °C: {{ $labels.device }} de {{ $labels.host }}"
+          description: "{{ $labels.device }} de {{ $labels.host }} supera los 50 °C."
+
+      - alert: SmartSsdTempHigh
+        expr: |
+          smartctl_device_temperature{temperature_type="current"} > 55
+            unless on (host, device) (smartctl_device_rotation_rate > 0)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSD a {{ $value }} °C: {{ $labels.device }} de {{ $labels.host }}"
+          description: "{{ $labels.device }} de {{ $labels.host }} lleva más de 10 minutos por encima de 55 °C."
+
+      - alert: SmartSsdTempCritical
+        expr: |
+          smartctl_device_temperature{temperature_type="current"} > 65
+            unless on (host, device) (smartctl_device_rotation_rate > 0)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSD a {{ $value }} °C: {{ $labels.device }} de {{ $labels.host }}"
+          description: "{{ $labels.device }} de {{ $labels.host }} supera los 65 °C."

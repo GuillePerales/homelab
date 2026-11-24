@@ -1,0 +1,87 @@
+---
+- name: Check architecture
+  ansible.builtin.assert:
+    that: ansible_facts['architecture'] == 'x86_64'
+    fail_msg: "El rol descarga el binario linux-amd64"
+    quiet: true
+
+- name: Check that smartctl is installed
+  ansible.builtin.stat:
+    path: "{{ smartctl_exporter_smartctl }}"
+  register: smartctl_exporter_smartctl_stat
+  failed_when: not smartctl_exporter_smartctl_stat.stat.exists
+
+- name: Create service user
+  ansible.builtin.user:
+    name: "{{ smartctl_exporter_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ smartctl_exporter_install_dir }}"
+    - "{{ smartctl_exporter_install_dir }}/{{ smartctl_exporter_version }}"
+
+- name: Download release
+  ansible.builtin.get_url:
+    url: "{{ smartctl_exporter_release_url }}/v{{ smartctl_exporter_version }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-amd64.tar.gz"
+    dest: "{{ smartctl_exporter_install_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.tar.gz"
+    checksum: "sha256:{{ smartctl_exporter_sha256 }}"
+    mode: "0644"
+
+- name: Unpack binary
+  ansible.builtin.unarchive:
+    src: "{{ smartctl_exporter_install_dir }}/smartctl_exporter-{{ smartctl_exporter_version }}.tar.gz"
+    dest: "{{ smartctl_exporter_install_dir }}/{{ smartctl_exporter_version }}"
+    remote_src: true
+    extra_opts: ["--strip-components=1", "--wildcards", "*/smartctl_exporter"]
+    owner: root
+    group: root
+    creates: "{{ smartctl_exporter_install_dir }}/{{ smartctl_exporter_version }}/smartctl_exporter"
+
+- name: Point the binary link at this version
+  ansible.builtin.file:
+    src: "{{ smartctl_exporter_install_dir }}/{{ smartctl_exporter_version }}/smartctl_exporter"
+    dest: "{{ smartctl_exporter_bin }}"
+    state: link
+  notify: Restart smartctl_exporter
+
+- name: Install systemd unit
+  ansible.builtin.template:
+    src: smartctl_exporter.service.j2
+    dest: /etc/systemd/system/smartctl_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart smartctl_exporter
+
+- name: Enable and start smartctl_exporter
+  ansible.builtin.systemd_service:
+    name: smartctl_exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# Los handlers corren al final; si hay reinicio pendiente, que sea antes de comprobar
+- name: Apply pending restart
+  ansible.builtin.meta: flush_handlers
+
+# El exporter hace su primera lectura al arrancar: las métricas tardan unos segundos
+- name: Check that SMART data is served
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ smartctl_exporter_listen.split(':')[-1] }}/metrics"
+    return_content: true
+  register: smartctl_exporter_metrics
+  until: >-
+    smartctl_exporter_metrics.status | default(0) == 200 and
+    'smartctl_device_smart_status' in smartctl_exporter_metrics.content
+  retries: 10
+  delay: 3
+  changed_when: false

@@ -15,6 +15,13 @@
     quiet: true
   loop: "{{ prometheus_cadvisor_hosts }}"
 
+- name: Check that every smartctl host has an address
+  ansible.builtin.assert:
+    that: hostvars[item].smartctl_address is defined or hostvars[item].monitoring_address is defined
+    fail_msg: "Falta smartctl_address o monitoring_address de {{ item }}"
+    quiet: true
+  loop: "{{ prometheus_smartctl_hosts }}"
+
 - name: Create directories
   ansible.builtin.file:
     path: "{{ item.path }}"
@@ -61,11 +68,14 @@
 
 - name: Write alert rules
   ansible.builtin.copy:
-    src: alerts-nodos.yml
-    dest: "{{ prometheus_appdata }}/config/rules/alerts-nodos.yml"
+    src: "{{ item }}"
+    dest: "{{ prometheus_appdata }}/config/rules/{{ item }}"
     owner: root
     group: root
     mode: "0644"
+  loop:
+    - alerts-nodos.yml
+    - alerts-discos.yml
   register: prometheus_rules
 
 - name: Start the stack

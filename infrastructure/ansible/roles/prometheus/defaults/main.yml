@@ -22,3 +22,8 @@ prometheus_alertmanagers: []
 # Hosts Docker con cAdvisor (cadvisor_container_ip en su host_vars)
 prometheus_cadvisor_hosts: "{{ groups['docker_hosts'] }}"
 prometheus_cadvisor_port: 8080
+
+# Hosts con smartctl_exporter: los Proxmox (binario) y nas-01 (contenedor, con su
+# IP en smartctl_address del host_vars; sin ella se usa monitoring_address)
+prometheus_smartctl_hosts: "{{ groups['proxmox'] + groups['nas'] }}"
+prometheus_smartctl_port: 9633

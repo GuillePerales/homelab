@@ -38,3 +38,15 @@ scrape_configs:
           host: {{ h }}
 {% endfor %}
 {% endif %}
+
+{% if prometheus_smartctl_hosts %}
+  - job_name: smartctl
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    static_configs:
+{% for h in prometheus_smartctl_hosts %}
+      - targets: ["{{ hostvars[h].smartctl_address | default(hostvars[h].monitoring_address) }}:{{ prometheus_smartctl_port }}"]
+        labels:
+          host: {{ h }}
+{% endfor %}
+{% endif %}

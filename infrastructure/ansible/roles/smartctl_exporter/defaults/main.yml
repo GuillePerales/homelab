@@ -1,0 +1,30 @@
+---
+# Versión fijada y checksum de sha256sums.txt de la release de GitHub.
+# Actualizar: cambiar las dos y relanzar; la versión anterior se queda en disco
+# para volver atrás cambiando solo el enlace.
+smartctl_exporter_version: "0.15.0"
+smartctl_exporter_sha256: "32ff269f2ca5708e2aa8209c715192efcc32f87bd575cae50a76d391a484976e"
+
+smartctl_exporter_release_url: https://github.com/prometheus-community/smartctl_exporter/releases/download
+smartctl_exporter_user: smartctl_exporter
+smartctl_exporter_install_dir: /opt/smartctl_exporter
+smartctl_exporter_bin: /usr/local/bin/smartctl_exporter
+smartctl_exporter_smartctl: /usr/sbin/smartctl
+
+# Todas las interfaces: quién llega al 9633 lo decide el firewall, no el exporter.
+smartctl_exporter_listen: ":9633"
+
+# Cada cuánto lee el SMART. Solo lectura: el exporter no lanza tests.
+smartctl_exporter_interval: 300s
+
+# standby: si el disco está dormido, no lo despierta para leerlo
+smartctl_exporter_powermode_check: standby
+
+# Capacidades del servicio. SYS_RAWIO y SYS_ADMIN dan acceso a los discos; DAC_READ_SEARCH
+# hace falta solo para el NVMe: su dispositivo /dev/nvmeN es root:root 0600 y no está en
+# el grupo disk. Solo salta los permisos de lectura, no los de escritura. Alternativa
+# más estrecha si molesta: una regla de udev que ponga /dev/nvme* en el grupo disk.
+smartctl_exporter_capabilities:
+  - CAP_SYS_RAWIO
+  - CAP_SYS_ADMIN
+  - CAP_DAC_READ_SEARCH
