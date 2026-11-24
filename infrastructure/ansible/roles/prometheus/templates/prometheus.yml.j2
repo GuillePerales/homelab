@@ -94,9 +94,9 @@ scrape_configs:
     static_configs:
       - targets: ["{{ prometheus_qbittorrent_address }}"]
     metric_relabel_configs:
-      # https://tracker.ejemplo:443/<passkey>/announce -> tracker.ejemplo
+      # https://tracker.ejemplo:443/<passkey>/announce o udp://tracker.ejemplo:6969/announce -> tracker.ejemplo
       - source_labels: [tracker]
-        regex: 'https?://([^/:]+).*'
+        regex: '[a-z]+://([^/:]+).*'
         target_label: tracker
         replacement: '$1'
 {% endif %}
