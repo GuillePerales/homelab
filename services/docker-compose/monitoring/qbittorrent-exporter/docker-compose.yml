@@ -1,0 +1,31 @@
+---
+# qBittorrent Exporter — métricas de qBittorrent (torrents, velocidades, ratio, conexión) para
+# Prometheus. Lo despliega el rol qbittorrent_exporter de Ansible en docker-aux; llega a la web
+# de qBittorrent por srv-net con una clave de API y lo lee Prometheus por su IP fija.
+services:
+  qbittorrent-exporter:
+    image: ghcr.io/martabal/qbittorrent-exporter:v2.0.4
+    container_name: qbittorrent-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - QBITTORRENT_BASE_URL=${QBITTORRENT_URL}
+      - QBITTORRENT_API_KEY=${QBITTORRENT_API_KEY}
+      # Etiqueta experimental: añade el tracker a las métricas por torrent (subida y
+      # descarga por tracker). Prometheus la reduce a dominio antes de guardarla,
+      # porque la URL de announce puede llevar el passkey.
+      - ENABLE_LABEL_WITH_TRACKER=true
+      # Las métricas qbittorrent_tracker_* (seeds y peers de scrape) llevan la URL completa
+      # como etiqueta y no hacen falta; apagadas evitan además el passkey en ellas
+      - ENABLE_TRACKER=${ENABLE_TRACKER}
+      # Sin las métricas de alta cardinalidad: una serie extra por torrent y por estado
+      - ENABLE_HIGH_CARDINALITY=false
+      - ENABLE_INCREASED_CARDINALITY=false
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

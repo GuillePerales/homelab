@@ -86,3 +86,17 @@ scrape_configs:
       - target_label: __address__
         replacement: {{ prometheus_blackbox_address }}
 {% endif %}
+
+{% if prometheus_qbittorrent_address %}
+  - job_name: qbittorrent
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    static_configs:
+      - targets: ["{{ prometheus_qbittorrent_address }}"]
+    metric_relabel_configs:
+      # https://tracker.ejemplo:443/<passkey>/announce -> tracker.ejemplo
+      - source_labels: [tracker]
+        regex: 'https?://([^/:]+).*'
+        target_label: tracker
+        replacement: '$1'
+{% endif %}
