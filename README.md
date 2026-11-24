@@ -238,7 +238,7 @@ Phase 8 — metrics stack on `docker-aux`, deployed with Ansible roles (`infrast
 | mon-prometheus-01 | Prometheus | docker-aux | 9090 | ✅ Operational | Metrics database and alert rules (30-day retention, scrape config generated from the Ansible inventory) |
 | mon-alertmanager-01 | Alertmanager | docker-aux | 9093 | ✅ Operational | Routes alerts to ntfy with a priority per severity and inhibits the noise of a down host |
 | mon-grafana-01 | Grafana | docker-aux | 3000 | ✅ Operational | Dashboards provisioned from files in the repo: global overview, containers, disk health |
-| mon-nodeexp-01 | Node Exporter | Proxmox nodes, Docker hosts, K3s | 9100 | ✅ Operational | CPU, RAM, disk and network metrics (pinned binary, hardened systemd unit) |
+| mon-nodeexp-01 | Node Exporter | Proxmox nodes, Docker hosts, K3s | 9100 | ✅ Operational | CPU, RAM, disk and network metrics, plus CPU power (RAPL) on the Proxmox nodes (pinned binary, hardened systemd unit) |
 | mon-cadvisor-01 | cAdvisor | docker-main, docker-aux | 8080 | ✅ Operational | Per-container metrics |
 | mon-smartctl-01 | smartctl_exporter | Proxmox nodes, NAS | 9633 | ✅ Operational | Read-only S.M.A.R.T. health and temperature, with 12 alert rules; replaces Scrutiny |
 | mon-blackbox-01 | Blackbox Exporter | docker-aux | 9115 | ✅ Operational | HTTP probes of the same services Gatus watches (targets read from its config, so no addresses in the repo): availability, latency and certificate expiry in a dashboard; Gatus keeps the down alerts |
@@ -643,7 +643,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
 | **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library (Romm ✅ deployed) | ✅ Done |
-| **Phase 8** | Observability & operations: Prometheus, Alertmanager, Grafana (3 dashboards), node, container, S.M.A.R.T., HTTP-probe and qBittorrent exporters deployed with Ansible roles. Pending: power metrics, job scheduler; Loki under evaluation | 🔄 In progress |
+| **Phase 8** | Observability & operations: Prometheus, Alertmanager, Grafana (5 dashboards), node, container, S.M.A.R.T., HTTP-probe and qBittorrent exporters deployed with Ansible roles, plus CPU power (RAPL) on the Proxmox nodes. Wall-power metering with smart plugs was dropped. Pending: job scheduler; Loki under evaluation | 🔄 In progress |
 | **Phase 9** | Restricted, always-on AI agent with least privilege (replanned) | ⏳ Planned |
 | **Post-deployment** | Data-engineering practice on real homelab data: lakehouse, CDC streaming | ⏳ Ideas |
 
