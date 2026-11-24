@@ -5,6 +5,7 @@
 node_exporter_version: "1.13.1"
 node_exporter_sha256: "5c00c5234f1ee45900b25539a5a0ab82146a098c15c16a4ec3bc855b597a6477"
 
+node_exporter_release_url: https://github.com/prometheus/node_exporter/releases/download
 node_exporter_user: node_exporter
 node_exporter_install_dir: /opt/node_exporter
 node_exporter_bin: /usr/local/bin/node_exporter
