@@ -34,5 +34,9 @@ prometheus_alertmanagers: ["{{ alertmanager_container_ip }}:9093"]
 grafana_container_ip: 10.0.30.53
 prometheus_grafana_targets: ["{{ grafana_container_ip }}:3000"]
 
+# Blackbox Exporter (rol blackbox): IP fija en srv-net
+blackbox_container_ip: 10.0.30.55
+prometheus_blackbox_address: "{{ blackbox_container_ip }}:9115"
+
 # cAdvisor (rol cadvisor): IP fija en srv-net
 cadvisor_container_ip: 10.0.30.54

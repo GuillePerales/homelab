@@ -1,0 +1,78 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that: blackbox_container_ip | length > 0
+    fail_msg: "Falta blackbox_container_ip en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ blackbox_stack_dir }}"
+    - "{{ blackbox_appdata }}"
+    - "{{ blackbox_appdata }}/config"
+    - "{{ blackbox_prometheus_targets_dir }}"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/blackbox/docker-compose.yml"
+    dest: "{{ blackbox_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment
+  ansible.builtin.template:
+    src: blackbox.env.j2
+    dest: "{{ blackbox_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the Blackbox configuration
+  ansible.builtin.template:
+    src: blackbox.yml.j2
+    dest: "{{ blackbox_appdata }}/config/blackbox.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Blackbox
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ blackbox_stack_dir }}"
+    project_name: blackbox
+    state: present
+
+- name: Read the Gatus endpoints
+  ansible.builtin.slurp:
+    src: "{{ blackbox_gatus_endpoints_file }}"
+  delegate_to: "{{ blackbox_gatus_host }}"
+  register: blackbox_gatus_file
+
+- name: Parse the Gatus endpoints
+  ansible.builtin.set_fact:
+    blackbox_gatus_endpoints: "{{ (blackbox_gatus_file.content | b64decode | from_yaml).endpoints }}"
+
+- name: Write the Prometheus targets
+  ansible.builtin.template:
+    src: blackbox-targets.yml.j2
+    dest: "{{ blackbox_prometheus_targets_dir }}/blackbox.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Wait until Blackbox is ready
+  ansible.builtin.uri:
+    url: "http://{{ blackbox_container_ip }}:9115/-/healthy"
+  register: blackbox_health
+  until: blackbox_health.status == 200
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode

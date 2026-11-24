@@ -1,0 +1,16 @@
+# Generado por Ansible (rol blackbox): no editar a mano.
+# Dos módulos HTTP: el normal y el que acepta certificados autofirmados (PBS, TrueNAS,
+# OPNsense, Portainer). Los dos siguen redirecciones y cuentan como correcto cualquier
+# código por debajo de 500, como las condiciones de Gatus.
+modules:
+{% for name, insecure in [('http_reachable', false), ('http_insecure', true)] %}
+  {{ name }}:
+    prober: http
+    timeout: {{ blackbox_timeout }}
+    http:
+      valid_status_codes: {{ blackbox_valid_status_codes | to_json }}
+      follow_redirects: true
+      preferred_ip_protocol: ip4
+      tls_config:
+        insecure_skip_verify: {{ insecure | lower }}
+{% endfor %}

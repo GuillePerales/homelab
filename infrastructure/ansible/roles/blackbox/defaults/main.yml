@@ -1,0 +1,22 @@
+---
+# Blackbox Exporter en docker-aux, con el compose del repo (`docker compose -p blackbox up -d`).
+# Prometheus lo lee por su IP en srv-net.
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63)
+blackbox_container_ip: ""
+
+blackbox_appdata: /srv/blackbox
+blackbox_stack_dir: /opt/blackbox
+
+# Las URL que se sondean salen del fichero de endpoints de Gatus (mismos servicios, una sola
+# lista). Ese fichero no está en el repo: lleva IPs internas.
+blackbox_gatus_host: docker-main
+blackbox_gatus_endpoints_file: /opt/appdata/gatus/compose/config/endpoints.yaml
+
+# Directorio donde Prometheus lee los objetivos (service discovery por fichero)
+blackbox_prometheus_targets_dir: /srv/prometheus/config/targets
+
+# Códigos HTTP que cuentan como respuesta correcta: los mismos que Gatus (< 500).
+# Un 401 o un 403 también demuestran que el servicio está vivo.
+blackbox_valid_status_codes: "{{ range(200, 500) | list }}"
+blackbox_timeout: 8s

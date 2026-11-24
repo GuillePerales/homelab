@@ -68,3 +68,21 @@ scrape_configs:
           host: {{ h }}
 {% endfor %}
 {% endif %}
+
+{% if prometheus_blackbox_address %}
+  - job_name: blackbox
+    metrics_path: /probe
+    scrape_interval: 1m
+    scrape_timeout: 15s
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/blackbox.yml]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [module]
+        target_label: __param_module
+      - target_label: __address__
+        replacement: {{ prometheus_blackbox_address }}
+{% endif %}

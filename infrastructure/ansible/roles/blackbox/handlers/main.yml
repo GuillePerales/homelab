@@ -1,0 +1,6 @@
+---
+- name: Reload Blackbox
+  ansible.builtin.command: docker kill --signal=HUP blackbox
+  changed_when: true
+  # En --check el contenedor aún puede no existir
+  failed_when: false

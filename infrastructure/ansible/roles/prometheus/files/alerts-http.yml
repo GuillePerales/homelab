@@ -1,0 +1,30 @@
+# Alertas de las sondas HTTP de Blackbox. No hay alerta de servicio caído: de eso se
+# encarga Gatus, y avisar por los dos canales duplicaría las notificaciones de ntfy.
+# `service` y `group` salen de la configuración de Gatus.
+groups:
+  - name: http
+    rules:
+      # La mayoría de servicios responde en menos de 0,15 s; qBittorrent, que sale por su
+      # VPN, ronda 1,7 s. Con 3 s de media sostenida algo va mal de verdad.
+      - alert: HttpLatencyHigh
+        expr: avg_over_time(probe_duration_seconds[15m]) > 3
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} responde lento ({{ $value | humanizeDuration }})"
+          description: "{{ $labels.service }} ({{ $labels.group }}) lleva 15 minutos tardando de media más de 3 segundos en responder."
+
+      # Los certificados de vida absurda (autofirmados de siglos) no molestan: solo cuentan
+      # los que caducan, y 14 días dan margen para renovarlos.
+      - alert: HttpCertExpiringSoon
+        expr: |
+          ((probe_ssl_earliest_cert_expiry - time()) < 14 * 86400)
+            and (probe_ssl_earliest_cert_expiry > 0)
+            and on (instance) (probe_success == 1)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "El certificado de {{ $labels.service }} caduca en {{ $value | humanizeDuration }}"
+          description: "El certificado HTTPS de {{ $labels.service }} ({{ $labels.group }}) caduca en menos de 14 días."
