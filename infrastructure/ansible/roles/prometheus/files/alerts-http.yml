@@ -5,9 +5,10 @@ groups:
   - name: http
     rules:
       # La mayoría de servicios responde en menos de 0,15 s; qBittorrent, que sale por su
-      # VPN, ronda 1,7 s. Con 3 s de media sostenida algo va mal de verdad.
+      # VPN, ronda 1,7 s. Con 3 s de media sostenida algo va mal de verdad. Solo cuentan las
+      # sondas que responden: una caída agota el tiempo y eso lo vigila Gatus.
       - alert: HttpLatencyHigh
-        expr: avg_over_time(probe_duration_seconds[15m]) > 3
+        expr: (avg_over_time(probe_duration_seconds[15m]) > 3) and on (instance) (probe_success == 1)
         for: 15m
         labels:
           severity: warning
