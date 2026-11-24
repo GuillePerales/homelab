@@ -1,0 +1,76 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - alertmanager_container_ip | length > 0
+      - alertmanager_ntfy_url | length > 0
+    fail_msg: "Faltan alertmanager_container_ip o alertmanager_ntfy_url"
+    quiet: true
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.owner | default('root') }}"
+    mode: "0755"
+  loop:
+    - { path: "{{ alertmanager_stack_dir }}" }
+    - { path: "{{ alertmanager_appdata }}" }
+    - { path: "{{ alertmanager_appdata }}/config" }
+    # La imagen corre como nobody (65534)
+    - { path: "{{ alertmanager_appdata }}/data", owner: "65534" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/alertmanager/docker-compose.yml"
+    dest: "{{ alertmanager_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment
+  ansible.builtin.template:
+    src: alertmanager.env.j2
+    dest: "{{ alertmanager_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the Alertmanager configuration
+  ansible.builtin.template:
+    src: alertmanager.yml.j2
+    dest: "{{ alertmanager_appdata }}/config/config.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Alertmanager
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ alertmanager_stack_dir }}"
+    project_name: alertmanager
+    state: present
+
+- name: Validate the configuration
+  ansible.builtin.command: docker exec alertmanager amtool check-config /etc/alertmanager/config.yml
+  changed_when: false
+  # En --check el contenedor aún puede no existir
+  failed_when: false
+  register: alertmanager_check
+
+- name: Fail on an invalid configuration
+  ansible.builtin.fail:
+    msg: "{{ alertmanager_check.stderr }}"
+  when: alertmanager_check.rc != 0 and not ansible_check_mode
+
+- name: Wait until Alertmanager is ready
+  ansible.builtin.command: docker exec alertmanager wget -qO- http://localhost:9093/-/ready
+  register: alertmanager_ready
+  until: alertmanager_ready.rc == 0
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode

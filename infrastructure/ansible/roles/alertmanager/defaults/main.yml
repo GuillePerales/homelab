@@ -1,0 +1,18 @@
+---
+# Alertmanager en docker-aux, desplegado como Prometheus: compose del repo con
+# `docker compose -p alertmanager up -d`, datos y configuración en el disco local.
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63)
+alertmanager_container_ip: ""
+
+alertmanager_appdata: /srv/alertmanager
+alertmanager_stack_dir: /opt/alertmanager
+
+# Webhook de ntfy con la plantilla integrada de Alertmanager, p. ej.
+# http://<ip-de-ntfy>/homelab-alertas?template=alertmanager
+alertmanager_ntfy_url: ""
+
+# Prioridad de ntfy por severidad (como el resto del homelab: 4 alta, 3 media, 2 baja)
+alertmanager_priority_critical: "4"
+alertmanager_priority_warning: "3"
+alertmanager_priority_default: "2"

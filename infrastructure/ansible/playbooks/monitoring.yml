@@ -1,7 +1,7 @@
 # infrastructure/ansible/playbooks/monitoring.yml
 #
-# Stack de monitorización (fase 8). Exporters en los nodos y Prometheus en docker-aux;
-# Alertmanager y Grafana se añaden después.
+# Stack de monitorización (fase 8). Exporters en los nodos, Prometheus y Alertmanager en docker-aux;
+# Grafana se añade después.
 # nas-01 queda fuera: TrueNAS es un appliance, sin apt ni systemd propio.
 #
 # Uso:
@@ -21,3 +21,10 @@
   roles:
     - role: prometheus
       tags: [prometheus]
+
+- name: Deploy Alertmanager
+  hosts: monitoring
+  become: true
+  roles:
+    - role: alertmanager
+      tags: [alertmanager]
