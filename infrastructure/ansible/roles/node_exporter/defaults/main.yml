@@ -1,0 +1,21 @@
+---
+# Versión fijada y checksum de sha256sums.txt de la release de GitHub.
+# Actualizar: cambiar las dos y relanzar; la versión anterior se queda en disco
+# para volver atrás cambiando solo el enlace.
+node_exporter_version: "1.13.1"
+node_exporter_sha256: "5c00c5234f1ee45900b25539a5a0ab82146a098c15c16a4ec3bc855b597a6477"
+
+node_exporter_user: node_exporter
+node_exporter_install_dir: /opt/node_exporter
+node_exporter_bin: /usr/local/bin/node_exporter
+
+# Dirección de escucha. Por defecto todas las interfaces: quien puede llegar al
+# 9100 lo decide el firewall (OPNsense, Proxmox), no el exporter.
+node_exporter_listen: "0.0.0.0:9100"
+
+# Collectors extra sobre los de por defecto. systemd da las unidades fallidas.
+node_exporter_extra_collectors:
+  - systemd
+
+# Carpeta para métricas escritas por scripts (collector textfile).
+node_exporter_textfile_dir: /var/lib/node_exporter/textfile
