@@ -5,7 +5,7 @@
 Lo mismo que corre el CI (`.github/workflows/lint.yml`, `.woodpecker/tofu-plan.yml`). Ejecutar lo que afecte al cambio y enseñar la salida:
 
 - YAML: `yamllint -d relaxed services/docker-compose infrastructure/ansible .woodpecker .github`
-- Ansible: `ansible-lint infrastructure/ansible/`
+- Ansible: `ANSIBLE_CONFIG=$PWD/infrastructure/ansible/ansible.cfg ansible-lint infrastructure/ansible/` (sin el `ANSIBLE_CONFIG`, desde la raíz no encuentra los roles)
 - OpenTofu: `cd infrastructure/opentofu/proxmox && tofu fmt -check -recursive && tofu init -backend=false && tofu validate`
 - Compose: `docker compose config -q` en la carpeta del servicio tocado (con `--env-file .env.example` si lo tiene; el job `compose-validate` del CI rellena las variables que falten)
 - Secretos: `bash infrastructure/scripts/sops-env/sops-env.sh check` (todo `sops.env` cifrado)

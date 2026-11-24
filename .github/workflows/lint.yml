@@ -135,7 +135,11 @@ jobs:
       - run: pip install ansible-lint==26.10.1
       # ansible-lint no resuelve los módulos de estas colecciones sin instalarlas
       - run: ansible-galaxy collection install ansible.posix community.docker community.general
+      # Fija el ansible.cfg del repo: los playbooks de playbooks/ buscan los roles en roles/
+      # por su roles_path, y desde la raíz ansible-lint no lo lee
       - run: ansible-lint infrastructure/ansible/
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/infrastructure/ansible/ansible.cfg
 
   # Único check requerido en la protección de rama
   checks:
