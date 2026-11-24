@@ -419,6 +419,75 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Consumo de CPU por nodo (W, RAPL)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Solo la CPU (paquete): no incluye discos, placa, ventiladores ni pérdidas de la fuente. Los vatios del enchufe llegarán con los enchufes.",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 18,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (host) (rate(node_rapl_package_joules_total{host=~\"$host\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{host}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "min": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "CPU total ahora (W)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 27,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(sum by (host) (rate(node_rapl_package_joules_total{host=~\"$host\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "decimals": 1
+        },
+        "overrides": []
+      }
     }
   ],
   "editable": false
