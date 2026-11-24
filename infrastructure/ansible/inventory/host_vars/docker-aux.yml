@@ -29,3 +29,6 @@ monitoring_address: 10.0.30.99
 alertmanager_container_ip: 10.0.30.52
 alertmanager_ntfy_url: "http://10.0.30.31/homelab-alertas?template=alertmanager"
 prometheus_alertmanagers: ["{{ alertmanager_container_ip }}:9093"]
+
+# Grafana (rol grafana): IP fija en srv-net
+grafana_container_ip: 10.0.30.53

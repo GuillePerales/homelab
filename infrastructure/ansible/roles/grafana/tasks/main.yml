@@ -1,0 +1,152 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - grafana_container_ip | length > 0
+      - prometheus_container_ip is defined
+    fail_msg: "Faltan grafana_container_ip o prometheus_container_ip"
+    quiet: true
+
+- name: Read the existing stack environment
+  ansible.builtin.slurp:
+    src: "{{ grafana_stack_dir }}/.env"
+  register: grafana_env_existing
+  failed_when: false
+  no_log: true
+
+- name: Decide the admin password
+  ansible.builtin.set_fact:
+    grafana_effective_password: >-
+      {{ grafana_admin_password
+         if grafana_admin_password | length > 0
+         else (grafana_env_existing.content | default('') | b64decode
+               | regex_search('(?m)^ADMIN_PASS=(.*)$', '\1') | default([''], true) | first) }}
+  no_log: true
+
+- name: Check that there is an admin password
+  ansible.builtin.assert:
+    that: grafana_effective_password | length > 0
+    fail_msg: "Falta la contraseña de admin: exporta GRAFANA_ADMIN_PASS al lanzar el playbook"
+    quiet: true
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.owner | default('root') }}"
+    mode: "0755"
+  loop:
+    - { path: "{{ grafana_stack_dir }}" }
+    - { path: "{{ grafana_appdata }}" }
+    - { path: "{{ grafana_appdata }}/provisioning" }
+    - { path: "{{ grafana_appdata }}/provisioning/datasources" }
+    - { path: "{{ grafana_appdata }}/provisioning/dashboards" }
+    - { path: "{{ grafana_appdata }}/dashboards" }
+    # La imagen corre como el usuario 472 (grafana)
+    - { path: "{{ grafana_appdata }}/data", owner: "472" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/grafana/docker-compose.yml"
+    dest: "{{ grafana_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment (admin password)
+  ansible.builtin.template:
+    src: grafana.env.j2
+    dest: "{{ grafana_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Write the Prometheus datasource
+  ansible.builtin.template:
+    src: datasource.yml.j2
+    dest: "{{ grafana_appdata }}/provisioning/datasources/prometheus.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  register: grafana_datasource
+
+- name: Write the dashboards provider
+  ansible.builtin.copy:
+    src: dashboards.yml
+    dest: "{{ grafana_appdata }}/provisioning/dashboards/homelab.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy the dashboards
+  ansible.builtin.copy:
+    src: "dashboards/"
+    dest: "{{ grafana_appdata }}/dashboards/"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ grafana_stack_dir }}"
+    project_name: grafana
+    state: present
+  register: grafana_stack
+
+# Los datasources se leen al arrancar (los dashboards se recargan solos). Si el
+# stack se acaba de crear ya arranca con ellos: reiniciar solo interrumpiría las
+# migraciones de la primera vez.
+- name: Restart Grafana to load a changed datasource
+  ansible.builtin.command: docker restart grafana
+  when: grafana_datasource.changed and not grafana_stack.changed
+  changed_when: true
+
+- name: Wait until Grafana is healthy
+  ansible.builtin.uri:
+    url: "http://{{ grafana_container_ip }}:3000/api/health"
+    return_content: true
+  register: grafana_health
+  until: grafana_health.status == 200
+  retries: 20
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Check the Prometheus datasource
+  ansible.builtin.uri:
+    url: "http://{{ grafana_container_ip }}:3000/api/datasources/uid/prometheus/health"
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_effective_password }}"
+    force_basic_auth: true
+    return_content: true
+  register: grafana_ds_health
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Check that the dashboards are provisioned
+  ansible.builtin.uri:
+    url: "http://{{ grafana_container_ip }}:3000/api/search?type=dash-db"
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_effective_password }}"
+    force_basic_auth: true
+    return_content: true
+  register: grafana_dashboards
+  until: grafana_dashboards.json | length > 0
+  retries: 10
+  delay: 5
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Report
+  ansible.builtin.debug:
+    msg: >-
+      Datasource: {{ grafana_ds_health.json.status | default('?') }}
+      ({{ grafana_ds_health.json.message | default('') }}).
+      Dashboards: {{ grafana_dashboards.json | map(attribute='title') | list }}
+  when: not ansible_check_mode

@@ -11,7 +11,9 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://${CONTAINER_IP}:3000
     volumes:
-      - ${APPDATA}:/var/lib/grafana
+      - ${APPDATA}/data:/var/lib/grafana
+      - ${APPDATA}/provisioning:/etc/grafana/provisioning:ro
+      - ${APPDATA}/dashboards:/var/lib/dashboards:ro
     networks:
       srv-net:
         ipv4_address: ${CONTAINER_IP}
