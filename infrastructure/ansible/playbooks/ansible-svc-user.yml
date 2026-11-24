@@ -1,0 +1,53 @@
+# infrastructure/ansible/playbooks/ansible-svc-user.yml
+#
+# Crea el usuario de automatización `ansible-svc` en los hosts Docker: sin contraseña,
+# con la clave pública del PC de control y sudo sin contraseña. Instala sudo si falta
+# (los LXC Debian mínimos no lo traen).
+#
+# La clave pública no vive en el repo (es público): se lee del PC de control. Cambiar
+# la ruta con ansible_svc_pubkey_file si hace falta.
+#
+# Se lanza como root (ansible_user de group_vars/all.yml). No cambia con qué usuario
+# entra Ansible: eso se decide en el inventario.
+#
+# Uso:
+#   ansible-playbook playbooks/ansible-svc-user.yml --check --diff
+#   ansible-playbook playbooks/ansible-svc-user.yml --limit docker-aux
+---
+- name: Create the ansible-svc automation user
+  hosts: docker_hosts
+  vars:
+    ansible_svc_user: ansible-svc
+    ansible_svc_pubkey_file: "~/.ssh/homelab_ed25519.pub"
+
+  tasks:
+    - name: Install sudo
+      ansible.builtin.apt:
+        name: sudo
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Create the user
+      ansible.builtin.user:
+        name: "{{ ansible_svc_user }}"
+        shell: /bin/bash
+        create_home: true
+        password_lock: true
+
+    - name: Authorize the control PC key
+      ansible.posix.authorized_key:
+        user: "{{ ansible_svc_user }}"
+        key: "{{ lookup('ansible.builtin.file', ansible_svc_pubkey_file) }}"
+        exclusive: true
+      # En --check el usuario aún no existe y el módulo no puede simularse
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    - name: Allow passwordless sudo
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ ansible_svc_user }}"
+        content: "{{ ansible_svc_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
