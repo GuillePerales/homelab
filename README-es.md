@@ -3,7 +3,7 @@
 Homelab personal gestionado íntegramente como Infraestructura como Código. Dos objetivos en paralelo: un stack self-hosted privado que sustituye servicios cloud, y un pipeline DevOps de nivel productivo construido con las mismas herramientas que se usan en entornos enterprise.
 
 **Versión:** 3.3 — Noviembre 2026
-**Estado:** Fases 0–4 y 7 completadas
+**Estado:** Fases 0–4, 4b, 7 y 8 completadas
 
 ![Mapa de infraestructura del homelab: red, hosts, máquinas virtuales, contenedores y servicios](docs/diagrama/homelab-es.png)
 
@@ -644,7 +644,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing — refuerzo de la protección de datos en curso | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
 | **Phase 4** | DevOps Core: Forgejo (espejo de GitHub), Woodpecker CI, imágenes propias escaneadas con Trivy y publicadas en el registro de Forgejo; todos los recursos de Proxmox (VM del firewall, LXC de Docker, VM de K3s) en OpenTofu, con el estado cifrado y un `tofu plan` de solo lectura en cada PR; runbook de recuperación escrito. Siguiente: un simulacro de recuperación cronometrado | ✅ Completada |
-| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots de etcd al NAS; métricas del clúster (kube-state-metrics, API server y uso de contenedores) leídas por el Prometheus de la fase 8, con dashboard y alertas. La VM es un laboratorio y un temporizador la apaga cada noche. Pendiente: Velero; Jenkins, SonarQube y AWX, fuera del alcance. Planificado: nodo Proxmox a demanda (Wake-on-LAN y apagado por inactividad) para un K3s de varios nodos, laboratorios de virtualización y ciberseguridad en una VLAN aislada, un agente de CI y la GPU para IA local | 🔄 En curso |
+| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots de etcd al NAS; métricas del clúster (kube-state-metrics, API server y uso de contenedores) leídas por el Prometheus de la fase 8, con dashboard y alertas. La VM es un laboratorio y un temporizador la apaga cada noche. Pendiente: Velero (necesita un almacén S3); Jenkins, SonarQube y AWX, fuera del alcance. Planificado: nodo Proxmox a demanda (Wake-on-LAN y apagado por inactividad) para un K3s de varios nodos, laboratorios de virtualización y ciberseguridad en una VLAN aislada, un agente de CI y la GPU para IA local | ✅ Completada |
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
 | **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |
