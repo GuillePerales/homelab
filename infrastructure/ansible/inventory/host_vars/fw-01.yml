@@ -1,0 +1,4 @@
+---
+# OPNsense (fw-01): solo objetivo de métricas; Ansible no lo gestiona.
+# IP de gestión, de donde Prometheus lee el plugin os-node_exporter (:9100) y el exporter de API lee la web
+monitoring_address: 10.0.10.1

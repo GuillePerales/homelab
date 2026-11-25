@@ -1,0 +1,83 @@
+# Alertas de la plataforma: el clúster de Proxmox (prometheus-pve-exporter) y la red (opnsense-exporter).
+# No hay alerta de gateway caída: el hook de OPNsense ya avisa a ntfy cuando cae ProtonVPN y duplicaría el
+# aviso. Tampoco se usa opnsense_up: con OPNsense recientes vale 0 aunque todo funcione (issue #119).
+groups:
+  - name: proxmox
+    rules:
+      - alert: PveClusterNotQuorate
+        expr: pve_up{id=~"cluster/.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El clúster de Proxmox ha perdido el quórum"
+          description: "{{ $labels.id }} no tiene quórum desde hace 2 minutos: el clúster deja de aceptar cambios."
+
+      - alert: PveStorageAlmostFull
+        expr: 100 * pve_disk_usage_bytes{id=~"storage/.*"} / pve_disk_size_bytes{id=~"storage/.*"} > 85
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Almacenamiento de Proxmox al {{ $value | printf \"%.0f\" }} %: {{ $labels.id }}"
+          description: "{{ $labels.id }} lleva 30 minutos por encima del 85 % de uso."
+
+      - alert: PveExporterDown
+        expr: up{job="pve"} == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sin métricas del clúster de Proxmox"
+          description: >-
+            Prometheus no consigue leer el exporter de Proxmox desde hace 10 minutos (el exporter,
+            el token de la API o el nodo al que pregunta).
+
+  - name: opnsense
+    rules:
+      - alert: OpnsenseGatewayLoss
+        expr: opnsense_gateways_loss_percentage > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pérdida de paquetes del {{ $value | printf \"%.0f\" }} % en la gateway {{ $labels.name }}"
+          description: "La gateway {{ $labels.name }} pierde más del 10 % de los paquetes desde hace 10 minutos."
+
+      - alert: OpnsensePfStatesHigh
+        expr: 100 * opnsense_pf_states_current / opnsense_pf_states_limit > 70
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tabla de estados de pf al {{ $value | printf \"%.0f\" }} %"
+          description: "El cortafuegos lleva 15 minutos con más del 70 % de la tabla de estados llena; al llenarse se cortan conexiones nuevas."
+
+      - alert: OpnsenseInterfaceErrors
+        expr: >-
+          sum by (interface) (increase(opnsense_interfaces_input_errors_total[1h])
+          + increase(opnsense_interfaces_output_errors_total[1h])) > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Errores en la interfaz {{ $labels.interface }} de OPNsense"
+          description: "La interfaz {{ $labels.interface }} acumula más de 100 errores en la última hora: un cable, un puerto o una negociación mala."
+
+      - alert: OpnsenseServiceStopped
+        expr: opnsense_services_status == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Servicio parado en OPNsense: {{ $labels.description }}"
+          description: "El servicio {{ $labels.description }} de OPNsense lleva 10 minutos parado."
+
+      - alert: OpnsenseExporterDown
+        expr: up{job="opnsense"} == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sin métricas de OPNsense"
+          description: "Prometheus no consigue leer el exporter de OPNsense desde hace 10 minutos (el exporter, su clave de API o el firewall)."

@@ -13,14 +13,14 @@ prometheus_stack_dir: /opt/prometheus
 
 # Hosts con node_exporter que se recogen; cada uno necesita monitoring_address
 # en su host_vars (IP desde la que docker-aux llega a su :9100).
-prometheus_node_hosts: "{{ groups['proxmox'] + groups['docker_hosts'] + groups['k3s_nodes'] }}"
+prometheus_node_hosts: "{{ groups['proxmox'] + groups['docker_hosts'] + groups['k3s_nodes'] + groups['nas'] + groups['firewall'] }}"
 prometheus_node_port: 9100
 
 # Alertmanagers a los que enviar alertas (host:puerto). Vacío hasta que exista el rol.
 prometheus_alertmanagers: []
 
 # Hosts Docker con cAdvisor (cadvisor_container_ip en su host_vars)
-prometheus_cadvisor_hosts: "{{ groups['docker_hosts'] }}"
+prometheus_cadvisor_hosts: "{{ groups['docker_hosts'] + groups['nas'] }}"
 prometheus_cadvisor_port: 8080
 
 # Hosts con smartctl_exporter: los Proxmox (binario) y nas-01 (contenedor, con su
@@ -39,3 +39,10 @@ prometheus_blackbox_address: ""
 # Exporter de qBittorrent (host:puerto); vacío desactiva el job. Las etiquetas de tracker
 # se reducen a dominio: la URL de announce puede llevar el passkey.
 prometheus_qbittorrent_address: ""
+
+# Exporter de Proxmox (host:puerto) y nodo al que preguntar; vacío desactiva el job.
+prometheus_pve_exporter_address: ""
+prometheus_pve_target: ""
+
+# Exporter de OPNsense (host:puerto); vacío desactiva el job.
+prometheus_opnsense_exporter_address: ""

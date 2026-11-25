@@ -1,0 +1,69 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that: pve_exporter_container_ip | length > 0
+    fail_msg: "Falta pve_exporter_container_ip en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Read the existing stack environment
+  ansible.builtin.slurp:
+    src: "{{ pve_exporter_stack_dir }}/.env"
+  register: pve_exporter_env_existing
+  failed_when: false
+  no_log: true
+
+- name: Decide the token
+  ansible.builtin.set_fact:
+    pve_exporter_effective_token: >-
+      {{ pve_exporter_token
+         if pve_exporter_token | length > 0
+         else (pve_exporter_env_existing.content | default('') | b64decode
+               | regex_search('(?m)^PVE_TOKEN_VALUE=(.*)$', '\1') | default([''], true) | first) }}
+  no_log: true
+
+- name: Check that there is a token
+  ansible.builtin.assert:
+    that: pve_exporter_effective_token | length > 0
+    fail_msg: "Falta el token de Proxmox: exporta PVE_EXPORTER_TOKEN al lanzar el playbook"
+    quiet: true
+
+- name: Create the stack directory
+  ansible.builtin.file:
+    path: "{{ pve_exporter_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/pve-exporter/docker-compose.yml"
+    dest: "{{ pve_exporter_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment (token)
+  ansible.builtin.template:
+    src: pve-exporter.env.j2
+    dest: "{{ pve_exporter_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ pve_exporter_stack_dir }}"
+    project_name: pve-exporter
+    state: present
+    recreate: auto
+
+- name: Wait until the exporter is up
+  ansible.builtin.command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" pve-exporter
+  register: pve_exporter_state
+  until: pve_exporter_state.stdout == 'running'
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode

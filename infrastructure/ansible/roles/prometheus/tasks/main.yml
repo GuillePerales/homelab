@@ -79,6 +79,7 @@
     - alerts-monitorizacion.yml
     - alerts-http.yml
     - alerts-torrents.yml
+    - alerts-plataforma.yml
   register: prometheus_rules
 
 - name: Start the stack

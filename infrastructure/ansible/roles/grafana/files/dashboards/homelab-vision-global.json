@@ -239,7 +239,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=~\"$host\"} / node_memory_MemTotal_bytes{host=~\"$host\"}) * 100",
+          "expr": "((1 - node_memory_MemAvailable_bytes{host=~\"$host\"} / node_memory_MemTotal_bytes{host=~\"$host\"}) or (1 - (node_memory_free_bytes{host=~\"$host\"} + node_memory_inactive_bytes{host=~\"$host\"} + node_memory_cache_bytes{host=~\"$host\"}) / node_memory_size_bytes{host=~\"$host\"})) * 100",
           "refId": "A",
           "legendFormat": "{{host}}"
         }
@@ -251,7 +251,8 @@
           "max": 100
         },
         "overrides": []
-      }
+      },
+      "description": "En el firewall (FreeBSD) la memoria libre se calcula con libre, inactiva y caché."
     },
     {
       "id": 7,
@@ -273,9 +274,9 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(1 - node_filesystem_avail_bytes{host=~\"$host\",fstype!~\"tmpfs|overlay|squashfs|devtmpfs|ramfs|fuse.*\"} / node_filesystem_size_bytes{host=~\"$host\",fstype!~\"tmpfs|overlay|squashfs|devtmpfs|ramfs|fuse.*\"}) * 100",
+          "expr": "(1 - node_filesystem_avail_bytes{host=~\"$host\",fstype!~\"tmpfs|overlay|squashfs|devtmpfs|ramfs|fuse.*|nullfs|msdosfs|devfs\",mountpoint!~\"/(audit|conf|data|etc|home|opt|root|usr|var|boot|zroot|run|sys|proc|dev)(/.*)?|/mnt/.ix-apps(/.*)?|/mnt\"} / node_filesystem_size_bytes{host=~\"$host\",fstype!~\"tmpfs|overlay|squashfs|devtmpfs|ramfs|fuse.*|nullfs|msdosfs|devfs\",mountpoint!~\"/(audit|conf|data|etc|home|opt|root|usr|var|boot|zroot|run|sys|proc|dev)(/.*)?|/mnt/.ix-apps(/.*)?|/mnt\"}) * 100",
           "refId": "A",
-          "legendFormat": "{{host}} {{mountpoint}}",
+          "legendFormat": "{{host}} · {{mountpoint}}",
           "instant": true,
           "range": false
         }
@@ -309,7 +310,8 @@
         "orientation": "horizontal",
         "displayMode": "gradient",
         "showUnfilled": true
-      }
+      },
+      "description": "Sin los conjuntos de datos del sistema de TrueNAS y de OPNsense ni /boot/efi."
     },
     {
       "id": 8,

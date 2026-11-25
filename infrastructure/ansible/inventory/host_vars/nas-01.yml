@@ -1,3 +1,9 @@
 ---
 # smartctl_exporter en el NAS: contenedor en srv-net (IP fija del segundo bloque del NAS)
 smartctl_address: 10.0.30.43
+
+# node_exporter del NAS (contenedor en modo host, a mano): IP del NAS en INFRA, de donde lo lee Prometheus
+monitoring_address: 10.0.5.10
+
+# cAdvisor del NAS (contenedor, a mano): IP fija en srv-net, segundo bloque del NAS
+cadvisor_container_ip: 10.0.30.46
