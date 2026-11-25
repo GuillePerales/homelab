@@ -14,10 +14,11 @@
 - Contenedores parados: si Gluetun o qBittorrent no están en marcha (p. ej. una recreación que
   dejó qBittorrent en «Created» porque Gluetun tardó en pasar el healthcheck), los arranca con
   `docker compose up -d` y avisa. No gasta el cupo de recreaciones.
-- Sesión caducada de Radarr/Sonarr en Mularr: Mularr pierde las sesiones al reiniciarse y
-  responde 401 a la cookie vieja; Radarr y Sonarr solo vuelven a iniciar sesión con un 403
-  (lo que da qBittorrent), así que se quedan sin ver la cola de eMule hasta reiniciarlos. Si el
-  log de Mularr muestra ese rechazo, reinicia la app (como mucho MULARR_REINICIOS_MAX_DIA al día).
+- Sesión caducada de Radarr/Sonarr en Mularr: con usuario y contraseña el token caduca a los
+  7 días (con el API_KEY como contraseña, no) y Mularr responde 401; Radarr y Sonarr solo vuelven
+  a iniciar sesión con un 403 (lo que da qBittorrent), así que se quedan sin ver la cola de eMule
+  hasta reiniciarlos. Red de seguridad: si el log de Mularr muestra ese rechazo, reinicia la app
+  (como mucho MULARR_REINICIOS_MAX_DIA al día). Arreglo propuesto: joecarl/mularr#49.
 - Resumen semanal: lo sembrado y lo subido por tracker, desde el lado del cliente.
 - Diagnóstico de la conexión en LOG_DIR: en cada pasada sin conexión apunta en conexion.log el
   estado, el puerto que tiene Gluetun y el que escucha qBittorrent (¿se perdió el puerto o está
@@ -268,14 +269,14 @@ def vigilar_mularr(state, hoy):
                 cupo[app] = n + 1
                 notify(TOPIC_ALERTAS, 2 if ok else 4, ["arrows_counterclockwise" if ok else "warning"],
                        f"{app}: sesión de Mularr renovada" if ok else f"{app}: no se pudo reiniciar",
-                       f"Mularr rechazaba su sesión (se reinició y la perdió). "
+                       "Mularr rechazaba su sesión caducada. "
                        f"{'Reiniciado' if ok else 'Falló docker restart'} ({n + 1}/{MULARR_REINICIOS_MAX_DIA} hoy). "
                        "Volverá a leer la cola de eMule cuando acabe la pausa por fallos.")
             elif n == MULARR_REINICIOS_MAX_DIA:
                 cupo[app] = n + 1
                 notify(TOPIC_ALERTAS, 4, ["warning"], f"{app} sigue sin entrar en Mularr",
-                       f"Mularr le rechaza la sesión tras {n} reinicios hoy: revisa las credenciales "
-                       "del cliente de descargas Mularr.")
+                       f"Mularr le rechaza la sesión tras {n} reinicios hoy: revisa que la contraseña "
+                       "del cliente de descargas Mularr sea su API_KEY.")
         state["mularr_reinicios"] = cupo
     except Exception:
         pass
