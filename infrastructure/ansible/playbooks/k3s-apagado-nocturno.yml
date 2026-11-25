@@ -1,0 +1,72 @@
+# infrastructure/ansible/playbooks/k3s-apagado-nocturno.yml
+#
+# Apaga k3s-01 cada noche si sigue encendida: es un laboratorio y no hace falta de día
+# y de noche (la VM tiene on_boot = false, así que tampoco arranca sola tras reiniciar
+# el nodo). Un timer de systemd en pve-main hace un apagado ACPI ordenado con `qm shutdown`.
+#
+# Consecuencias que conviene tener presentes:
+#   - Al arrancar, Vault vuelve sellado: hay que desprecintarlo a mano.
+#   - Apagada no hace el snapshot de etcd de las 3:00 ni su copia al NAS; la tarea de
+#     copia del clúster (3:00 en PBS) sí guarda la VM apagada.
+#   - NodeDown no avisa de k3s-01 (alerts-nodos.yml): estar apagada es lo normal.
+#
+# Para desactivarlo: systemctl disable --now k3s-apagado-nocturno.timer en pve-main.
+#
+# Uso (desde WSL, ver run-from-wsl.sh):
+#   ansible-playbook playbooks/k3s-apagado-nocturno.yml --check --diff
+#   ansible-playbook playbooks/k3s-apagado-nocturno.yml
+---
+- name: Shut down k3s-01 every night
+  hosts: pve-main
+  become: true
+
+  vars:
+    k3s_vm_id: 300
+    k3s_shutdown_time: "23:30:00"
+    k3s_shutdown_timeout: 180   # segundos que espera al apagado ordenado antes de dar error
+
+  tasks:
+    - name: Service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/k3s-apagado-nocturno.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Shut down the k3s-01 VM if it is still running
+
+          [Service]
+          Type=oneshot
+          ExecStart=/bin/sh -c 'if /usr/sbin/qm status {{ k3s_vm_id }} | grep -q running; \
+            then /usr/sbin/qm shutdown {{ k3s_vm_id }} --timeout {{ k3s_shutdown_timeout }}; fi'
+      notify: Reload systemd
+
+    - name: Timer
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/k3s-apagado-nocturno.timer
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Nightly shutdown of the k3s-01 VM
+
+          [Timer]
+          OnCalendar=*-*-* {{ k3s_shutdown_time }}
+
+          [Install]
+          WantedBy=timers.target
+      notify: Reload systemd
+
+    - name: Flush handlers before enabling the timer
+      ansible.builtin.meta: flush_handlers
+
+    - name: Timer enabled
+      ansible.builtin.systemd:
+        name: k3s-apagado-nocturno.timer
+        enabled: true
+        state: started
+      # En --check la unidad aún no existe
+      ignore_errors: "{{ ansible_check_mode }}"
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
