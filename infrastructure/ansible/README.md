@@ -14,8 +14,24 @@ privadas y este repo ya publica otras. Los secretos nunca: van por entorno desde
 | `playbooks/monitoring.yml` | El stack de monitorización: un play por rol, con una etiqueta (`tags`) por rol |
 | `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `qbittorrent_exporter`, `dozzle`, `dozzle_agent`, `pve_exporter`, `opnsense_exporter`, `pbs_exporter`, `prometheus`, `alertmanager`, `grafana` |
 
-Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar nada,
-`--check --diff` para ver qué cambiaría.
+Ansible no corre en Windows: se lanza desde Linux o desde WSL. Desde WSL, `run-from-wsl.sh` hace el trabajo pesado: exporta `HEAD` (en Windows el árbol de trabajo está en CRLF), resuelve la IP y el usuario de cada nodo con `ssh -G` sobre el `~/.ssh/config` y copia la clave con permisos válidos. Los secretos entran por el entorno del que llama.
+
+    wsl -d Debian bash -lc 'cd /mnt/c/.../homelab && infrastructure/ansible/run-from-wsl.sh [playbook.yml] --check --diff'
+
+Antes de ejecutar nada, `--check --diff` para ver qué cambiaría.
+
+## Dónde viven los servicios en docker-main
+
+Hay dos formas de desplegar un servicio Docker en docker-main y conviven a propósito:
+
+| Quién lo despliega | Carpeta en el host | De dónde sale el compose |
+|---|---|---|
+| A mano (ntfy, Gatus, Homarr, diun…) | `/opt/appdata/<servicio>/compose/` | Enlace simbólico al clon del repo en el NAS (`docker-main-setup-symlinks.sh`); el clon se actualiza a mano |
+| Un rol de Ansible (cAdvisor, agente de Dozzle) | `/opt/<servicio>/` | El rol copia el compose desde `HEAD` en cada ejecución |
+
+Los roles no usan el enlace porque entonces el compose dependería de un `git pull` manual en el NAS y
+`--check` ya no diría la verdad: la copia del rol es lo que garantiza que el host tiene lo que hay en el repo.
+Si algún día se quiere unificar, el camino es migrar los servicios manuales a roles, no al revés.
 
 ## Qué recoge cada grupo
 
