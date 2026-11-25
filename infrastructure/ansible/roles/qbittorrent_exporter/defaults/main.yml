@@ -1,0 +1,21 @@
+---
+# qBittorrent Exporter en docker-aux, con el compose del repo
+# (`docker compose -p qbittorrent-exporter up -d`). Prometheus lo lee por su IP en srv-net.
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63)
+qbittorrent_exporter_container_ip: ""
+
+# URL de la web de qBittorrent (en el host_vars: lleva una IP interna)
+qbittorrent_exporter_url: ""
+
+qbittorrent_exporter_stack_dir: /opt/qbittorrent-exporter
+qbittorrent_exporter_port: 8090
+
+# Clave de API de qBittorrent (5.2 o posterior: Opciones → WebUI). Se pasa por entorno al
+# lanzar el playbook (QBITTORRENT_API_KEY, leída de un fichero local fuera del repo). Si no
+# viene y ya hay un .env en el host, se conserva la que tiene.
+qbittorrent_exporter_api_key: "{{ lookup('ansible.builtin.env', 'QBITTORRENT_API_KEY') }}"
+
+# Métricas qbittorrent_tracker_*: seeds y peers de scrape, con la URL completa (y su passkey)
+# en la etiqueta. No hacen falta para el ratio por tracker.
+qbittorrent_exporter_tracker_metrics: false

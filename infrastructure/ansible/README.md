@@ -1,0 +1,77 @@
+# Ansible
+
+Roles y playbooks del homelab. Aquí solo está lo que se puede rehacer desde cero; las
+direcciones internas no se publican: los nombres del inventario son alias de
+`~/.ssh/config` en la máquina de control, y las IPs de cada nodo van en su `host_vars`.
+
+## Estructura
+
+| Ruta | Qué lleva |
+|---|---|
+| `inventory/hosts.yml` | Los nodos y sus grupos: `proxmox`, `docker_hosts`, `k3s_nodes`, `nas`, `monitoring` |
+| `inventory/host_vars/<nodo>.yml` | Lo propio de cada nodo (IP desde la que Prometheus lo lee, IP de sus contenedores…) |
+| `playbooks/monitoring.yml` | El stack de monitorización: un play por rol, con una etiqueta (`tags`) por rol |
+| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `prometheus`, `alertmanager`, `grafana` |
+
+Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar nada,
+`--check --diff` para ver qué cambiaría.
+
+## Qué recoge cada grupo
+
+| Grupo | Roles que se le aplican | Qué entra en Prometheus |
+|---|---|---|
+| `proxmox` | `node_exporter`, `smartctl_exporter` | métricas del nodo (`:9100`) y SMART de sus discos (`:9633`) |
+| `docker_hosts` | `node_exporter`, `cadvisor` | métricas del host y de sus contenedores |
+| `k3s_nodes` | `node_exporter` | métricas del nodo |
+| `nas` | ninguno (es un appliance) | SMART por un contenedor propio; su IP va en `smartctl_address` |
+
+`prometheus.yml` se genera desde el inventario: añadir un nodo a su grupo y volver a lanzar
+el rol `prometheus` basta para que lo recoja. Los dashboards leen las etiquetas solos.
+
+## Añadir un nodo al monitoring
+
+1. **Acceso.** Un alias SSH con su nombre en `~/.ssh/config` de la máquina de control y la
+   clave autorizada en el nodo. El rol `node_exporter` descarga el binario `linux-amd64`:
+   en otra arquitectura el rol se detiene.
+2. **Inventario.** Añadir el nodo al grupo que le toque en `inventory/hosts.yml`.
+3. **Variables.** Crear `inventory/host_vars/<nodo>.yml` con:
+   - `monitoring_address`: la IP desde la que docker-aux alcanza el puerto 9100 del nodo.
+     Si falta, el rol `prometheus` falla al generar la configuración, que es lo esperado.
+   - En un host Docker, además `cadvisor_container_ip`: una IP fija libre dentro del bloque
+     de srv-net de ese host (el `srv-net-check` del CI falla si un contenedor no fija IP).
+   - Para un contenedor que se vea desde el propio host, que la IP quede cubierta por las
+     rutas de su `macvlan_shim`.
+4. **Firewall.** Abrir TCP 9100 (y 9633 en un Proxmox) desde el host de monitorización hacia
+   el nodo. Si el nodo está en otra VLAN, la regla es del firewall, no de Ansible.
+5. **Desplegar**, primero en seco y solo sobre el nodo nuevo:
+
+       ansible-playbook playbooks/monitoring.yml --check --diff --limit <nodo>
+       ansible-playbook playbooks/monitoring.yml --tags node_exporter,smartctl_exporter,cadvisor --limit <nodo>
+
+   Cada rol comprueba al final que su servicio responde.
+6. **Regenerar Prometheus**, que es lo que añade el nodo a la recogida:
+
+       ansible-playbook playbooks/monitoring.yml --tags prometheus --limit monitoring
+
+7. **Comprobar** en Prometheus (`/targets`) que el nodo está `up` en los jobs que le tocan, y
+   que aparece en el dashboard de visión global. Mientras falte la regla del firewall saldrá
+   caído y la alerta `NodeDown` saltará a los dos minutos.
+
+Si el nodo se conecta como otro usuario, pasarlo con `-e ansible_user=<usuario>`.
+
+## Quitar un nodo
+
+1. Sacarlo de `hosts.yml` y borrar su `host_vars`.
+2. Relanzar el rol `prometheus`, para que deje de recogerlo.
+3. En el nodo, parar y borrar lo que se instaló: `systemctl disable --now node_exporter`
+   (y `smartctl_exporter` en un Proxmox), o el contenedor de cAdvisor con
+   `docker compose -p cadvisor down`.
+
+## Qué no hace Ansible aquí
+
+- Las reglas del firewall y los silencios de Alertmanager se hacen a mano.
+- Las alertas no se editan en la interfaz: viven en `roles/prometheus/files/` y los
+  dashboards en `roles/grafana/files/dashboards/`. Un cambio hecho en la interfaz de Grafana
+  no se guarda.
+- Las URL que sondea Blackbox salen del fichero de endpoints de Gatus: un servicio nuevo se
+  añade allí y se relanza el rol `blackbox`.

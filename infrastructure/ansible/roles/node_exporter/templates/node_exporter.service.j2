@@ -6,6 +6,10 @@ After=network-online.target
 [Service]
 User={{ node_exporter_user }}
 Group={{ node_exporter_user }}
+{% if node_exporter_rapl_enabled | default(false) %}
+# El prefijo + lo ejecuta como root fuera de la sandbox; el - tolera que falle
+ExecStartPre=+-{{ node_exporter_tmpfiles_bin }} --create {{ node_exporter_rapl_tmpfiles }}
+{% endif %}
 ExecStart={{ node_exporter_bin }} \
   --web.listen-address={{ node_exporter_listen }} \
 {% for c in node_exporter_extra_collectors %}

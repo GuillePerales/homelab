@@ -1,0 +1,124 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - prometheus_container_ip | length > 0
+      - hostvars[item].monitoring_address is defined
+    fail_msg: "Falta prometheus_container_ip o monitoring_address de {{ item }}"
+    quiet: true
+  loop: "{{ prometheus_node_hosts }}"
+
+- name: Check that every Docker host has a cAdvisor address
+  ansible.builtin.assert:
+    that: hostvars[item].cadvisor_container_ip is defined
+    fail_msg: "Falta cadvisor_container_ip de {{ item }}"
+    quiet: true
+  loop: "{{ prometheus_cadvisor_hosts }}"
+
+- name: Check that every smartctl host has an address
+  ansible.builtin.assert:
+    that: hostvars[item].smartctl_address is defined or hostvars[item].monitoring_address is defined
+    fail_msg: "Falta smartctl_address o monitoring_address de {{ item }}"
+    quiet: true
+  loop: "{{ prometheus_smartctl_hosts }}"
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.owner | default('root') }}"
+    mode: "0755"
+  loop:
+    - { path: "{{ prometheus_stack_dir }}" }
+    - { path: "{{ prometheus_appdata }}" }
+    - { path: "{{ prometheus_appdata }}/config" }
+    - { path: "{{ prometheus_appdata }}/config/rules" }
+    # La imagen corre como nobody (65534)
+    - { path: "{{ prometheus_appdata }}/data", owner: "65534" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/prometheus/docker-compose.yml"
+    dest: "{{ prometheus_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  register: prometheus_compose
+
+- name: Write the stack environment
+  ansible.builtin.template:
+    src: prometheus.env.j2
+    dest: "{{ prometheus_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0644"
+  register: prometheus_env
+
+- name: Write prometheus.yml
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_appdata }}/config/prometheus.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  register: prometheus_config
+
+- name: Write alert rules
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ prometheus_appdata }}/config/rules/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - alerts-nodos.yml
+    - alerts-discos.yml
+    - alerts-monitorizacion.yml
+    - alerts-http.yml
+    - alerts-torrents.yml
+  register: prometheus_rules
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ prometheus_stack_dir }}"
+    project_name: prometheus
+    state: present
+
+- name: Validate the configuration
+  ansible.builtin.command: docker exec prometheus promtool check config /etc/prometheus/prometheus.yml
+  register: prometheus_check
+  changed_when: false
+  # En --check el contenedor aún puede no existir
+  failed_when: prometheus_check.rc != 0 and not ansible_check_mode
+
+- name: Reload Prometheus after a config or rules change
+  ansible.builtin.command: docker kill --signal=HUP prometheus
+  when: prometheus_config.changed or prometheus_rules.changed
+  changed_when: true
+
+- name: Wait until Prometheus is ready
+  ansible.builtin.command: docker exec prometheus wget -qO- http://localhost:9090/-/ready
+  register: prometheus_ready
+  until: prometheus_ready.rc == 0
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Read target health
+  ansible.builtin.command: docker exec prometheus wget -qO- http://localhost:9090/api/v1/targets?state=active
+  register: prometheus_targets
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Report targets that are down
+  ansible.builtin.debug:
+    msg: >-
+      Objetivos caídos:
+      {{ (prometheus_targets.stdout | from_json).data.activeTargets
+         | selectattr('health', 'ne', 'up')
+         | map(attribute='scrapeUrl') | list }}
+  when: not ansible_check_mode

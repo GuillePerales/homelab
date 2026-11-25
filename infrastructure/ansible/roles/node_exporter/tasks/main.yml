@@ -49,6 +49,25 @@
     state: link
   notify: Restart node_exporter
 
+- name: Look for RAPL energy counters
+  ansible.builtin.stat:
+    path: "{{ node_exporter_rapl_path }}"
+  register: node_exporter_rapl_stat
+
+- name: Decide whether to share the RAPL counters with the exporter
+  ansible.builtin.set_fact:
+    node_exporter_rapl_enabled: "{{ node_exporter_rapl_group_read and node_exporter_rapl_stat.stat.exists }}"
+
+- name: Let the exporter group read the RAPL energy counters
+  ansible.builtin.template:
+    src: node_exporter-rapl.conf.j2
+    dest: "{{ node_exporter_rapl_tmpfiles }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: node_exporter_rapl_enabled
+  notify: Restart node_exporter
+
 - name: Install systemd unit
   ansible.builtin.template:
     src: node_exporter.service.j2

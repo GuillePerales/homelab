@@ -20,3 +20,12 @@ node_exporter_extra_collectors:
 
 # Carpeta para métricas escritas por scripts (collector textfile).
 node_exporter_textfile_dir: /var/lib/node_exporter/textfile
+
+# Consumo de CPU por RAPL (node_rapl_*). Los ficheros energy_uj son de root (por el
+# ataque Platypus) y el exporter corre sin privilegios: en los nodos que tienen RAPL se
+# le da lectura de grupo solo a esos ficheros, sin abrirlos a otros usuarios. Se aplica
+# desde la unidad en cada arranque, porque sysfs se recrea al iniciar.
+node_exporter_rapl_group_read: false  # true en group_vars/proxmox.yml: solo el hardware, no los LXC
+node_exporter_rapl_path: /sys/class/powercap/intel-rapl:0
+node_exporter_tmpfiles_bin: /usr/bin/systemd-tmpfiles
+node_exporter_rapl_tmpfiles: /etc/tmpfiles.d/node_exporter-rapl.conf

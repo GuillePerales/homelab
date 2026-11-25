@@ -1,0 +1,24 @@
+---
+# Blackbox Exporter — sondea desde docker-aux las URL de los servicios del homelab y expone
+# disponibilidad, latencia y caducidad del certificado. Lo despliega el rol blackbox de Ansible;
+# lo lee Prometheus por la IP fija en srv-net. Las URL no están aquí: el rol las saca de la
+# configuración de Gatus del host y las deja en un fichero que Prometheus recarga solo.
+services:
+  blackbox:
+    image: prom/blackbox-exporter:v0.27.0
+    container_name: blackbox
+    restart: unless-stopped
+    command:
+      - --config.file=/config/blackbox.yml
+    volumes:
+      - ${APPDATA}/config:/config:ro
+    environment:
+      - TZ=${TZ}
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

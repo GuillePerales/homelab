@@ -1,0 +1,102 @@
+# Generado por Ansible (rol prometheus): no editar a mano.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+{% if prometheus_alertmanagers %}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+{% for am in prometheus_alertmanagers %}
+            - {{ am }}
+{% endfor %}
+{% endif %}
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+{% if prometheus_alertmanagers %}
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+{% for am in prometheus_alertmanagers %}
+          - {{ am }}
+{% endfor %}
+
+{% endif %}
+{% if prometheus_grafana_targets %}
+  - job_name: grafana
+    static_configs:
+      - targets:
+{% for g in prometheus_grafana_targets %}
+          - {{ g }}
+{% endfor %}
+
+{% endif %}
+  - job_name: node
+    static_configs:
+{% for h in prometheus_node_hosts %}
+      - targets: ["{{ hostvars[h].monitoring_address }}:{{ prometheus_node_port }}"]
+        labels:
+          host: {{ h }}
+{% endfor %}
+
+{% if prometheus_cadvisor_hosts %}
+  - job_name: cadvisor
+    static_configs:
+{% for h in prometheus_cadvisor_hosts %}
+      - targets: ["{{ hostvars[h].cadvisor_container_ip }}:{{ prometheus_cadvisor_port }}"]
+        labels:
+          host: {{ h }}
+{% endfor %}
+{% endif %}
+
+{% if prometheus_smartctl_hosts %}
+  - job_name: smartctl
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    static_configs:
+{% for h in prometheus_smartctl_hosts %}
+      - targets: ["{{ hostvars[h].smartctl_address | default(hostvars[h].monitoring_address) }}:{{ prometheus_smartctl_port }}"]
+        labels:
+          host: {{ h }}
+{% endfor %}
+{% endif %}
+
+{% if prometheus_blackbox_address %}
+  - job_name: blackbox
+    metrics_path: /probe
+    scrape_interval: 1m
+    scrape_timeout: 15s
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/blackbox.yml]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [module]
+        target_label: __param_module
+      - target_label: __address__
+        replacement: {{ prometheus_blackbox_address }}
+{% endif %}
+
+{% if prometheus_qbittorrent_address %}
+  - job_name: qbittorrent
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    static_configs:
+      - targets: ["{{ prometheus_qbittorrent_address }}"]
+    metric_relabel_configs:
+      # https://tracker.ejemplo:443/<passkey>/announce o udp://tracker.ejemplo:6969/announce -> tracker.ejemplo
+      - source_labels: [tracker]
+        regex: '[a-z]+://([^/:]+).*'
+        target_label: tracker
+        replacement: '$1'
+{% endif %}

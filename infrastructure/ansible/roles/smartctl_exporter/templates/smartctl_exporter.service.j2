@@ -1,0 +1,28 @@
+[Unit]
+Description=Prometheus smartctl_exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User={{ smartctl_exporter_user }}
+Group={{ smartctl_exporter_user }}
+# Leer el SMART pide acceso a los dispositivos: grupo disk y capacidades ambientales
+# (el NVMe lo abre el grupo disk por una regla de udev), sin correr como root
+SupplementaryGroups=disk
+AmbientCapabilities={{ smartctl_exporter_capabilities | join(' ') }}
+CapabilityBoundingSet={{ smartctl_exporter_capabilities | join(' ') }}
+ExecStart={{ smartctl_exporter_bin }} \
+  --web.listen-address={{ smartctl_exporter_listen }} \
+  --smartctl.path={{ smartctl_exporter_smartctl }} \
+  --smartctl.interval={{ smartctl_exporter_interval }} \
+  --smartctl.powermode-check={{ smartctl_exporter_powermode_check }}
+Restart=on-failure
+RestartSec=5
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

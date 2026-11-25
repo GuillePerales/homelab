@@ -10,7 +10,7 @@ services:
       - --storage.tsdb.retention.time=30d
       - --web.enable-lifecycle
     volumes:
-      - ${APPDATA}/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${APPDATA}/config:/etc/prometheus:ro
       - ${APPDATA}/data:/prometheus
     networks:
       srv-net:

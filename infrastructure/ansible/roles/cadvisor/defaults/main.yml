@@ -1,0 +1,8 @@
+---
+# cAdvisor en cada host Docker: un contenedor con el compose del repo
+# (`docker compose -p cadvisor up -d`). Prometheus lo lee por su IP en srv-net.
+
+# IP fija en srv-net, dentro del bloque del host (host_vars)
+cadvisor_container_ip: ""
+
+cadvisor_stack_dir: /opt/cadvisor

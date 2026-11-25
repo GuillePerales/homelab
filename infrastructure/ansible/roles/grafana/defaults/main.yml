@@ -1,0 +1,18 @@
+---
+# Grafana en docker-aux, desplegado como Prometheus y Alertmanager: compose del
+# repo con `docker compose -p grafana up -d`, datos y provisioning en disco local.
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63)
+grafana_container_ip: ""
+
+grafana_appdata: /srv/grafana
+grafana_stack_dir: /opt/grafana
+
+grafana_admin_user: admin
+# La contraseña no vive en el repo: se pasa por entorno al lanzar el playbook
+# (GRAFANA_ADMIN_PASS). Si no viene y ya hay un .env en el host, se conserva la
+# existente. Grafana solo la usa al crear la base de datos la primera vez.
+grafana_admin_password: "{{ lookup('ansible.builtin.env', 'GRAFANA_ADMIN_PASS') }}"
+
+# Datasource de Prometheus (misma red srv-net)
+grafana_prometheus_url: "http://{{ prometheus_container_ip }}:9090"

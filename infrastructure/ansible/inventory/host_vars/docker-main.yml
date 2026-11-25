@@ -28,3 +28,9 @@ macvlan_shim:
     - 10.0.30.40/31
 
 # Portainer server vive aquí (stack propio), así que sin agente
+
+# IP desde la que Prometheus alcanza el node_exporter (:9100)
+monitoring_address: 10.0.30.20
+
+# cAdvisor (rol cadvisor): IP fija en srv-net
+cadvisor_container_ip: 10.0.30.39

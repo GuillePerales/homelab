@@ -1,0 +1,38 @@
+---
+# smartctl_exporter en el NAS (TrueNAS Scale, appliance sin apt): salud SMART de los cuatro
+# discos SATA para Prometheus. Solo lectura: no lanza tests y con powermode-check=standby no
+# despierta un disco dormido. Mismo acceso que el agente de Beszel (devices y SYS_RAWIO), sin
+# privileged. IP fija en srv-net: Prometheus (docker-aux, misma VLAN) lo alcanza sin firewall.
+# .env: CONTAINER_IP (10.0.30.43, segundo bloque del NAS) y TZ.
+services:
+  smartctl-exporter:
+    container_name: smartctl-exporter
+    image: quay.io/prometheuscommunity/smartctl-exporter:v0.15.0
+    restart: unless-stopped
+    user: root
+    command:
+      - --smartctl.interval=300s
+      - --smartctl.powermode-check=standby
+      - --smartctl.device=/dev/sda
+      - --smartctl.device=/dev/sdb
+      - --smartctl.device=/dev/sdc
+      - --smartctl.device=/dev/sdd
+    environment:
+      - TZ=${TZ}
+    devices:
+      - /dev/sda:/dev/sda
+      - /dev/sdb:/dev/sdb
+      - /dev/sdc:/dev/sdc
+      - /dev/sdd:/dev/sdd
+    cap_add:
+      - SYS_RAWIO
+    security_opt:
+      - no-new-privileges
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

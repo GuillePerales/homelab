@@ -1,7 +1,8 @@
 # infrastructure/ansible/playbooks/monitoring.yml
 #
-# Stack de monitorización (fase 8). De momento solo los exporters en los nodos;
-# Prometheus, Alertmanager y Grafana en docker-aux se añaden después.
+# Stack de monitorización (fase 8): exporters en los nodos (node_exporter y smartctl_exporter
+# en los Proxmox), cAdvisor en los hosts Docker, y Blackbox, el exporter de qBittorrent, Prometheus, Alertmanager y Grafana en docker-aux.
+# El resto de exporters y dashboards se añaden después.
 # nas-01 queda fuera: TrueNAS es un appliance, sin apt ni systemd propio.
 #
 # Uso:
@@ -14,3 +15,52 @@
   roles:
     - role: node_exporter
       tags: [node_exporter]
+
+- name: Install smartctl_exporter on the Proxmox nodes
+  hosts: proxmox
+  become: true
+  roles:
+    - role: smartctl_exporter
+      tags: [smartctl_exporter]
+
+- name: Deploy cAdvisor on the Docker hosts
+  hosts: docker_hosts
+  become: true
+  roles:
+    - role: cadvisor
+      tags: [cadvisor]
+
+- name: Deploy Blackbox Exporter
+  hosts: monitoring
+  become: true
+  roles:
+    - role: blackbox
+      tags: [blackbox]
+
+- name: Deploy the qBittorrent exporter
+  hosts: monitoring
+  become: true
+  roles:
+    - role: qbittorrent_exporter
+      tags: [qbittorrent_exporter]
+
+- name: Deploy Prometheus
+  hosts: monitoring
+  become: true
+  roles:
+    - role: prometheus
+      tags: [prometheus]
+
+- name: Deploy Alertmanager
+  hosts: monitoring
+  become: true
+  roles:
+    - role: alertmanager
+      tags: [alertmanager]
+
+- name: Deploy Grafana
+  hosts: monitoring
+  become: true
+  roles:
+    - role: grafana
+      tags: [grafana]

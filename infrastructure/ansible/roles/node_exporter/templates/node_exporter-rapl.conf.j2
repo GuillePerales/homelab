@@ -1,0 +1,3 @@
+# Generado por Ansible (rol node_exporter): lectura de grupo en los contadores RAPL
+z /sys/class/powercap/intel-rapl:*/energy_uj 0440 root {{ node_exporter_user }} - -
+z /sys/class/powercap/intel-rapl:*:*/energy_uj 0440 root {{ node_exporter_user }} - -

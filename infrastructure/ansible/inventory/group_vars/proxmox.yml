@@ -1,0 +1,5 @@
+# infrastructure/ansible/inventory/group_vars/proxmox.yml
+---
+# Los nodos Proxmox son el hardware: node_exporter lee aquí el consumo de CPU por RAPL
+# (los LXC ven el RAPL de su host y repetirían el dato, sin poder cambiar permisos de sysfs)
+node_exporter_rapl_group_read: true

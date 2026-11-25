@@ -1,0 +1,9 @@
+# Generado por Ansible (rol blackbox) desde los endpoints de Gatus: no editar a mano.
+# Prometheus recarga este fichero solo (service discovery por fichero).
+{% for e in blackbox_gatus_endpoints | selectattr('url', 'match', 'https?://') %}
+- targets: [{{ e.url | to_json }}]
+  labels:
+    service: {{ e.name | to_json }}
+    group: {{ (e.group | default('sin-grupo')) | to_json }}
+    module: {{ 'http_insecure' if (e.client | default({})).insecure | default(false) else 'http_reachable' }}
+{% endfor %}
