@@ -3,6 +3,8 @@
 # Modo host y pid del host, con la raíz montada en solo lectura: así ve el sistema real (CPU, RAM,
 # red, discos, ZFS) y no el del contenedor. Escucha solo en la IP del NAS en INFRA, no en todas sus
 # interfaces; quién llega al 9100 lo decide una regla de OPNsense (solo Prometheus).
+# Textfile collector: lee los *.prom que escribe qbit-vigia (reinicios de VPN de Gluetun) en
+# /mnt/vault/cache/qbit-vigia/metrics, que el exporter ve a través del montaje de la raíz en /host.
 # Se despliega a mano en el NAS, como smartctl-exporter: copia o enlace de este compose y un .env.
 services:
   node-exporter:
@@ -12,6 +14,7 @@ services:
     command:
       - --path.rootfs=/host
       - --web.listen-address=${LISTEN_ADDRESS}
+      - --collector.textfile.directory=/host/mnt/vault/cache/qbit-vigia/metrics
     network_mode: host
     pid: host
     environment:
