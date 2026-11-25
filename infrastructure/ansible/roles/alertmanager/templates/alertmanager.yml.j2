@@ -1,0 +1,31 @@
+# Generado por Ansible (rol alertmanager): no editar a mano.
+route:
+  receiver: ntfy-info
+  group_by: [alertname, host]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: ntfy-critical
+      repeat_interval: 1h
+    - matchers: [severity="warning"]
+      receiver: ntfy-warning
+
+# Un nodo caído silencia el resto de alertas de ese mismo host
+inhibit_rules:
+  - source_matchers: [alertname="NodeDown"]
+    target_matchers: [severity=~"warning|critical"]
+    equal: [host]
+
+receivers:
+{% for name, prio in [('ntfy-critical', alertmanager_priority_critical), ('ntfy-warning', alertmanager_priority_warning), ('ntfy-info', alertmanager_priority_default)] %}
+  - name: {{ name }}
+    webhook_configs:
+      - url: "{{ alertmanager_ntfy_url }}"
+        send_resolved: true
+        http_config:
+          http_headers:
+            Priority:
+              values: ["{{ prio }}"]
+{% endfor %}

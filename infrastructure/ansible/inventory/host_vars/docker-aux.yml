@@ -24,3 +24,8 @@ macvlan_shim:
 
 # IP desde la que Prometheus alcanza el node_exporter de este host (el shim)
 monitoring_address: 10.0.30.99
+
+# Alertmanager (rol alertmanager): IP fija en srv-net y webhook de ntfy
+alertmanager_container_ip: 10.0.30.52
+alertmanager_ntfy_url: "http://10.0.30.31/homelab-alertas?template=alertmanager"
+prometheus_alertmanagers: ["{{ alertmanager_container_ip }}:9093"]
