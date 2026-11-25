@@ -1,4 +1,5 @@
-# Alertas de la plataforma: el clúster de Proxmox (prometheus-pve-exporter) y la red (opnsense-exporter).
+# Alertas de la plataforma: el clúster de Proxmox (prometheus-pve-exporter) y la red (opnsense-exporter)
+# y las copias (pbs-exporter).
 # No hay alerta de gateway caída: el hook de OPNsense ya avisa a ntfy cuando cae ProtonVPN y duplicaría el
 # aviso. Tampoco se usa opnsense_up: con OPNsense recientes vale 0 aunque todo funcione (issue #119).
 groups:
@@ -81,3 +82,32 @@ groups:
         annotations:
           summary: "Sin métricas de OPNsense"
           description: "Prometheus no consigue leer el exporter de OPNsense desde hace 10 minutos (el exporter, su clave de API o el firewall)."
+
+  - name: pbs
+    rules:
+      - alert: PbsBackupOld
+        expr: time() - pbs_snapshot_vm_last_timestamp > 2 * 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sin copia reciente de {{ $labels.vm_name }} ({{ $labels.backup_type }} {{ $labels.vm_id }})"
+          description: "La última copia de {{ $labels.vm_name }} en el datastore {{ $labels.datastore }} tiene más de 2 días."
+
+      - alert: PbsDatastoreAlmostFull
+        expr: 100 * pbs_used / pbs_size > 80
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Datastore de PBS al {{ $value | printf \"%.0f\" }} %: {{ $labels.datastore }}"
+          description: "El datastore {{ $labels.datastore }} lleva 30 minutos por encima del 80 % de uso."
+
+      - alert: PbsExporterDown
+        expr: up{job="pbs"} == 0 or pbs_up == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sin métricas de PBS"
+          description: "El exporter de PBS no responde o PBS rechaza su token desde hace 10 minutos."

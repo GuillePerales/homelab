@@ -1,0 +1,83 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - pbs_exporter_container_ip | length > 0
+      - pbs_exporter_endpoint | length > 0
+    fail_msg: "Faltan pbs_exporter_container_ip o pbs_exporter_endpoint en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Read the existing stack environment
+  ansible.builtin.slurp:
+    src: "{{ pbs_exporter_stack_dir }}/.env"
+  register: pbs_exporter_env_existing
+  failed_when: false
+  no_log: true
+
+- name: Decide the token
+  ansible.builtin.set_fact:
+    pbs_exporter_effective_token: >-
+      {{ pbs_exporter_token
+         if pbs_exporter_token | length > 0
+         else (pbs_exporter_env_existing.content | default('') | b64decode
+               | regex_search('(?m)^PBS_API_TOKEN=(.*)$', '\1') | default([''], true) | first) }}
+  no_log: true
+
+- name: Check that there is a token
+  ansible.builtin.assert:
+    that: pbs_exporter_effective_token | length > 0
+    fail_msg: "Falta el token de PBS: exporta PBS_EXPORTER_TOKEN al lanzar el playbook"
+    quiet: true
+
+- name: Create the stack directory
+  ansible.builtin.file:
+    path: "{{ pbs_exporter_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/pbs-exporter/docker-compose.yml"
+    dest: "{{ pbs_exporter_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment (token)
+  ansible.builtin.template:
+    src: pbs-exporter.env.j2
+    dest: "{{ pbs_exporter_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ pbs_exporter_stack_dir }}"
+    project_name: pbs-exporter
+    state: present
+    recreate: auto
+
+- name: Wait until the exporter is up
+  ansible.builtin.command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" pbs-exporter
+  register: pbs_exporter_state
+  until: pbs_exporter_state.stdout == 'running'
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+# El exporter contesta 200 aunque PBS rechace el token (issue #196): lo que dice si lee datos es pbs_up
+- name: Check that the exporter reads data from PBS
+  ansible.builtin.uri:
+    url: "http://{{ pbs_exporter_container_ip }}:{{ pbs_exporter_port }}/metrics"
+    return_content: true
+  register: pbs_exporter_metrics
+  until: "'pbs_up 1' in pbs_exporter_metrics.content"
+  retries: 6
+  delay: 5
+  changed_when: false
+  when: not ansible_check_mode

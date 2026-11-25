@@ -133,3 +133,11 @@ scrape_configs:
     static_configs:
       - targets: ["{{ prometheus_opnsense_exporter_address }}"]
 {% endif %}
+
+{% if prometheus_pbs_exporter_address %}
+  - job_name: pbs
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    static_configs:
+      - targets: ["{{ prometheus_pbs_exporter_address }}"]
+{% endif %}

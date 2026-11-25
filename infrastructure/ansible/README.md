@@ -12,7 +12,7 @@ privadas y este repo ya publica otras. Los secretos nunca: van por entorno desde
 | `inventory/hosts.yml` | Los nodos y sus grupos: `proxmox`, `docker_hosts`, `k3s_nodes`, `nas`, `monitoring` |
 | `inventory/host_vars/<nodo>.yml` | Lo propio de cada nodo (IP desde la que Prometheus lo lee, IP de sus contenedores…) |
 | `playbooks/monitoring.yml` | El stack de monitorización: un play por rol, con una etiqueta (`tags`) por rol |
-| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `qbittorrent_exporter`, `dozzle`, `dozzle_agent`, `pve_exporter`, `opnsense_exporter`, `prometheus`, `alertmanager`, `grafana` |
+| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `qbittorrent_exporter`, `dozzle`, `dozzle_agent`, `pve_exporter`, `opnsense_exporter`, `pbs_exporter`, `prometheus`, `alertmanager`, `grafana` |
 
 Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar nada,
 `--check --diff` para ver qué cambiaría.

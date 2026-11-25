@@ -60,5 +60,10 @@ opnsense_exporter_container_ip: 10.0.30.59
 opnsense_exporter_address: "{{ hostvars['fw-01'].monitoring_address }}"
 prometheus_opnsense_exporter_address: "{{ opnsense_exporter_container_ip }}:8080"
 
+# Exporter de PBS (rol pbs_exporter): IP fija en srv-net y API del contenedor `pbs` del NAS (misma VLAN)
+pbs_exporter_container_ip: 10.0.30.60
+pbs_exporter_endpoint: https://10.0.30.16:8007
+prometheus_pbs_exporter_address: "{{ pbs_exporter_container_ip }}:10019"
+
 # cAdvisor (rol cadvisor): IP fija en srv-net
 cadvisor_container_ip: 10.0.30.54
