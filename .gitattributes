@@ -1,0 +1,19 @@
+# Finales de línea: LF en el repo y en la copia de trabajo, en cualquier PC.
+#
+# Los ficheros se despliegan a Linux (Ansible copia los compose, las reglas de alertas y los
+# dashboards tal cual) y los scripts los ejecuta bash. Sin esto, Git for Windows con
+# core.autocrlf=true reescribe los ficheros en CRLF al cambiar de rama y un despliegue desde esa
+# copia manda CRLF a los hosts: no rompe todo, pero cambia ficheros que no han cambiado y puede
+# romper scripts de shell y reglas de udev.
+* text=auto eol=lf
+
+# Binarios: ni se convierten ni se diferencian como texto
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
