@@ -398,7 +398,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (interface) (rate(opnsense_interfaces_received_bytes_total[$__rate_interval]))",
+          "expr": "sum by (interface) (rate(opnsense_interfaces_received_bytes_total[5m]))",
           "refId": "A",
           "legendFormat": "{{interface}}"
         }
@@ -432,7 +432,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (interface) (rate(opnsense_interfaces_transmitted_bytes_total[$__rate_interval]))",
+          "expr": "sum by (interface) (rate(opnsense_interfaces_transmitted_bytes_total[5m]))",
           "refId": "A",
           "legendFormat": "{{interface}}"
         }
@@ -500,7 +500,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (interface) (rate(opnsense_firewall_in_ipv4_block_packets[$__rate_interval]))",
+          "expr": "sum by (interface) (rate(opnsense_firewall_in_ipv4_block_packets[5m]))",
           "refId": "A",
           "legendFormat": "{{interface}}"
         }
@@ -534,7 +534,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (interface) (rate(opnsense_firewall_in_ipv4_pass_packets[$__rate_interval]))",
+          "expr": "sum by (interface) (rate(opnsense_firewall_in_ipv4_pass_packets[5m]))",
           "refId": "A",
           "legendFormat": "{{interface}}"
         }
@@ -675,7 +675,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(opnsense_wireguard_peer_received_bytes_total[$__rate_interval])",
+          "expr": "rate(opnsense_wireguard_peer_received_bytes_total[5m])",
           "refId": "A",
           "legendFormat": "{{peer_name}} ↓"
         },
@@ -684,7 +684,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "-rate(opnsense_wireguard_peer_transmitted_bytes_total[$__rate_interval])",
+          "expr": "-rate(opnsense_wireguard_peer_transmitted_bytes_total[5m])",
           "refId": "B",
           "legendFormat": "{{peer_name}} ↑"
         }

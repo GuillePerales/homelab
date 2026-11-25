@@ -626,7 +626,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(pve_network_receive_bytes_total{id=~\"qemu/.*|lxc/.*\"}[$__rate_interval]) * on (id) group_left (name) pve_guest_info",
+          "expr": "rate(pve_network_receive_bytes_total{id=~\"qemu/.*|lxc/.*\"}[5m]) * on (id) group_left (name) pve_guest_info",
           "refId": "A",
           "legendFormat": "{{name}} ↓"
         },
@@ -635,7 +635,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "-rate(pve_network_transmit_bytes_total{id=~\"qemu/.*|lxc/.*\"}[$__rate_interval]) * on (id) group_left (name) pve_guest_info",
+          "expr": "-rate(pve_network_transmit_bytes_total{id=~\"qemu/.*|lxc/.*\"}[5m]) * on (id) group_left (name) pve_guest_info",
           "refId": "B",
           "legendFormat": "{{name}} ↑"
         }
@@ -667,7 +667,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(pve_disk_read_bytes_total{id=~\"qemu/.*|lxc/.*\"}[$__rate_interval]) * on (id) group_left (name) pve_guest_info",
+          "expr": "rate(pve_disk_read_bytes_total{id=~\"qemu/.*|lxc/.*\"}[5m]) * on (id) group_left (name) pve_guest_info",
           "refId": "A",
           "legendFormat": "{{name}} lectura"
         },
@@ -676,7 +676,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "-rate(pve_disk_written_bytes_total{id=~\"qemu/.*|lxc/.*\"}[$__rate_interval]) * on (id) group_left (name) pve_guest_info",
+          "expr": "-rate(pve_disk_written_bytes_total{id=~\"qemu/.*|lxc/.*\"}[5m]) * on (id) group_left (name) pve_guest_info",
           "refId": "B",
           "legendFormat": "{{name}} escritura"
         }

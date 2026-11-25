@@ -22,3 +22,12 @@ Despliega Grafana en el host del grupo `monitoring` (docker-aux) como los roles
 Uso:
 
     GRAFANA_ADMIN_PASS=... ansible-playbook playbooks/monitoring.yml --tags grafana
+
+## Ventana de `rate()` en los paneles de exporters que se leen cada minuto
+
+El `$__rate_interval` de Grafana vale como mínimo 4 veces el intervalo de scrape del datasource (15 s, o sea 1 min).
+Los jobs de Proxmox, OPNsense, SMART, Blackbox y qBittorrent se leen **cada minuto**, y un `rate()` sobre una ventana
+de 1 minuto con un dato por minuto casi nunca tiene los dos puntos que necesita: el panel sale en «No data» aunque los
+datos existan. Esos paneles usan una ventana fija de `[5m]`; los de node_exporter (15 s) siguen con `$__rate_interval`.
+Al validar un panel nuevo, probarlo en Grafana (o con `/api/ds/query`) y no solo con una consulta instantánea.
+
