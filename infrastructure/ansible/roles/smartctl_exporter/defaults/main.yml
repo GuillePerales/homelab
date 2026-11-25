@@ -20,11 +20,14 @@ smartctl_exporter_interval: 300s
 # standby: si el disco está dormido, no lo despierta para leerlo
 smartctl_exporter_powermode_check: standby
 
-# Capacidades del servicio. SYS_RAWIO y SYS_ADMIN dan acceso a los discos; DAC_READ_SEARCH
-# hace falta solo para el NVMe: su dispositivo /dev/nvmeN es root:root 0600 y no está en
-# el grupo disk. Solo salta los permisos de lectura, no los de escritura. Alternativa
-# más estrecha si molesta: una regla de udev que ponga /dev/nvme* en el grupo disk.
+# El NVMe: su dispositivo /dev/nvmeN es root:root 0600 y no está en el grupo disk, así que el
+# exporter, que sí está en disk, no lo abre. En vez de darle CAP_DAC_READ_SEARCH (leer cualquier
+# fichero del host), una regla de udev pone esos dispositivos en el grupo disk con 0660, como ya
+# están los discos SATA. Se aplica en cada arranque y no abre nada a otros usuarios.
+smartctl_exporter_nvme_udev: true
+smartctl_exporter_udev_rule: /etc/udev/rules.d/60-smartctl-exporter-nvme.rules
+
+# Capacidades del servicio: SYS_RAWIO y SYS_ADMIN para las consultas SMART a los discos.
 smartctl_exporter_capabilities:
   - CAP_SYS_RAWIO
   - CAP_SYS_ADMIN
-  - CAP_DAC_READ_SEARCH

@@ -7,7 +7,7 @@ After=network-online.target
 User={{ smartctl_exporter_user }}
 Group={{ smartctl_exporter_user }}
 # Leer el SMART pide acceso a los dispositivos: grupo disk y capacidades ambientales
-# (el NVMe necesita además DAC_READ_SEARCH), sin correr como root
+# (el NVMe lo abre el grupo disk por una regla de udev), sin correr como root
 SupplementaryGroups=disk
 AmbientCapabilities={{ smartctl_exporter_capabilities | join(' ') }}
 CapabilityBoundingSet={{ smartctl_exporter_capabilities | join(' ') }}
