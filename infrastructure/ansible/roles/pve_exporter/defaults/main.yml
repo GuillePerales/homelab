@@ -1,0 +1,17 @@
+---
+# prometheus-pve-exporter en docker-aux, con el compose del repo (`docker compose -p pve-exporter up -d`).
+# Prometheus lo lee por su IP en srv-net, puerto 9221, y le pasa el nodo de Proxmox al que preguntar.
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63)
+pve_exporter_container_ip: ""
+
+pve_exporter_stack_dir: /opt/pve-exporter
+pve_exporter_port: 9221
+
+# Usuario y token de Proxmox de solo lectura (rol PVEAuditor en /, también para el token)
+pve_exporter_user: prometheus@pve
+pve_exporter_token_name: exporter
+
+# Valor del token. Se pasa por entorno al lanzar el playbook (PVE_EXPORTER_TOKEN, leído de un fichero
+# local fuera del repo). Si no viene y ya hay un .env en el host, se conserva el que tiene.
+pve_exporter_token: "{{ lookup('ansible.builtin.env', 'PVE_EXPORTER_TOKEN') }}"

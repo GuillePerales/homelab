@@ -1,0 +1,29 @@
+---
+# prometheus-pve-exporter — métricas del clúster de Proxmox (nodos, VM, CT, almacenamiento, quórum)
+# leídas por la API con un token de solo lectura. Lo despliega el rol pve_exporter de Ansible en
+# docker-aux; Prometheus lo consulta por su IP en srv-net y le dice a qué nodo preguntar (`target`).
+services:
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:3.12.0
+    container_name: pve-exporter
+    restart: unless-stopped
+    command:
+      # El colector de configuración pide VM.Config.Options, que el rol PVEAuditor no da, y hace una
+      # llamada a la API por cada VM y CT para una sola métrica sin interés
+      - --no-collector.config
+      - --web.listen-address=:9221
+    environment:
+      - TZ=${TZ}
+      - PVE_USER=${PVE_USER}
+      - PVE_TOKEN_NAME=${PVE_TOKEN_NAME}
+      - PVE_TOKEN_VALUE=${PVE_TOKEN_VALUE}
+      # Los nodos usan el certificado autofirmado de Proxmox
+      - PVE_VERIFY_SSL=false
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

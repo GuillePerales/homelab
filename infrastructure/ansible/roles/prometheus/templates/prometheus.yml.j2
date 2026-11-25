@@ -100,3 +100,36 @@ scrape_configs:
         target_label: tracker
         replacement: '$1'
 {% endif %}
+
+{% if prometheus_pve_exporter_address and prometheus_pve_target %}
+  - job_name: pve
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    metrics_path: /pve
+    params:
+      module: [default]
+      cluster: ["1"]
+      node: ["0"]
+    static_configs:
+      - targets: ["{{ prometheus_pve_target }}"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: {{ prometheus_pve_exporter_address }}
+    metric_relabel_configs:
+      # Una serie por estado y por VM o CT; no se usa HA ni bloqueos
+      - source_labels: [__name__]
+        regex: pve_ha_state|pve_lock_state
+        action: drop
+{% endif %}
+
+{% if prometheus_opnsense_exporter_address %}
+  - job_name: opnsense
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    static_configs:
+      - targets: ["{{ prometheus_opnsense_exporter_address }}"]
+{% endif %}

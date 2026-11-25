@@ -12,7 +12,7 @@ privadas y este repo ya publica otras. Los secretos nunca: van por entorno desde
 | `inventory/hosts.yml` | Los nodos y sus grupos: `proxmox`, `docker_hosts`, `k3s_nodes`, `nas`, `monitoring` |
 | `inventory/host_vars/<nodo>.yml` | Lo propio de cada nodo (IP desde la que Prometheus lo lee, IP de sus contenedores…) |
 | `playbooks/monitoring.yml` | El stack de monitorización: un play por rol, con una etiqueta (`tags`) por rol |
-| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `qbittorrent_exporter`, `dozzle`, `dozzle_agent`, `prometheus`, `alertmanager`, `grafana` |
+| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `qbittorrent_exporter`, `dozzle`, `dozzle_agent`, `pve_exporter`, `opnsense_exporter`, `prometheus`, `alertmanager`, `grafana` |
 
 Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar nada,
 `--check --diff` para ver qué cambiaría.
@@ -25,7 +25,8 @@ Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar
 | `docker_hosts` | `node_exporter`, `cadvisor` | métricas del host y de sus contenedores |
 | `dozzle_agents` | `dozzle_agent` | nada en Prometheus: deja al Dozzle de docker-aux leer los logs de sus contenedores |
 | `k3s_nodes` | `node_exporter` | métricas del nodo |
-| `nas` | ninguno (es un appliance) | SMART por un contenedor propio; su IP va en `smartctl_address` |
+| `nas` | ninguno (es un appliance) | node_exporter (modo host), cAdvisor y SMART, los tres en contenedores desplegados a mano; sus IPs van en `monitoring_address`, `cadvisor_container_ip` y `smartctl_address` |
+| `firewall` | ninguno (OPNsense no se gestiona con Ansible) | node_exporter del plugin `os-node_exporter`, instalado en el firewall; su IP va en `monitoring_address` |
 
 `prometheus.yml` se genera desde el inventario: añadir un nodo a su grupo y volver a lanzar
 el rol `prometheus` basta para que lo recoja. Los dashboards leen las etiquetas solos.

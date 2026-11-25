@@ -2,8 +2,8 @@
 #
 # Stack de monitorización (fase 8): exporters en los nodos (node_exporter y smartctl_exporter
 # en los Proxmox), cAdvisor en los hosts Docker, Blackbox, el exporter de qBittorrent y Dozzle
-# (hub en docker-aux y agentes en los demás hosts Docker) en docker-aux, y Prometheus, Alertmanager
-# y Grafana en docker-aux.
+# (hub en docker-aux y agentes en los demás hosts Docker), los exporters de Proxmox y de OPNsense
+# (por API) y Prometheus, Alertmanager y Grafana, todo en docker-aux.
 # nas-01 queda fuera: TrueNAS es un appliance, sin apt ni systemd propio.
 #
 # Uso:
@@ -58,6 +58,20 @@
   roles:
     - role: dozzle
       tags: [dozzle]
+
+- name: Deploy the Proxmox exporter
+  hosts: monitoring
+  become: true
+  roles:
+    - role: pve_exporter
+      tags: [pve_exporter]
+
+- name: Deploy the OPNsense exporter
+  hosts: monitoring
+  become: true
+  roles:
+    - role: opnsense_exporter
+      tags: [opnsense_exporter]
 
 - name: Deploy Prometheus
   hosts: monitoring

@@ -1,0 +1,100 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - opnsense_exporter_container_ip | length > 0
+      - opnsense_exporter_address | length > 0
+    fail_msg: "Faltan opnsense_exporter_container_ip u opnsense_exporter_address en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Read the existing stack environment
+  ansible.builtin.slurp:
+    src: "{{ opnsense_exporter_stack_dir }}/.env"
+  register: opnsense_exporter_env_existing
+  failed_when: false
+  no_log: true
+
+- name: Decide the API key and secret
+  ansible.builtin.set_fact:
+    opnsense_exporter_effective_key: >-
+      {{ opnsense_exporter_api_key
+         if opnsense_exporter_api_key | length > 0
+         else (opnsense_exporter_env_existing.content | default('') | b64decode
+               | regex_search('(?m)^OPNSENSE_API_KEY=(.*)$', '\1') | default([''], true) | first) }}
+    opnsense_exporter_effective_secret: >-
+      {{ opnsense_exporter_api_secret
+         if opnsense_exporter_api_secret | length > 0
+         else (opnsense_exporter_env_existing.content | default('') | b64decode
+               | regex_search('(?m)^OPNSENSE_API_SECRET=(.*)$', '\1') | default([''], true) | first) }}
+  no_log: true
+
+- name: Check that there are API credentials
+  ansible.builtin.assert:
+    that:
+      - opnsense_exporter_effective_key | length > 0
+      - opnsense_exporter_effective_secret | length > 0
+    fail_msg: "Faltan la clave y el secreto de API de OPNsense: exporta OPNSENSE_API_KEY y OPNSENSE_API_SECRET al lanzar el playbook"
+    quiet: true
+
+- name: Create the stack directory
+  ansible.builtin.file:
+    path: "{{ opnsense_exporter_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/opnsense-exporter/docker-compose.yml"
+    dest: "{{ opnsense_exporter_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment (API credentials)
+  ansible.builtin.template:
+    src: opnsense-exporter.env.j2
+    dest: "{{ opnsense_exporter_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ opnsense_exporter_stack_dir }}"
+    project_name: opnsense-exporter
+    state: present
+    recreate: auto
+
+- name: Wait until the exporter is up
+  ansible.builtin.command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" opnsense-exporter
+  register: opnsense_exporter_state
+  until: opnsense_exporter_state.stdout == 'running'
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+# opnsense_up no sirve de comprobación (falla con OPNsense recientes aunque todo funcione, issue #119 del
+# exporter): se comprueba que las métricas de las interfaces y las de gateways llegan
+- name: Read the metrics
+  ansible.builtin.uri:
+    url: "http://{{ opnsense_exporter_container_ip }}:{{ opnsense_exporter_port }}/metrics"
+    return_content: true
+    timeout: 40
+  register: opnsense_exporter_metrics
+  until: "'opnsense_interfaces_received_bytes_total' in opnsense_exporter_metrics.content | default('')"
+  retries: 5
+  delay: 5
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Check that OPNsense answers with those credentials
+  ansible.builtin.assert:
+    that: "'opnsense_interfaces_received_bytes_total' in opnsense_exporter_metrics.content | default('')"
+    fail_msg: "El exporter responde pero no obtiene datos de OPNsense (¿clave, permisos o regla de firewall?). Mira: docker logs opnsense-exporter"
+    quiet: true
+  when: not ansible_check_mode

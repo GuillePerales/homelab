@@ -50,5 +50,15 @@ dozzle_remote_agents:
   - 10.0.30.40:7007
   - 10.0.30.45:7007
 
+# Exporter de Proxmox (rol pve_exporter): IP fija en srv-net. Prometheus pregunta a pve-main
+pve_exporter_container_ip: 10.0.30.58
+prometheus_pve_exporter_address: "{{ pve_exporter_container_ip }}:9221"
+prometheus_pve_target: "{{ hostvars['pve-main'].monitoring_address }}"
+
+# Exporter de OPNsense (rol opnsense_exporter): IP fija en srv-net y dirección del firewall
+opnsense_exporter_container_ip: 10.0.30.59
+opnsense_exporter_address: "{{ hostvars['fw-01'].monitoring_address }}"
+prometheus_opnsense_exporter_address: "{{ opnsense_exporter_container_ip }}:8080"
+
 # cAdvisor (rol cadvisor): IP fija en srv-net
 cadvisor_container_ip: 10.0.30.54

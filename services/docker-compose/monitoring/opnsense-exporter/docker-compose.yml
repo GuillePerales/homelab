@@ -1,0 +1,39 @@
+---
+# opnsense-exporter — métricas de red y de cortafuegos de OPNsense (interfaces, gateways, estados y
+# paquetes de pf, WireGuard, DHCP de Kea, servicios) leídas por su API con un usuario de solo lectura.
+# Lo despliega el rol opnsense_exporter de Ansible en docker-aux. CPU y memoria del firewall no las
+# da: vienen del plugin os-node_exporter (job `node`, host fw-01).
+services:
+  opnsense-exporter:
+    image: ghcr.io/athennamind/opnsense-exporter:0.0.19
+    container_name: opnsense-exporter
+    restart: unless-stopped
+    command:
+      - --opnsense.protocol=https
+      - --opnsense.address=${OPNSENSE_ADDRESS}
+      # El certificado de la web de OPNsense es autofirmado
+      - --opnsense.insecure
+      - --exporter.instance-label=${INSTANCE_LABEL}
+      - --web.listen-address=:8080
+      # Colectores que sobran o que fallan con esta configuración:
+      #  - unbound necesita Extended Statistics en Unbound (no se toca DNS por esto) y si no, falla entero
+      #  - arp-table lleva una serie por cliente; cron, ipsec, openvpn y carp no se usan; kea-dhcpv6 tampoco
+      - --exporter.disable-unbound
+      - --exporter.disable-arp-table
+      - --exporter.disable-cron-table
+      - --exporter.disable-ipsec
+      - --exporter.disable-openvpn
+      - --exporter.disable-carp
+      - --exporter.disable-kea-dhcpv6
+    environment:
+      - TZ=${TZ}
+      - OPNSENSE_EXPORTER_OPS_API_KEY=${OPNSENSE_API_KEY}
+      - OPNSENSE_EXPORTER_OPS_API_SECRET=${OPNSENSE_API_SECRET}
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
