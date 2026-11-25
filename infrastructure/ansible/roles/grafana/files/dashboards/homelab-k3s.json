@@ -661,7 +661,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(10, apiserver_storage_objects)",
+          "expr": "topk(10, apiserver_resource_objects)",
           "refId": "A",
           "legendFormat": "{{resource}}",
           "instant": true,

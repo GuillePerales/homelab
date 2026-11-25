@@ -160,7 +160,7 @@ scrape_configs:
           host: {{ groups['k3s_nodes'] | first }}
     metric_relabel_configs:
       - source_labels: [__name__]
-        regex: 'apiserver_request_total|apiserver_request_duration_seconds_(sum|count)|apiserver_current_inflight_requests|apiserver_storage_size_bytes|apiserver_storage_objects|kubelet_running_(pods|containers)|kubelet_volume_stats_(used|capacity)_bytes|process_(cpu_seconds_total|resident_memory_bytes|start_time_seconds)|go_goroutines'
+        regex: 'apiserver_request_total|apiserver_request_duration_seconds_(sum|count)|apiserver_current_inflight_requests|apiserver_storage_size_bytes|apiserver_resource_objects|kubelet_running_(pods|containers)|kubelet_volume_stats_(used|capacity)_bytes|process_(cpu_seconds_total|resident_memory_bytes|start_time_seconds)|go_goroutines'
         action: keep
 
   - job_name: k3s-cadvisor
