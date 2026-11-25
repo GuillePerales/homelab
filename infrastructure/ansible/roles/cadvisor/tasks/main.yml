@@ -1,0 +1,68 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that: cadvisor_container_ip | length > 0
+    fail_msg: "Falta cadvisor_container_ip en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Create the stack directory
+  ansible.builtin.file:
+    path: "{{ cadvisor_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/cadvisor/docker-compose.yml"
+    dest: "{{ cadvisor_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment
+  ansible.builtin.template:
+    src: cadvisor.env.j2
+    dest: "{{ cadvisor_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ cadvisor_stack_dir }}"
+    project_name: cadvisor
+    state: present
+
+- name: Wait until cAdvisor is healthy
+  ansible.builtin.uri:
+    url: "http://{{ cadvisor_container_ip }}:8080/healthz"
+  register: cadvisor_health
+  until: cadvisor_health.status == 200
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+# En un LXC, cAdvisor puede arrancar pero no ver los cgroups de los contenedores
+- name: Read the container metrics
+  ansible.builtin.uri:
+    url: "http://{{ cadvisor_container_ip }}:8080/metrics"
+    return_content: true
+  register: cadvisor_metrics
+  until: >-
+    'container_cpu_usage_seconds_total{container_label_com_docker_compose_project'
+    in cadvisor_metrics.content or 'name="' in cadvisor_metrics.content
+  retries: 6
+  delay: 10
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Check that containers are visible by name
+  ansible.builtin.assert:
+    that: "'name=\"' in cadvisor_metrics.content"
+    fail_msg: "cAdvisor responde pero no ve contenedores por nombre (¿cgroups del LXC?)"
+    quiet: true
+  when: not ansible_check_mode

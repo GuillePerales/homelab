@@ -1,6 +1,6 @@
 # infrastructure/ansible/playbooks/monitoring.yml
 #
-# Stack de monitorización (fase 8). Exporters en los nodos, Prometheus, Alertmanager y Grafana en docker-aux.
+# Stack de monitorización (fase 8). Exporters en los nodos, cAdvisor en los hosts Docker, Prometheus, Alertmanager y Grafana en docker-aux.
 # El resto de exporters y dashboards se añaden después.
 # nas-01 queda fuera: TrueNAS es un appliance, sin apt ni systemd propio.
 #
@@ -14,6 +14,13 @@
   roles:
     - role: node_exporter
       tags: [node_exporter]
+
+- name: Deploy cAdvisor on the Docker hosts
+  hosts: docker_hosts
+  become: true
+  roles:
+    - role: cadvisor
+      tags: [cadvisor]
 
 - name: Deploy Prometheus
   hosts: monitoring

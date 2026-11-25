@@ -28,3 +28,13 @@ scrape_configs:
         labels:
           host: {{ h }}
 {% endfor %}
+
+{% if prometheus_cadvisor_hosts %}
+  - job_name: cadvisor
+    static_configs:
+{% for h in prometheus_cadvisor_hosts %}
+      - targets: ["{{ hostvars[h].cadvisor_container_ip }}:{{ prometheus_cadvisor_port }}"]
+        labels:
+          host: {{ h }}
+{% endfor %}
+{% endif %}
