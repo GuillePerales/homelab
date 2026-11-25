@@ -231,15 +231,30 @@ En marcha en `docker-main` (y diun también en `docker-nas`):
 | mon-beszel-01 | Beszel (hub + agentes) | docker-main; agentes en cada nodo, el NAS y los LXC con Docker | 8090 | ✅ Operativo | Monitorización de hardware: CPU, RAM, carga, red, temperaturas, S.M.A.R.T. y uso por contenedor, con historial |
 | mon-speedtest-01 | Speedtest Tracker | docker-main | 80 | ✅ Operativo | Tests programados de velocidad a Internet (cada 6 h); adelantado de la fase 8 |
 
-> Phase 8 — planificado en `docker-aux`, rango macvlan `.50–.63`
+Phase 8 — stack de métricas en `docker-aux`, desplegado con roles de Ansible (`infrastructure/ansible/`):
+
+| ID | Servicio | Host | Puerto | Estado | Función |
+|---|---|---|---|---|---|
+| mon-prometheus-01 | Prometheus | docker-aux | 9090 | ✅ Operativo | Base de datos de métricas y reglas de alertas (retención de 30 días, configuración de scrape generada desde el inventario de Ansible) |
+| mon-alertmanager-01 | Alertmanager | docker-aux | 9093 | ✅ Operativo | Reparte las alertas a ntfy con una prioridad por gravedad e inhibe el ruido de un host caído |
+| mon-grafana-01 | Grafana | docker-aux | 3000 | ✅ Operativo | Ocho dashboards provisionados desde ficheros del repo: visión global, contenedores, salud de discos, sondas HTTP, torrents, Proxmox, red y K3s |
+| mon-nodeexp-01 | Node Exporter | Nodos Proxmox, hosts Docker, K3s, NAS (contenedor) y el firewall (plugin de OPNsense) | 9100 | ✅ Operativo | Métricas de CPU, RAM, disco y red, más la potencia de CPU (RAPL) en los nodos Proxmox (binario fijado, unidad systemd endurecida) |
+| mon-cadvisor-01 | cAdvisor | docker-main, docker-aux, NAS | 8080 | ✅ Operativo | Métricas por contenedor |
+| mon-smartctl-01 | smartctl_exporter | Nodos Proxmox, NAS | 9633 | ✅ Operativo | Salud y temperatura S.M.A.R.T. en solo lectura, con 12 reglas de alerta; sustituye a Scrutiny |
+| mon-blackbox-01 | Blackbox Exporter | docker-aux | 9115 | ✅ Operativo | Sondas HTTP de los mismos servicios que vigila Gatus (los objetivos se leen de su configuración, así que no hay direcciones en el repo): disponibilidad, latencia y caducidad de certificados en un dashboard; Gatus sigue dando los avisos de caída |
+| mon-qbit-01 | Exporter de qBittorrent | docker-aux | 8090 | ✅ Operativo | Torrents, velocidades, ratio global y conectividad, leídos con una clave de API; subida y ratio por tracker de forma aproximada (etiquetas de tracker recortadas al dominio), con dashboard y alertas por no ser conectable, tener torrents en cola o un bucle de reinicios de la VPN (los reinicios de Gluetun se cuentan en sus logs) |
+| mon-dozzle-01 | Dozzle (hub + agentes) | docker-aux; agentes en los demás hosts Docker | 8080 | ✅ Operativo | Logs de contenedores en vivo de todos los hosts Docker en una sola web, detrás de un login; no guarda nada (un historial de logs necesitaría Loki) |
+| mon-pve-01 | Exporter de Proxmox | docker-aux | 9221 | ✅ Operativo | Clúster, quórum, nodos, VM, contenedores y almacenamiento leídos de la API de Proxmox con un token de solo lectura |
+| mon-opnsense-01 | Exporter de OPNsense | docker-aux | 8080 | ✅ Operativo | Tráfico y errores por VLAN, pasarelas, tabla de estados y paquetes del firewall, WireGuard y servicios, leídos de la API de OPNsense con un usuario de solo lectura |
+| mon-pbs-01 | Exporter de PBS | docker-aux | 10019 | ✅ Operativo | Antigüedad y número de copias por VM y contenedor, uso de los datastores y salud del host, leídos de la API de PBS con un token de solo lectura |
+| mon-ksm-01 | kube-state-metrics | K3s (k3s-01) | — | ✅ Operativo | Estado de los objetos de Kubernetes (pods, deployments, nodos) para Prometheus; solo Prometheus puede llegar a él (NetworkPolicy) |
+
+Todavía planificado, fuera de la fase 8:
 
 | ID | Servicio | Host | Puerto | Función |
 |---|---|---|---|---|
-| mon-prometheus-01 | Prometheus | docker-aux | 9090 | Base de datos de métricas + alertas |
-| mon-grafana-01 | Grafana | docker-aux | 3001 | Dashboards — métricas DORA, salud de infra |
 | mon-loki-01 | Loki | docker-aux | 3100 | Agregación centralizada de logs |
 | mon-homepage-01 | Homepage | docker-aux | 3003 | Dashboard de inicio |
-| mon-nodeexp-01 | Node Exporter | Todos los hosts | 9100 | Métricas CPU, RAM, disco |
 | mon-ipmi-01 | IPMI Exporter | docker-aux | 9290 | Métricas de hardware Dell |
 
 ### 4.5 Almacenamiento de usuario (VLAN 30 — SRV)
@@ -629,11 +644,11 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 2** | TrueNAS, pools ZFS, stack \*arr, qBittorrent, Calibre-Web Automated, PBS, Syncthing — refuerzo de la protección de datos en curso | ✅ Completada |
 | **Phase 3** | Clúster Proxmox 3 nodos, LXCs Docker, Portainer multi-host | ✅ Completada |
 | **Phase 4** | DevOps Core: Forgejo (espejo de GitHub), Woodpecker CI, imágenes propias escaneadas con Trivy y publicadas en el registro de Forgejo; todos los recursos de Proxmox (VM del firewall, LXC de Docker, VM de K3s) en OpenTofu, con el estado cifrado y un `tofu plan` de solo lectura en cada PR; runbook de recuperación escrito. Siguiente: un simulacro de recuperación cronometrado | ✅ Completada |
-| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots al NAS. Pendientes: métricas y Velero; Jenkins, SonarQube y AWX, fuera del alcance. Planificado: nodo Proxmox a demanda (Wake-on-LAN y apagado por inactividad) para un K3s de varios nodos, laboratorios de virtualización y ciberseguridad en una VLAN aislada, un agente de CI y la GPU para IA local | 🔄 En curso |
+| **Phase 4b** | K3s de un nodo con ArgoCD, Vault, cert-manager, NetworkPolicies, entornos dev/prod y Trivy Operator; copia diaria de los snapshots de etcd al NAS; métricas del clúster (kube-state-metrics, API server y uso de contenedores) leídas por el Prometheus de la fase 8, con dashboard y alertas. La VM es un laboratorio y un temporizador la apaga cada noche. Pendiente: Velero; Jenkins, SonarQube y AWX, fuera del alcance. Planificado: nodo Proxmox a demanda (Wake-on-LAN y apagado por inactividad) para un K3s de varios nodos, laboratorios de virtualización y ciberseguridad en una VLAN aislada, un agente de CI y la GPU para IA local | 🔄 En curso |
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
 | **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |
-| **Phase 8** | Observabilidad y operación: Prometheus, Grafana, Alertmanager, exporters, planificador de tareas; Loki en evaluación | ⏳ Planificada |
+| **Phase 8** | Observabilidad y operación: Prometheus, Alertmanager, Grafana (8 dashboards, con los de Proxmox, red/OPNsense y K3s), exporters de nodos, contenedores, S.M.A.R.T., sondas HTTP y qBittorrent, un visor de logs en vivo (Dozzle) y exporters del clúster Proxmox, el firewall y PBS, desplegados con roles de Ansible, más las métricas y alertas del clúster K3s y la potencia de CPU (RAPL) en los nodos Proxmox. Se descartó medir el consumo con enchufes. A continuación, fuera de esta fase: planificador de tareas; Loki en evaluación | ✅ Completada |
 | **Phase 9** | Agente IA acotado y siempre encendido, con mínimo privilegio (replanteada) | ⏳ Planificada |
 | **Postimplantación** | Práctica de data engineering con datos reales del homelab: lakehouse, streaming CDC | ⏳ Ideas |
 
