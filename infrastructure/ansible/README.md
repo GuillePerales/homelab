@@ -1,8 +1,9 @@
 # Ansible
 
-Roles y playbooks del homelab. Aquí solo está lo que se puede rehacer desde cero; las
-direcciones internas no se publican: los nombres del inventario son alias de
-`~/.ssh/config` en la máquina de control, y las IPs de cada nodo van en su `host_vars`.
+Roles y playbooks del homelab. Aquí solo está lo que se puede rehacer desde cero. Los nombres del
+inventario son alias de `~/.ssh/config` en la máquina de control (de ahí salen la IP de conexión, el
+usuario y la clave). Las IPs de los servicios van en el `host_vars` de cada nodo: son direcciones
+privadas y este repo ya publica otras. Los secretos nunca: van por entorno desde ficheros locales.
 
 ## Estructura
 
@@ -11,7 +12,7 @@ direcciones internas no se publican: los nombres del inventario son alias de
 | `inventory/hosts.yml` | Los nodos y sus grupos: `proxmox`, `docker_hosts`, `k3s_nodes`, `nas`, `monitoring` |
 | `inventory/host_vars/<nodo>.yml` | Lo propio de cada nodo (IP desde la que Prometheus lo lee, IP de sus contenedores…) |
 | `playbooks/monitoring.yml` | El stack de monitorización: un play por rol, con una etiqueta (`tags`) por rol |
-| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `prometheus`, `alertmanager`, `grafana` |
+| `roles/` | `node_exporter`, `smartctl_exporter`, `cadvisor`, `blackbox`, `qbittorrent_exporter`, `dozzle`, `dozzle_agent`, `prometheus`, `alertmanager`, `grafana` |
 
 Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar nada,
 `--check --diff` para ver qué cambiaría.
@@ -22,6 +23,7 @@ Ansible no corre en Windows: se lanza desde Linux o desde WSL. Antes de ejecutar
 |---|---|---|
 | `proxmox` | `node_exporter`, `smartctl_exporter` | métricas del nodo (`:9100`) y SMART de sus discos (`:9633`) |
 | `docker_hosts` | `node_exporter`, `cadvisor` | métricas del host y de sus contenedores |
+| `dozzle_agents` | `dozzle_agent` | nada en Prometheus: deja al Dozzle de docker-aux leer los logs de sus contenedores |
 | `k3s_nodes` | `node_exporter` | métricas del nodo |
 | `nas` | ninguno (es un appliance) | SMART por un contenedor propio; su IP va en `smartctl_address` |
 

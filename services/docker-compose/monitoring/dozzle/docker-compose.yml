@@ -1,0 +1,34 @@
+---
+# Dozzle — visor web de los logs de los contenedores, en vivo y sin guardar nada. Es el hub: lee
+# los logs de docker-aux por el socket local y los de los demás hosts Docker por los agentes
+# (ver ../dozzle-agent). Lo despliega el rol dozzle de Ansible. Login propio con usuarios en
+# /data/users.yml: los logs pueden llevar tokens y URLs con passkey.
+services:
+  dozzle:
+    image: amir20/dozzle:v11.5.0
+    container_name: dozzle
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DOZZLE_AUTH_PROVIDER=simple
+      - DOZZLE_REMOTE_AGENT=${DOZZLE_REMOTE_AGENT}
+      # Sin telemetría anónima
+      - DOZZLE_NO_ANALYTICS=true
+    volumes:
+      # Socket de este host. Permite leer logs y también hablar con la API de Docker: ni el
+      # modo de solo lectura de Dozzle ni :ro limitan lo que podría hacer quien lo comprometa
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${APPDATA}/data:/data
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

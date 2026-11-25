@@ -1,0 +1,8 @@
+---
+# Agente de Dozzle en los hosts Docker (menos el del hub), con el compose del repo
+# (`docker compose -p dozzle-agent up -d`). El hub lo lee por su IP en srv-net, puerto 7007.
+
+# IP fija en srv-net, dentro del bloque del host (host_vars)
+dozzle_agent_container_ip: ""
+
+dozzle_agent_stack_dir: /opt/dozzle-agent

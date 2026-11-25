@@ -1,0 +1,28 @@
+---
+# Agente de Dozzle — deja que el hub (en docker-aux) lea los logs de los contenedores de este
+# host. Uno por host Docker, menos docker-aux, donde corre el hub. Escucha en el 7007 de su IP
+# de srv-net y no publica ningún puerto en el host.
+#
+# Ojo: el certificado TLS del agente es el mismo en todas las copias de la imagen. Cifra, pero no
+# identifica a nadie: cualquiera que llegue al 7007 puede leer los logs de este host. Por eso solo
+# vive en srv-net; si algún día se abre a otra red, hay que darle un certificado propio.
+services:
+  dozzle-agent:
+    image: amir20/dozzle:v11.5.0
+    container_name: dozzle-agent
+    restart: unless-stopped
+    command: agent
+    environment:
+      - TZ=${TZ}
+      - DOZZLE_NO_ANALYTICS=true
+    volumes:
+      # Socket de este host: ver el aviso del hub sobre lo que permite
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net

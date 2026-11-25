@@ -34,3 +34,6 @@ monitoring_address: 10.0.30.20
 
 # cAdvisor (rol cadvisor): IP fija en srv-net
 cadvisor_container_ip: 10.0.30.39
+
+# Agente de Dozzle (rol dozzle_agent): IP fija en srv-net, en el bloque de docker-main
+dozzle_agent_container_ip: 10.0.30.40
