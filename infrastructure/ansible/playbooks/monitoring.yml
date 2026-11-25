@@ -73,6 +73,13 @@
     - role: opnsense_exporter
       tags: [opnsense_exporter]
 
+- name: Deploy the PBS exporter
+  hosts: monitoring
+  become: true
+  roles:
+    - role: pbs_exporter
+      tags: [pbs_exporter]
+
 - name: Deploy Prometheus
   hosts: monitoring
   become: true

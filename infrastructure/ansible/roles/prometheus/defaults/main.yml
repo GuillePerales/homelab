@@ -46,3 +46,6 @@ prometheus_pve_target: ""
 
 # Exporter de OPNsense (host:puerto); vacío desactiva el job.
 prometheus_opnsense_exporter_address: ""
+
+# Exporter de PBS (host:puerto); vacío desactiva el job.
+prometheus_pbs_exporter_address: ""

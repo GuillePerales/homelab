@@ -1,0 +1,27 @@
+---
+# pbs-exporter (natrontech) — métricas de Proxmox Backup Server: uso de los datastores, copias por VM y CT
+# (cuántas, cuándo fue la última y si se verificó) y salud del host, leídas por la API con un token de solo
+# lectura (rol Audit). No da el estado de la limpieza (GC), el prune ni la sincronización.
+# Lo despliega el rol pbs_exporter de Ansible en docker-aux; Prometheus lo consulta por su IP en srv-net.
+services:
+  pbs-exporter:
+    image: ghcr.io/natrontech/pbs-exporter:v0.10.0
+    container_name: pbs-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PBS_ENDPOINT=${PBS_ENDPOINT}
+      - PBS_USERNAME=${PBS_USERNAME}
+      - PBS_API_TOKEN_NAME=${PBS_API_TOKEN_NAME}
+      - PBS_API_TOKEN=${PBS_API_TOKEN}
+      # PBS usa un certificado autofirmado
+      - PBS_INSECURE=true
+      - PBS_LISTEN_ADDRESS=:10019
+    networks:
+      srv-net:
+        ipv4_address: ${CONTAINER_IP}
+
+networks:
+  srv-net:
+    external: true
+    name: srv-net
