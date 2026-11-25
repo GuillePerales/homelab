@@ -1,0 +1,23 @@
+# Alertas del propio stack de monitorización. Si Alertmanager o Prometheus caen no
+# pueden avisar de sí mismos: de eso se encarga Gatus, que corre fuera de este stack.
+groups:
+  - name: monitorizacion
+    rules:
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Grafana no responde"
+          description: "Prometheus no consigue leer las métricas de Grafana desde hace 5 minutos."
+
+      # Alertmanager no pudo entregar avisos (ntfy caído o URL mal): sin esto los fallos son silenciosos
+      - alert: AlertmanagerNotificationsFailing
+        expr: sum by (integration) (increase(alertmanager_notifications_failed_total[10m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager no entrega avisos por {{ $labels.integration }}"
+          description: "Han fallado envíos de Alertmanager por {{ $labels.integration }} en los últimos 10 minutos."

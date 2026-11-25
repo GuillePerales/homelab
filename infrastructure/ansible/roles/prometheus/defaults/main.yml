@@ -27,3 +27,7 @@ prometheus_cadvisor_port: 8080
 # IP en smartctl_address del host_vars; sin ella se usa monitoring_address)
 prometheus_smartctl_hosts: "{{ groups['proxmox'] + groups['nas'] }}"
 prometheus_smartctl_port: 9633
+
+# Grafana (host:puerto) para recoger sus propias métricas en /metrics, que vienen
+# activadas de fábrica. El job de Alertmanager sale de prometheus_alertmanagers.
+prometheus_grafana_targets: []

@@ -76,6 +76,7 @@
   loop:
     - alerts-nodos.yml
     - alerts-discos.yml
+    - alerts-monitorizacion.yml
   register: prometheus_rules
 
 - name: Start the stack
