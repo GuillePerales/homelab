@@ -89,7 +89,8 @@ resource "proxmox_virtual_environment_container" "docker_aux" {
   }
 
   memory {
-    dedicated = 9216
+    # 4 GB: con todo el stack de monitorización gasta ~1 GB (2026-11-25); antes 9216
+    dedicated = 4096
     swap      = 0
   }
 
