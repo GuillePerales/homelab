@@ -16,8 +16,9 @@ privadas y este repo ya publica otras. Los secretos nunca: van por entorno desde
 
 Ansible no corre en Windows: se lanza desde Linux o desde WSL. Desde WSL, `run-from-wsl.sh` hace el trabajo pesado: exporta `HEAD` (en Windows el árbol de trabajo está en CRLF), resuelve la IP y el usuario de cada nodo con `ssh -G` sobre el `~/.ssh/config` y copia la clave con permisos válidos. Los secretos entran por el entorno del que llama.
 
-    wsl -d Debian bash -lc 'cd /mnt/c/.../homelab && infrastructure/ansible/run-from-wsl.sh [playbook.yml] --check --diff' Antes de ejecutar nada,
-`--check --diff` para ver qué cambiaría.
+    wsl -d Debian bash -lc 'cd /mnt/c/.../homelab && infrastructure/ansible/run-from-wsl.sh [playbook.yml] --check --diff'
+
+Antes de ejecutar nada, `--check --diff` para ver qué cambiaría.
 
 ## Qué recoge cada grupo
 
