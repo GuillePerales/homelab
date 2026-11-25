@@ -246,6 +246,7 @@ Phase 8 — metrics stack on `docker-aux`, deployed with Ansible roles (`infrast
 | mon-dozzle-01 | Dozzle (hub + agents) | docker-aux; agents on the other Docker hosts | 8080 | ✅ Operational | Live container logs from every Docker host in one web UI, behind a login; nothing is stored (log history would need Loki) |
 | mon-pve-01 | Proxmox exporter | docker-aux | 9221 | ✅ Operational | Cluster, quorum, nodes, VMs, containers and storage read from the Proxmox API with a read-only token |
 | mon-opnsense-01 | OPNsense exporter | docker-aux | 8080 | ✅ Operational | Per-VLAN traffic and errors, gateways, firewall state table and packets, WireGuard and services, read from the OPNsense API with a read-only user |
+| mon-pbs-01 | PBS exporter | docker-aux | 10019 | ✅ Operational | Backup age and count per VM and container, datastore usage and host health, read from the PBS API with a read-only token |
 
 Still planned in Phase 8:
 
