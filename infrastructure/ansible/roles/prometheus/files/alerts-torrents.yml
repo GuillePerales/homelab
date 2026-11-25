@@ -32,3 +32,31 @@ groups:
         annotations:
           summary: "Sin métricas de qBittorrent"
           description: "Prometheus no consigue leer el exporter de qBittorrent desde hace 10 minutos (el exporter, la clave de API o qBittorrent)."
+
+      - alert: GluetunReinicioBucle
+        expr: increase(gluetun_vpn_restarts_total[1h]) >= 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "La VPN de {{ $labels.container }} se reinicia en bucle"
+          description: >-
+            {{ $value | printf "%.0f" }} reinicios por fallo de healthcheck en la última hora (lo normal es 0).
+            Anoche hubo un bucle de 344 y 60 reinicios en 24 horas. Mira los logs de Gluetun y el túnel
+            de OPNsense; qbit-vigia solo actúa si qBittorrent pierde el puerto.
+
+      - alert: QbitVigiaSinMetricas
+        expr: >-
+          (time() - node_textfile_mtime_seconds{host="nas-01", file=~".*/gluetun.prom"} > 3600)
+          or (qbit_vigia_export_ok{host="nas-01"} == 0)
+          or (node_textfile_scrape_error{host="nas-01"} == 1)
+          or absent(node_textfile_mtime_seconds{host="nas-01", file=~".*/gluetun.prom"})
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No se actualiza el contador de reinicios de VPN de Gluetun"
+          description: >-
+            El fichero gluetun.prom del NAS no se escribe desde hace más de una hora, no existe, el
+            collector falla o qbit-vigia no pudo leer los logs de algún Gluetun (ver metricas.log en
+            los logs de qbit-vigia del NAS).

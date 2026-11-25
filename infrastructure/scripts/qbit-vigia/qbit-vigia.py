@@ -19,6 +19,9 @@
   a iniciar sesión con un 403 (lo que da qBittorrent), así que se quedan sin ver la cola de eMule
   hasta reiniciarlos. Red de seguridad: si el log de Mularr muestra ese rechazo, reinicia la app
   (como mucho MULARR_REINICIOS_MAX_DIA al día). Arreglo propuesto: joecarl/mularr#49.
+- Métricas: cuenta los reinicios de la VPN de cada Gluetun por fallo de su healthcheck (en sus logs;
+  Gluetun no da métricas) y los escribe en METRICS_DIR/gluetun.prom para el textfile collector del
+  node_exporter del NAS. `--prueba-metricas` cuenta las últimas 24 h sin escribir nada.
 - Resumen semanal: lo sembrado y lo subido por tracker, desde el lado del cliente.
 - Diagnóstico de la conexión en LOG_DIR: en cada pasada sin conexión apunta en conexion.log el
   estado, el puerto que tiene Gluetun y el que escucha qBittorrent (¿se perdió el puerto o está
@@ -32,6 +35,7 @@ Configuración privada (no versionada): /mnt/vault/secrets/qbit-vigia.env
 Uso: qbit-vigia.py [--resumen]   (--resumen manda el resumen semanal ya, para probarlo)
 """
 import datetime
+import fcntl
 import json
 import os
 import re
@@ -80,6 +84,11 @@ MULARR_REINICIOS_MAX_DIA = int(ENV.get("MULARR_REINICIOS_MAX_DIA", "4"))
 MULARR_RECHAZO = re.compile(r"Unauthorized request .* from (?:::ffff:)?([\d.]+) \(credentials presented: [^)]*SID cookie")
 ESPERA_PUERTO = 60         # s antes de dar el puerto por perdido (Gluetun puede estar reconectando)
 GLUETUN_API = "http://127.0.0.1:8000/v1/vpn/status"
+# métricas para Prometheus: textfile collector del node_exporter del NAS (lee *.prom de METRICAS_DIR)
+METRICAS_DIR = ENV.get("METRICS_DIR", "/mnt/vault/cache/qbit-vigia/metrics")
+METRICAS_ESTADO = os.path.join(os.path.dirname(STATE_FILE), "metrics-state.json")
+METRICAS_GLUETUN = [c for c in ENV.get("METRICS_GLUETUN", f"{GLUETUN_CONTAINER},gluetun-mularr").split(",") if c]
+REINICIO_VPN = "restarting VPN because it failed to pass the healthcheck"
 
 SEMBRANDO = {"uploading", "stalledUP", "forcedUP", "queuedUP", "checkingUP"}
 RIESGO = {"stoppedUP", "pausedUP", "error", "missingFiles"}
@@ -135,9 +144,100 @@ def levantar(intentos=3, espera=60):
     return False, salida
 
 
+def contar_reinicios_vpn(texto):
+    """(reinicios por fallo del healthcheck, líneas [vpn]) de un trozo de log de Gluetun."""
+    reinicios = lineas_vpn = 0
+    for linea in texto.splitlines():
+        if "[vpn]" in linea:
+            lineas_vpn += 1
+            if REINICIO_VPN in linea:
+                reinicios += 1
+    return reinicios, lineas_vpn
+
+
+def apuntar_error_metricas(mensaje):
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        with open(os.path.join(LOG_DIR, "metricas.log"), "a") as f:
+            f.write(f"{datetime.datetime.now():%Y-%m-%d %H:%M} {mensaje}\n")
+    except OSError:
+        pass
+
+
+def exportar_metricas():
+    """Escribe en METRICAS_DIR/gluetun.prom (lo lee el textfile collector del node_exporter del NAS)
+    cuántas veces ha reiniciado cada Gluetun su VPN por fallo del healthcheck, contadas en sus logs:
+    Gluetun no da métricas y sus logs se pierden al recrearlo. Estado y bloqueo propios, no el
+    STATE_FILE: ese solo se guarda al final de la pasada y dos pasadas solapadas (el script puede
+    tardar más de 15 min) recontarían el mismo tramo. Si `docker logs` falla no se avanza ni se
+    cuenta. Nunca falla: un error se apunta en LOG_DIR/metricas.log y en qbit_vigia_export_ok."""
+    try:
+        os.makedirs(METRICAS_DIR, exist_ok=True)
+        os.makedirs(os.path.dirname(METRICAS_ESTADO), exist_ok=True)
+        with open(METRICAS_ESTADO + ".lock", "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                with open(METRICAS_ESTADO) as f:
+                    estado = json.load(f)
+            except (OSError, ValueError):
+                estado = {}
+            contenedores = estado.setdefault("contenedores", {})
+            ahora = datetime.datetime.now(datetime.timezone.utc)
+            marca = ahora.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            ok = 1
+            for c in METRICAS_GLUETUN:
+                cont = contenedores.setdefault(c, {"reinicios": 0, "lineas_vpn": 0, "desde": None})
+                if cont["desde"] is None:      # primera vez: se empieza a contar desde ahora, sin histórico
+                    cont["desde"] = marca
+                    continue
+                r = subprocess.run(["docker", "logs", c, "--since", cont["desde"], "--until", marca],
+                                   capture_output=True, text=True, timeout=60)
+                if r.returncode != 0:
+                    ok = 0
+                    apuntar_error_metricas(f"docker logs {c}: {(r.stderr or r.stdout).strip()[-200:]}")
+                    continue
+                reinicios, lineas_vpn = contar_reinicios_vpn(r.stdout + r.stderr)
+                cont["reinicios"] += reinicios
+                cont["lineas_vpn"] += lineas_vpn
+                cont["desde"] = marca
+            salida = ["# HELP gluetun_vpn_restarts_total Reinicios de la VPN de Gluetun por fallo de su healthcheck, contados en sus logs.",
+                      "# TYPE gluetun_vpn_restarts_total counter"]
+            salida += [f'gluetun_vpn_restarts_total{{container="{c}"}} {estado["contenedores"][c]["reinicios"]}'
+                       for c in METRICAS_GLUETUN]
+            salida += ["# HELP gluetun_vpn_log_lines_total Lineas [vpn] vistas en los logs de Gluetun: si deja de subir, el formato del log ha cambiado.",
+                       "# TYPE gluetun_vpn_log_lines_total counter"]
+            salida += [f'gluetun_vpn_log_lines_total{{container="{c}"}} {estado["contenedores"][c]["lineas_vpn"]}'
+                       for c in METRICAS_GLUETUN]
+            salida += ["# HELP qbit_vigia_export_ok 1 si la ultima exportacion pudo leer los logs de todos los Gluetun.",
+                       "# TYPE qbit_vigia_export_ok gauge",
+                       f"qbit_vigia_export_ok {ok}",
+                       ""]
+            # el .tmp no acaba en .prom: el collector solo lee *.prom y no vería un fichero a medias
+            for ruta, contenido in ((METRICAS_ESTADO, json.dumps(estado)),
+                                    (os.path.join(METRICAS_DIR, "gluetun.prom"), "\n".join(salida))):
+                with open(ruta + ".tmp", "w") as f:
+                    f.write(contenido)
+                os.replace(ruta + ".tmp", ruta)
+    except Exception as e:
+        apuntar_error_metricas(f"exportar_metricas: {e!r}")
+
+
+def prueba_metricas(horas=24):
+    """`qbit-vigia.py --prueba-metricas [horas]`: cuenta los reinicios de VPN de las últimas horas
+    en los logs actuales y los escribe por pantalla, sin tocar ni el estado ni METRICAS_DIR."""
+    for c in METRICAS_GLUETUN:
+        r = subprocess.run(["docker", "logs", c, "--since", f"{horas}h"], capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            print(f"{c}: docker logs falló: {(r.stderr or r.stdout).strip()[-200:]}")
+            continue
+        reinicios, lineas_vpn = contar_reinicios_vpn(r.stdout + r.stderr)
+        print(f"{c}: {reinicios} reinicios por healthcheck y {lineas_vpn} líneas [vpn] en las últimas {horas} h")
+
+
 def guardar_logs_gluetun(motivo):
     """Copia los logs de Gluetun a LOG_DIR antes de recrearlo (al recrear se pierden).
     Nunca falla: el diagnóstico no puede tumbar la pasada. Devuelve la ruta o ""."""
+    exportar_metricas()   # antes de que se pierdan los logs con los reinicios de VPN aún sin contar
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
         ruta = os.path.join(LOG_DIR, f"gluetun-{datetime.datetime.now():%Y%m%d-%H%M}-{motivo}.log")
@@ -316,6 +416,10 @@ def gb(b):
 
 
 def main():
+    if "--prueba-metricas" in sys.argv:
+        prueba_metricas()
+        return
+    exportar_metricas()
     forzar_resumen = "--resumen" in sys.argv
     try:
         with open(STATE_FILE) as f:
