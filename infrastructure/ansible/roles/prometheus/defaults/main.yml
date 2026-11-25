@@ -49,3 +49,20 @@ prometheus_opnsense_exporter_address: ""
 
 # Exporter de PBS (host:puerto); vacío desactiva el job.
 prometheus_pbs_exporter_address: ""
+
+
+# Clúster K3s (fase 4b): IP del nodo. Vacío desactiva los jobs `k3s`, `k3s-cadvisor` y
+# `kube-state-metrics`. El API server (6443) y el kubelet (10250) comparten registro de
+# métricas en K3s: se recoge /metrics una sola vez (job `k3s`) y de forma selectiva.
+prometheus_k3s_address: ""
+prometheus_k3s_apiserver_port: 6443
+prometheus_k3s_kubelet_port: 10250
+# NodePort del Service `ksm-externo` (services/k8s/platform/monitoring)
+prometheus_k3s_ksm_port: 30080
+
+# Token de la cuenta `prometheus-externo` (Secret del namespace monitoring) y CA de K3s
+# (/var/lib/rancher/k3s/server/tls/server-ca.crt). Se pasan por entorno al lanzar el playbook
+# (K3S_PROMETHEUS_TOKEN y K3S_PROMETHEUS_CA, desde ficheros locales fuera del repo). Si no
+# vienen y ya están en el host, se conservan.
+prometheus_k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_PROMETHEUS_TOKEN') }}"
+prometheus_k3s_ca: "{{ lookup('ansible.builtin.env', 'K3S_PROMETHEUS_CA') }}"

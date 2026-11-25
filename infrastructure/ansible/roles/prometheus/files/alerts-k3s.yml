@@ -1,0 +1,71 @@
+# Alertas del clúster K3s (fase 4b). k3s-01 se apaga cada noche (playbooks/k3s-apagado-nocturno.yml)
+# y Vault vuelve sellado al arrancar: todas llevan un guardia que exige que el nodo lleve 15 minutos
+# arriba, para que no salten con la VM apagada ni mientras arranca (K3s y los pods tardan en estar listos).
+groups:
+  - name: k3s
+    rules:
+      - alert: K3sApiserverDown
+        expr: >-
+          up{job="k3s"} == 0
+          and on() min_over_time(up{job="node", host="k3s-01"}[15m]) == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El API server de K3s no responde"
+          description: "Prometheus no puede leer /metrics del API server de k3s-01, que lleva más de 15 minutos encendida."
+
+      - alert: K3sScrapeDown
+        expr: >-
+          up{job=~"k3s-cadvisor|kube-state-metrics"} == 0
+          and on() min_over_time(up{job="node", host="k3s-01"}[15m]) == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No se leen las métricas de {{ $labels.job }}"
+          description: "{{ $labels.job }} no contesta con la VM encendida más de 15 minutos: sin él las alertas de pods y despliegues no tienen datos."
+
+      - alert: K3sNodeNotReady
+        expr: >-
+          kube_node_status_condition{condition="Ready", status="true"} == 0
+          and on() min_over_time(up{job="node", host="k3s-01"}[15m]) == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El nodo {{ $labels.node }} de K3s no está Ready"
+          description: "Kubernetes lleva más de 5 minutos sin dar el nodo por listo."
+
+      - alert: K3sPodCrashLooping
+        expr: >-
+          max by (namespace, pod, container) (kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}) == 1
+          and on() min_over_time(up{job="node", host="k3s-01"}[15m]) == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} se reinicia en bucle"
+          description: "El contenedor {{ $labels.container }} está en CrashLoopBackOff desde hace más de 5 minutos."
+
+      - alert: K3sPodNotReady
+        expr: >-
+          sum by (namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}) > 0
+          and on() min_over_time(up{job="node", host="k3s-01"}[15m]) == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} no está en marcha"
+          description: "El pod lleva más de 10 minutos en Pending, Unknown o Failed. Si es de dev o prod y Vault sigue sellado, es lo esperado."
+
+      - alert: K3sDeploymentReplicasMismatch
+        expr: >-
+          kube_deployment_spec_replicas != kube_deployment_status_replicas_available
+          and on() min_over_time(up{job="node", host="k3s-01"}[15m]) == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.deployment }} sin todas sus réplicas"
+          description: "Faltan réplicas disponibles desde hace más de 10 minutos."

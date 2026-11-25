@@ -1,0 +1,32 @@
+# kube-state-metrics — Helm values
+# Chart: prometheus-community/kube-state-metrics 9.1.0 (app 2.20.0; fijada, subirla a propósito)
+# Namespace: monitoring
+# Docs: https://github.com/kubernetes/kube-state-metrics
+#
+# helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+# helm upgrade --install kube-state-metrics prometheus-community/kube-state-metrics --version 9.1.0 \
+#   -n monitoring --create-namespace -f infrastructure/helm/kube-state-metrics/values.yaml
+#
+# Estado de los objetos de K3s para el Prometheus de docker-aux (fase 8), que lo lee por el
+# Service `ksm-externo` de services/k8s/platform/monitoring (NodePort, solo desde Prometheus).
+# Nodo de 4 GB: lista cerrada de recursos y límites bajos. Si el nodo pasa del 85 % de RAM, quitarlo.
+
+collectors:
+  - cronjobs
+  - daemonsets
+  - deployments
+  - jobs
+  - namespaces
+  - nodes
+  - persistentvolumeclaims
+  - pods
+  - replicasets
+  - statefulsets
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
