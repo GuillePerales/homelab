@@ -24,7 +24,7 @@ groups:
           severity: warning
         annotations:
           summary: "No se leen las métricas de {{ $labels.job }}"
-          description: "El objetivo {{ $labels.job }} no contesta (con la VM encendida más de 15 minutos). Sin él las alertas de pods y despliegues no tienen datos."
+          description: "{{ $labels.job }} no contesta con la VM encendida más de 15 minutos: sin él las alertas de pods y despliegues no tienen datos."
 
       - alert: K3sNodeNotReady
         expr: >-
