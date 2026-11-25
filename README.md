@@ -52,7 +52,7 @@ Personal homelab managed entirely as Infrastructure as Code. Two parallel object
 |---|---|---|
 | Proxmox | Single node | **3-node cluster: pve-router + pve-main + pve-aux** |
 | docker-main | Did not exist | LXC Debian 13, VLAN 30, 4GB RAM |
-| docker-aux | Did not exist | LXC Debian 13, VLAN 30, 9GB RAM |
+| docker-aux | Did not exist | LXC Debian 13, VLAN 30, 4GB RAM |
 | Macvlan networking | NAS only | All 3 Docker hosts with non-overlapping ranges |
 | Portainer | Did not exist | Server on docker-main + Agents on aux and nas |
 | NFS cluster storage | NAS only | `tank/vms/images` mounted on pve-main and pve-aux |
@@ -336,7 +336,7 @@ Still planned in Phase 8:
 - `k3s-01` (VM, 4GB, can be powered off) ✅ — single-node K3s: ArgoCD, Vault, cert-manager, Trivy Operator, homelab-check
 
 **pve-aux (10GB)**
-- `docker-aux` (LXC, 6GB) ✅ — Monitoring, cloud services
+- `docker-aux` (LXC, 4GB) ✅ — Monitoring stack, logs
 
 ### 5.3 VM vs LXC decision
 
