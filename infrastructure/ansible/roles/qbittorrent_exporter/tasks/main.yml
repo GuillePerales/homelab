@@ -1,0 +1,93 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_exporter_container_ip | length > 0
+      - qbittorrent_exporter_url | length > 0
+    fail_msg: "Faltan qbittorrent_exporter_container_ip o qbittorrent_exporter_url en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Read the existing stack environment
+  ansible.builtin.slurp:
+    src: "{{ qbittorrent_exporter_stack_dir }}/.env"
+  register: qbittorrent_exporter_env_existing
+  failed_when: false
+  no_log: true
+
+- name: Decide the API key
+  ansible.builtin.set_fact:
+    qbittorrent_exporter_effective_key: >-
+      {{ qbittorrent_exporter_api_key
+         if qbittorrent_exporter_api_key | length > 0
+         else (qbittorrent_exporter_env_existing.content | default('') | b64decode
+               | regex_search('(?m)^QBITTORRENT_API_KEY=(.*)$', '\1') | default([''], true) | first) }}
+  no_log: true
+
+- name: Check that there is an API key
+  ansible.builtin.assert:
+    that: qbittorrent_exporter_effective_key | length > 0
+    fail_msg: "Falta la clave de API de qBittorrent: exporta QBITTORRENT_API_KEY al lanzar el playbook"
+    quiet: true
+
+- name: Create the stack directory
+  ansible.builtin.file:
+    path: "{{ qbittorrent_exporter_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/qbittorrent-exporter/docker-compose.yml"
+    dest: "{{ qbittorrent_exporter_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment (API key)
+  ansible.builtin.template:
+    src: qbittorrent-exporter.env.j2
+    dest: "{{ qbittorrent_exporter_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ qbittorrent_exporter_stack_dir }}"
+    project_name: qbittorrent-exporter
+    state: present
+    recreate: auto
+
+- name: Wait until the exporter is up
+  ansible.builtin.uri:
+    url: "http://{{ qbittorrent_exporter_container_ip }}:{{ qbittorrent_exporter_port }}/healthz"
+  register: qbittorrent_exporter_health
+  until: qbittorrent_exporter_health.status == 200
+  retries: 10
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+# /healthz no consulta a qBittorrent: la clave solo se comprueba pidiendo las métricas
+- name: Read the metrics
+  ansible.builtin.uri:
+    url: "http://{{ qbittorrent_exporter_container_ip }}:{{ qbittorrent_exporter_port }}/metrics"
+    return_content: true
+    timeout: 40
+  register: qbittorrent_exporter_metrics
+  until: "'qbittorrent_global_ratio' in qbittorrent_exporter_metrics.content | default('')"
+  retries: 5
+  delay: 5
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Check that qBittorrent answers with that API key
+  ansible.builtin.assert:
+    that: "'qbittorrent_global_ratio' in qbittorrent_exporter_metrics.content | default('')"
+    fail_msg: "El exporter responde pero no obtiene datos de qBittorrent (¿clave de API o URL?). Mira: docker logs qbittorrent-exporter"
+    quiet: true
+  when: not ansible_check_mode

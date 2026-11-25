@@ -1,0 +1,34 @@
+# Alertas de qBittorrent. Las dos primeras vigilan lo que más cuesta en un tracker privado:
+# no ser conectable (casi no se sube) y tener torrents en cola (no comparten: cuentan como
+# hit and run). qbit-vigia ya reinicia la VPN si el puerto se pierde; esto avisa si no basta.
+groups:
+  - name: torrents
+    rules:
+      - alert: QbittorrentNotConnectable
+        expr: qbittorrent_transfer_connection_status{connection_status="connected"} == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "qBittorrent no es conectable"
+          description: "qBittorrent lleva 30 minutos firewalled o desconectado: sin puerto reenviado por la VPN los demás no pueden conectar y casi no se sube."
+
+      - alert: QbittorrentTorrentsQueued
+        expr: sum(qbittorrent_torrent_states{name="queuedUP"}) > 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} torrents en cola para subir"
+          description: >-
+            Hay torrents completos en cola desde hace una hora: no comparten y en un tracker
+            privado cuentan como hit and run. Revisa la cola de qBittorrent.
+
+      - alert: QbittorrentExporterDown
+        expr: up{job="qbittorrent"} == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sin métricas de qBittorrent"
+          description: "Prometheus no consigue leer el exporter de qBittorrent desde hace 10 minutos (el exporter, la clave de API o qBittorrent)."

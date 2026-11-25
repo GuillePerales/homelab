@@ -35,3 +35,7 @@ prometheus_grafana_targets: []
 # Blackbox Exporter (host:puerto). Los objetivos los escribe el rol blackbox en
 # config/targets/blackbox.yml del appdata; vacío desactiva el job.
 prometheus_blackbox_address: ""
+
+# Exporter de qBittorrent (host:puerto); vacío desactiva el job. Las etiquetas de tracker
+# se reducen a dominio: la URL de announce puede llevar el passkey.
+prometheus_qbittorrent_address: ""
