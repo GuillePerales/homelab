@@ -13,7 +13,9 @@ Despliega Grafana en el host del grupo `monitoring` (docker-aux) como los roles
   se conserva la existente. Grafana solo la usa al crear la base de datos.
 - **Dashboards incluidos**: `Homelab · Visión global` (nodos arriba y caídos,
   alertas activas, CPU, RAM, disco, red, uptime y carga, con selector de nodo).
-  Los de contenedores, SMART, HTTP y consumo llegan con sus exporters.
+  `Homelab · Contenedores` (cAdvisor: contenedores, RAM, CPU, red, disco, arranques
+  recientes y OOM, con selector de host y de stack). Los de SMART, HTTP y consumo
+  llegan con sus exporters.
 - Comprueba al final que Grafana responde, que el datasource conecta con
   Prometheus y que los dashboards están cargados.
 

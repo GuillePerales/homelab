@@ -136,9 +136,11 @@
     force_basic_auth: true
     return_content: true
   register: grafana_dashboards
-  until: grafana_dashboards.json | length > 0
-  retries: 10
+  until: grafana_dashboards.json | length >= grafana_dashboard_count | int
+  retries: 12
   delay: 5
+  vars:
+    grafana_dashboard_count: "{{ lookup('ansible.builtin.fileglob', role_path + '/files/dashboards/*.json', wantlist=True) | length }}"
   changed_when: false
   no_log: true
   when: not ansible_check_mode
