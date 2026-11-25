@@ -1,0 +1,53 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that: dozzle_agent_container_ip | length > 0
+    fail_msg: "Falta dozzle_agent_container_ip en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Create the stack directory
+  ansible.builtin.file:
+    path: "{{ dozzle_agent_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/dozzle-agent/docker-compose.yml"
+    dest: "{{ dozzle_agent_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment
+  ansible.builtin.template:
+    src: dozzle-agent.env.j2
+    dest: "{{ dozzle_agent_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ dozzle_agent_stack_dir }}"
+    project_name: dozzle-agent
+    state: present
+
+# El agente no tiene healthcheck propio: se comprueba que sigue arrancado y sin reinicios
+- name: Check that the agent keeps running
+  ansible.builtin.command: docker inspect -f "{% raw %}{{.State.Status}} {{.RestartCount}}{% endraw %}" dozzle-agent
+  register: dozzle_agent_state
+  until: dozzle_agent_state.stdout.startswith('running')
+  retries: 5
+  delay: 3
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Check that the agent did not restart
+  ansible.builtin.assert:
+    that: dozzle_agent_state.stdout.split()[1] == '0'
+    fail_msg: "El agente de Dozzle se ha reiniciado: mira docker logs dozzle-agent"
+    quiet: true
+  when: not ansible_check_mode

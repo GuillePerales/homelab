@@ -21,7 +21,7 @@ macvlan_shim:
   routes:
     - 10.0.30.50/31
     - 10.0.30.52/30
-    - 10.0.30.56/32
+    - 10.0.30.56/29
 
 # IP desde la que Prometheus alcanza el node_exporter de este host (el shim)
 monitoring_address: 10.0.30.99
@@ -43,6 +43,12 @@ prometheus_blackbox_address: "{{ blackbox_container_ip }}:9115"
 qbittorrent_exporter_container_ip: 10.0.30.56
 qbittorrent_exporter_url: "http://10.0.30.15:8080"
 prometheus_qbittorrent_address: "{{ qbittorrent_exporter_container_ip }}:8090"
+
+# Dozzle (rol dozzle): IP fija en srv-net y agentes de los demás hosts Docker (docker-main y el NAS)
+dozzle_container_ip: 10.0.30.57
+dozzle_remote_agents:
+  - 10.0.30.40:7007
+  - 10.0.30.45:7007
 
 # cAdvisor (rol cadvisor): IP fija en srv-net
 cadvisor_container_ip: 10.0.30.54

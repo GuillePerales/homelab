@@ -1,0 +1,93 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that: dozzle_container_ip | length > 0
+    fail_msg: "Falta dozzle_container_ip en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ dozzle_stack_dir }}", mode: "0755" }
+    - { path: "{{ dozzle_appdata }}", mode: "0755" }
+    - { path: "{{ dozzle_appdata }}/data", mode: "0700" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Look for the users file
+  ansible.builtin.stat:
+    path: "{{ dozzle_appdata }}/data/users.yml"
+  register: dozzle_users
+
+- name: Check that there is a password to create the user
+  ansible.builtin.assert:
+    that: dozzle_admin_password | length > 0
+    fail_msg: "No hay users.yml y falta la contraseña: exporta DOZZLE_ADMIN_PASS al lanzar el playbook"
+    quiet: true
+  when: not dozzle_users.stat.exists
+
+# La contraseña entra por la entrada estándar, no por la línea de comandos
+- name: Generate the users file with the Dozzle image
+  ansible.builtin.command: >-
+    docker run --rm -i {{ dozzle_image }} generate {{ dozzle_admin_user }} --name "{{ dozzle_admin_name }}"
+  args:
+    stdin: "{{ dozzle_admin_password }}"
+  register: dozzle_generated
+  changed_when: true
+  no_log: true
+  when: not dozzle_users.stat.exists and not ansible_check_mode
+
+- name: Write the users file
+  ansible.builtin.copy:
+    content: "{{ dozzle_generated.stdout }}"
+    dest: "{{ dozzle_appdata }}/data/users.yml"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: dozzle_generated.stdout is defined
+
+- name: Copy the repo compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../services/docker-compose/monitoring/dozzle/docker-compose.yml"
+    dest: "{{ dozzle_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the stack environment
+  ansible.builtin.template:
+    src: dozzle.env.j2
+    dest: "{{ dozzle_stack_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ dozzle_stack_dir }}"
+    project_name: dozzle
+    state: present
+
+- name: Wait until Dozzle is healthy
+  ansible.builtin.command: docker inspect -f "{% raw %}{{.State.Health.Status}}{% endraw %}" dozzle
+  register: dozzle_health
+  until: dozzle_health.stdout == 'healthy'
+  retries: 12
+  delay: 5
+  changed_when: false
+  when: not ansible_check_mode
+
+# El login tiene que estar activo: sin él, cualquiera que llegue vería todos los logs
+- name: Check that the login is required
+  ansible.builtin.uri:
+    url: "http://{{ dozzle_container_ip }}:8080/api/events/stream"
+    status_code: [401, 403, 302]
+    follow_redirects: none
+  changed_when: false
+  when: not ansible_check_mode

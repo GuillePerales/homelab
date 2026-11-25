@@ -1,0 +1,23 @@
+---
+# Dozzle (hub) en docker-aux, con el compose del repo (`docker compose -p dozzle up -d`).
+# Lee los logs de docker-aux por el socket local y los de los demás hosts por sus agentes.
+
+# IP fija en srv-net (bloque de docker-aux: .50–.63)
+dozzle_container_ip: ""
+
+dozzle_stack_dir: /opt/dozzle
+dozzle_appdata: /srv/dozzle
+
+# Agentes de los otros hosts Docker (host:puerto), en el host_vars de docker-aux
+dozzle_remote_agents: []
+
+# Imagen: la misma que fija el compose, para generar el users.yml con ella
+dozzle_image: amir20/dozzle:v11.5.0
+
+# Usuario único del login. La contraseña se pasa por entorno al lanzar el playbook
+# (DOZZLE_ADMIN_PASS, leída de un fichero local fuera del repo) y solo hace falta la primera vez:
+# en el host queda su hash en users.yml, que no se vuelve a generar. Para cambiarla: borrar
+# /srv/dozzle/data/users.yml y relanzar el rol con la contraseña nueva.
+dozzle_admin_user: admin
+dozzle_admin_name: Admin
+dozzle_admin_password: "{{ lookup('ansible.builtin.env', 'DOZZLE_ADMIN_PASS') }}"
