@@ -1,0 +1,6 @@
+# kube-state-metrics (chart de infrastructure/helm/kube-state-metrics) y la cuenta con la que el
+# Prometheus de docker-aux lee las métricas del clúster desde fuera.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring

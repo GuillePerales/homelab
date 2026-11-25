@@ -1,0 +1,18 @@
+# Acceso de Prometheus (docker-aux) a kube-state-metrics: NodePort en el nodo. El chart no
+# permite `externalTrafficPolicy`, y sin `Local` el origen se pierde (SNAT) y la NetworkPolicy
+# por IP no podría distinguir a Prometheus de cualquier otro cliente.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ksm-externo
+  namespace: monitoring
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: kube-state-metrics
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080

@@ -1,0 +1,42 @@
+# Cuenta de solo lectura para el Prometheus de docker-aux (fase 8): puede leer /metrics del API
+# server y /metrics, /metrics/cadvisor del kubelet, y nada más. Su token (Secret de abajo, sin
+# caducidad) va al host por variable de entorno desde el rol `prometheus`; para rotarlo, borrar el
+# Secret, dejar que ArgoCD lo recree y volver a aplicar el rol con el token nuevo.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-externo
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-externo-metricas
+rules:
+  - apiGroups: [""]
+    resources: ["nodes/metrics"]
+    verbs: ["get"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-externo-metricas
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-externo-metricas
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-externo
+    namespace: monitoring
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-externo-token
+  namespace: monitoring
+  annotations:
+    kubernetes.io/service-account.name: prometheus-externo
+type: kubernetes.io/service-account-token

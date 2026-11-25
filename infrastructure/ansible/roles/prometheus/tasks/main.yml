@@ -57,6 +57,64 @@
     mode: "0644"
   register: prometheus_env
 
+- name: Read the existing K3s credentials
+  ansible.builtin.slurp:
+    src: "{{ prometheus_appdata }}/config/secrets/{{ item }}"
+  loop: [k3s-token, k3s-ca.crt]
+  register: prometheus_k3s_existing
+  failed_when: false
+  no_log: true
+  when: prometheus_k3s_address | length > 0
+
+- name: Decide the K3s credentials
+  ansible.builtin.set_fact:
+    prometheus_k3s_effective_token: >-
+      {{ prometheus_k3s_token if prometheus_k3s_token | length > 0
+         else (prometheus_k3s_existing.results[0].content | default('') | b64decode) }}
+    prometheus_k3s_effective_ca: >-
+      {{ prometheus_k3s_ca if prometheus_k3s_ca | length > 0
+         else (prometheus_k3s_existing.results[1].content | default('') | b64decode) }}
+  no_log: true
+  when: prometheus_k3s_address | length > 0
+
+- name: Check that there are K3s credentials
+  ansible.builtin.assert:
+    that:
+      - prometheus_k3s_effective_token | trim | length > 0
+      - prometheus_k3s_effective_ca | trim | length > 0
+    fail_msg: "Faltan el token o el CA de K3s: exporta K3S_PROMETHEUS_TOKEN y K3S_PROMETHEUS_CA al lanzar el playbook"
+    quiet: true
+  when: prometheus_k3s_address | length > 0
+
+- name: Create the secrets directory
+  ansible.builtin.file:
+    path: "{{ prometheus_appdata }}/config/secrets"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: prometheus_k3s_address | length > 0
+
+# El contenedor corre como nobody (65534): el token solo lo lee él
+- name: Write the K3s token
+  ansible.builtin.copy:
+    content: "{{ prometheus_k3s_effective_token | trim }}\n"
+    dest: "{{ prometheus_appdata }}/config/secrets/k3s-token"
+    owner: "65534"
+    group: "65534"
+    mode: "0400"
+  no_log: true
+  when: prometheus_k3s_address | length > 0
+
+- name: Write the K3s CA
+  ansible.builtin.copy:
+    content: "{{ prometheus_k3s_effective_ca | trim }}\n"
+    dest: "{{ prometheus_appdata }}/config/secrets/k3s-ca.crt"
+    owner: root
+    group: root
+    mode: "0444"
+  when: prometheus_k3s_address | length > 0
+
 - name: Write prometheus.yml
   ansible.builtin.template:
     src: prometheus.yml.j2
@@ -80,6 +138,7 @@
     - alerts-http.yml
     - alerts-torrents.yml
     - alerts-plataforma.yml
+    - alerts-k3s.yml
   register: prometheus_rules
 
 - name: Start the stack

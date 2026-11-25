@@ -141,3 +141,52 @@ scrape_configs:
     static_configs:
       - targets: ["{{ prometheus_pbs_exporter_address }}"]
 {% endif %}
+
+
+{% if prometheus_k3s_address %}
+  # K3s: el API server y el kubelet comparten registro de métricas, así que /metrics devuelve lo mismo
+  # en 6443 y en 10250 (~56 000 series). Se recoge una vez y solo lo que usan el dashboard y las alertas.
+  - job_name: k3s
+    scheme: https
+    scrape_interval: 1m
+    scrape_timeout: 30s
+    authorization:
+      credentials_file: /etc/prometheus/secrets/k3s-token
+    tls_config:
+      ca_file: /etc/prometheus/secrets/k3s-ca.crt
+    static_configs:
+      - targets: ["{{ prometheus_k3s_address }}:{{ prometheus_k3s_apiserver_port }}"]
+        labels:
+          host: {{ groups['k3s_nodes'] | first }}
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'apiserver_request_total|apiserver_request_duration_seconds_(sum|count)|apiserver_current_inflight_requests|apiserver_storage_size_bytes|apiserver_storage_objects|kubelet_running_(pods|containers)|kubelet_volume_stats_(used|capacity)_bytes|process_(cpu_seconds_total|resident_memory_bytes|start_time_seconds)|go_goroutines'
+        action: keep
+
+  - job_name: k3s-cadvisor
+    scheme: https
+    scrape_interval: 30s
+    scrape_timeout: 20s
+    metrics_path: /metrics/cadvisor
+    authorization:
+      credentials_file: /etc/prometheus/secrets/k3s-token
+    tls_config:
+      ca_file: /etc/prometheus/secrets/k3s-ca.crt
+    static_configs:
+      - targets: ["{{ prometheus_k3s_address }}:{{ prometheus_k3s_kubelet_port }}"]
+        labels:
+          host: {{ groups['k3s_nodes'] | first }}
+    metric_relabel_configs:
+      # Series que ningún panel usa y que multiplican la cardinalidad
+      - source_labels: [__name__]
+        regex: 'container_tasks_state|container_memory_failures_total|container_blkio_.*|container_fs_.*|container_spec_.*'
+        action: drop
+
+  - job_name: kube-state-metrics
+    scrape_interval: 30s
+    scrape_timeout: 20s
+    static_configs:
+      - targets: ["{{ prometheus_k3s_address }}:{{ prometheus_k3s_ksm_port }}"]
+        labels:
+          host: {{ groups['k3s_nodes'] | first }}
+{% endif %}

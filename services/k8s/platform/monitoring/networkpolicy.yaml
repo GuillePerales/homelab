@@ -1,0 +1,34 @@
+# Solo entra tráfico del mismo namespace, más el scrape del Prometheus de docker-aux
+# (10.0.30.51, en srv-net) a kube-state-metrics. Con `externalTrafficPolicy: Local` del Service
+# `ksm-externo` el pod ve la IP real de origen, así que el ipBlock funciona.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: solo-mismo-namespace
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: permitir-prometheus-externo
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 10.0.30.51/32
+      ports:
+        - protocol: TCP
+          port: 8080
