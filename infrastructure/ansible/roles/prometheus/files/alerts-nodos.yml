@@ -4,7 +4,8 @@ groups:
   - name: nodos
     rules:
       - alert: NodeDown
-        expr: up{job="node"} == 0
+        # k3s-01 se apaga cada noche (playbooks/k3s-apagado-nocturno.yml)
+        expr: up{job="node", host!="k3s-01"} == 0
         for: 2m
         labels:
           severity: critical
