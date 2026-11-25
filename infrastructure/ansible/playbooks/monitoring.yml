@@ -1,0 +1,16 @@
+# infrastructure/ansible/playbooks/monitoring.yml
+#
+# Stack de monitorización (fase 8). De momento solo los exporters en los nodos;
+# Prometheus, Alertmanager y Grafana en docker-aux se añaden después.
+# nas-01 queda fuera: TrueNAS es un appliance, sin apt ni systemd propio.
+#
+# Uso:
+#   ansible-playbook playbooks/monitoring.yml --check --diff
+#   ansible-playbook playbooks/monitoring.yml --tags node_exporter --limit docker-aux
+---
+- name: Install exporters on every node
+  hosts: proxmox:docker_hosts:k3s_nodes
+  become: true
+  roles:
+    - role: node_exporter
+      tags: [node_exporter]

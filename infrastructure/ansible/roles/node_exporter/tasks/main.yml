@@ -1,0 +1,81 @@
+---
+- name: Check architecture
+  ansible.builtin.assert:
+    that: ansible_facts['architecture'] == 'x86_64'
+    fail_msg: "El rol descarga el binario linux-amd64"
+
+- name: Create service user
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ node_exporter_install_dir }}", owner: root, group: root, mode: "0755" }
+    - { path: "{{ node_exporter_install_dir }}/{{ node_exporter_version }}", owner: root, group: root, mode: "0755" }
+    - { path: "{{ node_exporter_textfile_dir }}", owner: "{{ node_exporter_user }}", group: "{{ node_exporter_user }}", mode: "0755" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Download release
+  ansible.builtin.get_url:
+    url: "{{ node_exporter_release_url }}/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "{{ node_exporter_install_dir }}/node_exporter-{{ node_exporter_version }}.tar.gz"
+    checksum: "sha256:{{ node_exporter_sha256 }}"
+    mode: "0644"
+
+- name: Unpack binary
+  ansible.builtin.unarchive:
+    src: "{{ node_exporter_install_dir }}/node_exporter-{{ node_exporter_version }}.tar.gz"
+    dest: "{{ node_exporter_install_dir }}/{{ node_exporter_version }}"
+    remote_src: true
+    extra_opts: ["--strip-components=1", "--wildcards", "*/node_exporter"]
+    owner: root
+    group: root
+    creates: "{{ node_exporter_install_dir }}/{{ node_exporter_version }}/node_exporter"
+
+- name: Point the binary link at this version
+  ansible.builtin.file:
+    src: "{{ node_exporter_install_dir }}/{{ node_exporter_version }}/node_exporter"
+    dest: "{{ node_exporter_bin }}"
+    state: link
+  notify: Restart node_exporter
+
+- name: Install systemd unit
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart node_exporter
+
+- name: Enable and start node_exporter
+  ansible.builtin.systemd_service:
+    name: node_exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# Los handlers corren al final; si hubo cambios, esto reinicia antes de comprobar.
+- name: Apply pending restart
+  ansible.builtin.meta: flush_handlers
+
+- name: Check that metrics are served
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ node_exporter_listen.split(':')[-1] }}/metrics"
+    return_content: true
+  register: node_exporter_metrics
+  until: node_exporter_metrics.status == 200
+  retries: 5
+  delay: 2
+  changed_when: false
+  failed_when: "'node_cpu_seconds_total' not in node_exporter_metrics.content"
