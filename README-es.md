@@ -215,7 +215,7 @@ Categorías:
 |---|---|---|---|
 | dns-unbound-01 | Unbound (integrado en OPNsense) | fw-01 | Resolver recursivo + DNSSEC + split-horizon |
 
-> **Decisión de diseño:** Unbound integrado en OPNsense en lugar de AdGuard Home. Justificación: sin servicios adicionales que mantener, soporte nativo de DNSSEC y split-horizon para el dominio `.homelab`.
+> **Decisión de diseño:** Unbound integrado en OPNsense en lugar de AdGuard Home. Justificación: sin servicios adicionales que mantener, soporte nativo de DNSSEC y split-horizon para el dominio `home.arpa`.
 
 ### 4.4 Monitorización (VLAN 30 — SRV)
 

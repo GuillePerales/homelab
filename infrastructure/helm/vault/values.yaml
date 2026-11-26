@@ -33,13 +33,13 @@ server:
     annotations:
       cert-manager.io/cluster-issuer: homelab-ca
     hosts:
-      - host: vault.homelab.local
+      - host: vault.k3s.home.arpa
         paths:
           - /
     tls:
       - secretName: vault-tls
         hosts:
-          - vault.homelab.local
+          - vault.k3s.home.arpa
 
 ui:
   enabled: true

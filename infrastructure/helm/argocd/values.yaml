@@ -11,7 +11,7 @@
 # (services/k8s/argocd/), porque llevan la credencial de lectura.
 
 global:
-  domain: argocd.homelab.local
+  domain: argocd.k3s.home.arpa
   # Las políticas de red del chart dejan entrar a cualquiera al servidor: mandan las de
   # services/k8s/platform/argocd (solo el mismo namespace y Traefik)
   networkPolicy:
@@ -30,7 +30,7 @@ server:
   ingress:
     enabled: true
     ingressClassName: traefik
-    hostname: argocd.homelab.local
+    hostname: argocd.k3s.home.arpa
     tls: true
     annotations:
       cert-manager.io/cluster-issuer: homelab-ca
