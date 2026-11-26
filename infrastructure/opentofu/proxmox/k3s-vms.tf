@@ -65,7 +65,7 @@ resource "proxmox_virtual_environment_vm" "k3s_01" {
     datastore_id = "local-lvm"
 
     dns {
-      domain  = "homelab.local"
+      domain  = "home.arpa"
       servers = ["10.0.30.1"]
     }
 
@@ -80,5 +80,10 @@ resource "proxmox_virtual_environment_vm" "k3s_01" {
       username = "debian"
       keys     = [var.k3s_ssh_public_key]
     }
+  }
+
+  # La VM se enciende y se apaga a mano (laboratorio apagable): que OpenTofu no la arranque.
+  lifecycle {
+    ignore_changes = [started]
   }
 }
