@@ -81,4 +81,9 @@ resource "proxmox_virtual_environment_vm" "k3s_01" {
       keys     = [var.k3s_ssh_public_key]
     }
   }
+
+  # La VM se enciende y se apaga a mano (laboratorio apagable): que OpenTofu no la arranque.
+  lifecycle {
+    ignore_changes = [started]
+  }
 }
