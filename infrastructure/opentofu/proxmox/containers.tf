@@ -41,7 +41,7 @@ resource "proxmox_virtual_environment_container" "docker_main" {
     hostname = "docker-main"
 
     dns {
-      domain  = "homelab.local"
+      domain  = "home.arpa"
       servers = ["10.0.30.1"]
     }
 
@@ -107,7 +107,7 @@ resource "proxmox_virtual_environment_container" "docker_aux" {
     hostname = "docker-aux"
 
     dns {
-      domain  = "homelab.local"
+      domain  = "home.arpa"
       servers = ["10.0.30.1"]
     }
 

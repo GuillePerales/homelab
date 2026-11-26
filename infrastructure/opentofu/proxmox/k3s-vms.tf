@@ -65,7 +65,7 @@ resource "proxmox_virtual_environment_vm" "k3s_01" {
     datastore_id = "local-lvm"
 
     dns {
-      domain  = "homelab.local"
+      domain  = "home.arpa"
       servers = ["10.0.30.1"]
     }
 
