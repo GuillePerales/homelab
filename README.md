@@ -641,7 +641,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 0** | Workstation, tooling, repo init, SOPS + Age | ✅ Done |
 | **Phase 1** | Network: OPNsense, 7 VLANs, managed switch, Tailscale | ✅ Done |
 | **Phase 1.5** | VPN: Tailscale (remote) + ProtonVPN WireGuard (egress) | ✅ Done |
-| **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — data protection hardening ongoing | ✅ Done |
+| **Phase 2** | TrueNAS, ZFS pools, \*arr stack, qBittorrent, Calibre-Web Automated, PBS, Syncthing — external backup to Proton Drive, mirrored `tank` pool and encrypted datasets | ✅ Done |
 | **Phase 3** | Proxmox 3-node cluster, Docker LXCs, Portainer multi-host | ✅ Done |
 | **Phase 4** | DevOps Core: Forgejo (GitHub mirror), Woodpecker CI, own images scanned with Trivy and published to the Forgejo registry; every Proxmox resource (firewall VM, Docker LXCs, K3s VM) in OpenTofu with an encrypted state and a read-only `tofu plan` on every PR; recovery runbook written. Next: a timed disaster-recovery drill | ✅ Done |
 | **Phase 4b** | Single-node K3s with ArgoCD, Vault, cert-manager, NetworkPolicies, dev/prod environments and Trivy Operator; daily etcd snapshot copy to the NAS; cluster metrics (kube-state-metrics, API server and container usage) read by the Phase 8 Prometheus, with a dashboard and alerts. The VM is a lab and a timer shuts it down every night. Pending: Velero (needs an S3 store); Jenkins, SonarQube and AWX out of scope. Planned: on-demand Proxmox node (Wake-on-LAN and idle shutdown) for a multi-node K3s, virtualization and security labs on an isolated VLAN, a CI agent and the GPU for local AI | ✅ Completed |
