@@ -1,0 +1,6149 @@
+{
+  "uid": "homelab-mapa",
+  "title": "Homelab · Mapa",
+  "tags": [
+    "homelab",
+    "mapa"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "editable": false,
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "canvas",
+      "title": "",
+      "transparent": true,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 29
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "up{job=\"node\"}",
+          "legendFormat": "host:{{host}}",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pve_up{id=~\"qemu/.*|lxc/.*\"} * on(id) group_left(name) pve_guest_info",
+          "legendFormat": "vm:{{name}}",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(time() - max by (host, name) (container_last_seen{name!=\"\"})) < bool 120",
+          "legendFormat": "ct:{{host}}/{{name}}",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "probe_success",
+          "legendFormat": "svc:{{service}}",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 - avg by (host) (rate(node_cpu_seconds_total{job=\"node\",mode=\"idle\"}[5m])) * 100",
+          "legendFormat": "cpu:{{host}}",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"})",
+          "legendFormat": "ram:{{host}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "Time",
+            "mode": "outer"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(cpu|ram):.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "inlineEditing": false,
+        "showAdvancedTypes": false,
+        "panZoom": true,
+        "infinitePan": false,
+        "root": {
+          "type": "frame",
+          "name": "Mapa",
+          "background": {
+            "color": {
+              "fixed": "#0d1117"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 100,
+            "height": 100,
+            "rotation": 0
+          },
+          "elements": [
+            {
+              "type": "rectangle",
+              "name": "clúster",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 860,
+                "top": 460,
+                "width": 880,
+                "height": 508
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#f0a030"
+                },
+                "width": 1,
+                "radius": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "título",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 20,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Homelab · mapa de infraestructura"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 6,
+                "width": 600,
+                "height": 30
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "subtítulo",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Borde verde/rojo: estado en vivo (Prometheus). Punto en la esquina: la web responde (Blackbox)."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 34,
+                "width": 700,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "internet",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 760,
+                "top": 20,
+                "width": 170,
+                "height": 46
+              },
+              "background": {
+                "color": {
+                  "fixed": "#13233d"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#2b4a7a"
+                },
+                "width": 1,
+                "radius": 23
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "internet l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Internet"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 760,
+                "top": 25.0,
+                "width": 170,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "internet l1",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "fibra · IPv4"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 760,
+                "top": 43.0,
+                "width": 170,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "router isp",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 960,
+                "top": 20,
+                "width": 240,
+                "height": 46
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "width": 1,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "router isp l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Router del ISP"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 960,
+                "top": 25.0,
+                "width": 240,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "router isp l1",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "telefonía y wifi de casa"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 960,
+                "top": 43.0,
+                "width": 240,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "isp-enlace",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 930,
+                "top": 42,
+                "width": 30,
+                "height": 3
+              },
+              "background": {
+                "color": {
+                  "fixed": "#4b5563"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "isp-fw",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1080,
+                "top": 66,
+                "width": 3,
+                "height": 44
+              },
+              "background": {
+                "color": {
+                  "fixed": "#4b5563"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-router",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 700,
+                "top": 110,
+                "width": 520,
+                "height": 190
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "host:pve-router"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-router t",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 16,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "pve-router"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 114,
+                "width": 260,
+                "height": 24
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-router s",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Proxmox VE · nodo del clúster · INFRA"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 136,
+                "width": 300,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu-et pve-router",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "CPU"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1040,
+                "top": 118,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu pve-router",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "cpu:pve-router",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1072,
+                "top": 118,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram-et pve-router",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "RAM"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1114,
+                "top": 118,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram pve-router",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "ram:pve-router",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1146,
+                "top": 118,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "fw-01",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 168,
+                "width": 488,
+                "height": 120
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "vm:fw-01"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "fw-01 l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "fw-01  ·  OPNsense (VM 100)"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 726,
+                "top": 176,
+                "width": 468,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "fw-01 l2",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Firewall de VLAN y NAT · DHCP y Unbound DNS"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 726,
+                "top": 212,
+                "width": 468,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "fw-01 l3",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "WireGuard → ProtonVPN · Tailscale (subnet router)"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 726,
+                "top": 230,
+                "width": 468,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web OPNsense",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1186,
+                "top": 174,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:OPNsense"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "trunk",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 958,
+                "top": 300,
+                "width": 5,
+                "height": 46
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "switch",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 770,
+                "top": 346,
+                "width": 380,
+                "height": 58
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#3b9eff"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "switch l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "TL-SG108E · switch gestionable 8 × GbE · 802.1Q"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 770,
+                "top": 358.0,
+                "width": 380,
+                "height": 17
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "switch l1",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "P1 trunk · P2 pve-aux · P3 wks-02 · P4 pve-main · P6 nas-01 · P8 wks-01"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 770,
+                "top": 375.0,
+                "width": 380,
+                "height": 17
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 5",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "5"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1190,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#3b9eff"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#3b9eff"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 10",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "10"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1238,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#ff5c5c"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#ff5c5c"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 15",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "15"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1286,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#8b949e"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 20",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "20"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1334,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#ff6bb5"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#ff6bb5"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 30",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "30"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1382,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#2ed9a0"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#2ed9a0"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 40",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "40"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1430,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#a78bfa"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#a78bfa"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan 50",
+              "config": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "50"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1478,
+                "top": 360,
+                "width": 42,
+                "height": 22
+              },
+              "background": {
+                "color": {
+                  "fixed": "#f5c518"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#f5c518"
+                },
+                "width": 0,
+                "radius": 4
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "vlan et",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "5 INFRA · 10 MGMT · 15 AI · 20 DEVICES · 30 SRV · 40 GAME · 50 IOT"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1190,
+                "top": 386,
+                "width": 560,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "sw-bus",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 958,
+                "top": 404,
+                "width": 5,
+                "height": 32
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "bus",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 110,
+                "top": 436,
+                "width": 1410,
+                "height": 4
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "bus wks",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 110,
+                "top": 436,
+                "width": 4,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "bus nas",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 540,
+                "top": 436,
+                "width": 4,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "bus pve-main",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1080,
+                "top": 436,
+                "width": 4,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "bus pve-aux",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1520,
+                "top": 436,
+                "width": 4,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#cbd5e1"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "wks-02",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 470,
+                "width": 200,
+                "height": 86
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "width": 1,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "wks-02 l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "wks-02"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 495.0,
+                "width": 200,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "wks-02 l1",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "PC de administración · INFRA"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 513.0,
+                "width": 200,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "wks-01",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 570,
+                "width": 200,
+                "height": 86
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "width": 1,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "wks-01 l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "wks-01"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 595.0,
+                "width": 200,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "wks-01 l1",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "PC de gaming · INFRA"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 10,
+                "top": 613.0,
+                "width": 200,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 230,
+                "top": 470,
+                "width": 620,
+                "height": 388
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "host:nas-01"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01 t",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 16,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "nas-01"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 474,
+                "width": 300,
+                "height": 24
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01 s",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "TrueNAS Scale · bare metal · INFRA + SRV (macvlan)"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 496,
+                "width": 360,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu-et nas-01",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "CPU"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 690,
+                "top": 478,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu nas-01",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "cpu:nas-01",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 722,
+                "top": 478,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram-et nas-01",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "RAM"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 764,
+                "top": 478,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram nas-01",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "ram:nas-01",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 796,
+                "top": 478,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01 z",
+              "config": {
+                "color": {
+                  "fixed": "#f0a030"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "ZFS: boot-pool (SSD) · vault (2 SSD, espejo) · tank (2 HDD, stripe)"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 520,
+                "width": 590,
+                "height": 30
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01 d",
+              "config": {
+                "color": {
+                  "fixed": "#2ed9a0"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "DOCKER · MACVLAN EN SRV"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 562,
+                "width": 300,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/prowlarr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Prowlarr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 582,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/prowlarr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/prowlarr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 350,
+                "top": 585,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Prowlarr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/sonarr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Sonarr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 368,
+                "top": 582,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/sonarr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/sonarr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 472,
+                "top": 585,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Sonarr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/radarr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Radarr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 490,
+                "top": 582,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/radarr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/radarr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 594,
+                "top": 585,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Radarr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/lidarr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Lidarr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 612,
+                "top": 582,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/lidarr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/lidarr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 585,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Lidarr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/bazarr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Bazarr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 734,
+                "top": 582,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/bazarr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/bazarr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 838,
+                "top": 585,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Bazarr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/cross-seed",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "cross-seed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 622,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/cross-seed"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/qbittorrent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "qBittorrent"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 368,
+                "top": 622,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/qbittorrent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/qbittorrent",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 472,
+                "top": 625,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:qBittorrent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/mularr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Mularr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 490,
+                "top": 622,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/mularr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/mularr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 594,
+                "top": 625,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Mularr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/shelfmark",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Shelfmark"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 612,
+                "top": 622,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/shelfmark"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/shelfmark",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 625,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Shelfmark"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/gluetun-qbittorrent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Gluetun qBit"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 734,
+                "top": 622,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/gluetun-qbittorrent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/gluetun-mularr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Gluetun Mularr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 662,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/gluetun-mularr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/syncthing",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Syncthing"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 368,
+                "top": 662,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/syncthing"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/syncthing",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 472,
+                "top": 665,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Syncthing"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/jellyfin",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Jellyfin"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 490,
+                "top": 662,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/jellyfin"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/jellyfin",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 594,
+                "top": 665,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Jellyfin"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/romm",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Romm"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 612,
+                "top": 662,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/romm"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/romm",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 665,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Romm"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/immich-server",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Immich"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 734,
+                "top": 662,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/immich-server"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/immich-server",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 838,
+                "top": 665,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Immich"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/immich-machine-learning",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Immich ML"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 702,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/immich-machine-learning"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/immich-postgres",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Immich DB"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 368,
+                "top": 702,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/immich-postgres"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/immich-redis",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Immich Redis"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 490,
+                "top": 702,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/immich-redis"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/calibre-web-automated",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Calibre-Web"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 612,
+                "top": 702,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/calibre-web-automated"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/calibre-web-automated",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 716,
+                "top": 705,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Calibre-Web"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/pbs",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "PBS"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 734,
+                "top": 702,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/pbs"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web nas-01/pbs",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 838,
+                "top": 705,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:PBS"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/portainer-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Portainer Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 742,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/portainer-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/diun",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "diun"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 368,
+                "top": 742,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/diun"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/dozzle-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Dozzle Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 490,
+                "top": 742,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/dozzle-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/cadvisor",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "cAdvisor"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 612,
+                "top": 742,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/cadvisor"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/smartctl-exporter",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "smartctl"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 734,
+                "top": 742,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/smartctl-exporter"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/node-exporter",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "node_exporter"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 246,
+                "top": 782,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/node-exporter"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "nas-01/beszel-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Beszel Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 368,
+                "top": 782,
+                "width": 116,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:nas-01/beszel-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-main",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 870,
+                "top": 470,
+                "width": 420,
+                "height": 472
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "host:pve-main"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-main t",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 16,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "pve-main"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 886,
+                "top": 474,
+                "width": 200,
+                "height": 24
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-main s",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Proxmox VE · nodo del clúster"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 886,
+                "top": 496,
+                "width": 260,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu-et pve-main",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "CPU"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1120,
+                "top": 478,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu pve-main",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "cpu:pve-main",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1152,
+                "top": 478,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram-et pve-main",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "RAM"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1194,
+                "top": 478,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram pve-main",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "ram:pve-main",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1226,
+                "top": 478,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 882,
+                "top": 522,
+                "width": 396,
+                "height": 304
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "vm:docker-main"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main t",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "docker-main · CT 200 · LXC · SRV"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 526,
+                "width": 360,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/portainer",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Portainer"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 550,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/portainer"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/portainer",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1000,
+                "top": 553,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Portainer"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/forgejo",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Forgejo"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1018,
+                "top": 550,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/forgejo"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/forgejo",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1124,
+                "top": 553,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Forgejo"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/woodpecker-server",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Woodpecker"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1142,
+                "top": 550,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/woodpecker-server"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/woodpecker-server",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1248,
+                "top": 553,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Woodpecker"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/woodpecker-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "WP agente"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 590,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/woodpecker-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/homarr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Homarr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1018,
+                "top": 590,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/homarr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/homarr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1124,
+                "top": 593,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Homarr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/ntfy",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "ntfy"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1142,
+                "top": 590,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/ntfy"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/ntfy",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1248,
+                "top": 593,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:ntfy"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/gatus",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Gatus"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 630,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/gatus"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/diun",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "diun"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1018,
+                "top": 630,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/diun"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/seerr",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Seerr"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1142,
+                "top": 630,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/seerr"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/seerr",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1248,
+                "top": 633,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Seerr"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/agenda",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Agenda"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 670,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/agenda"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/agenda",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1000,
+                "top": 673,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Agenda"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/beszel",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Beszel"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1018,
+                "top": 670,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/beszel"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/beszel",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1124,
+                "top": 673,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Beszel"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/speedtest-tracker",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Speedtest"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1142,
+                "top": 670,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/speedtest-tracker"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/speedtest-tracker",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1248,
+                "top": 673,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Speedtest Tracker"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/salud",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Salud"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 710,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/salud"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "ellipse",
+              "name": "web docker-main/salud",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#e6edf3"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1000,
+                "top": 713,
+                "width": 9,
+                "height": 9
+              },
+              "background": {
+                "color": {
+                  "fixed": "#6e7681",
+                  "field": "svc:Salud"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#0d1117"
+                },
+                "width": 1
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/cadvisor",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "cAdvisor"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1018,
+                "top": 710,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/cadvisor"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/dozzle-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Dozzle Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1142,
+                "top": 710,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/dozzle-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-main/beszel-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Beszel Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 894,
+                "top": 750,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-main/beszel-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "k3s-01",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 882,
+                "top": 838,
+                "width": 396,
+                "height": 64
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "vm:k3s-01"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "k3s-01 l0",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "k3s-01 · VM 300 · laboratorio DevOps"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 882,
+                "top": 853.0,
+                "width": 396,
+                "height": 17
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "k3s-01 l1",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Se enciende bajo demanda: rojo = apagada"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 882,
+                "top": 870.0,
+                "width": 396,
+                "height": 17
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-aux",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1310,
+                "top": 470,
+                "width": 420,
+                "height": 312
+              },
+              "background": {
+                "color": {
+                  "fixed": "#161b27"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "host:pve-aux"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-aux t",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 16,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "pve-aux"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1326,
+                "top": 474,
+                "width": 200,
+                "height": 24
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "pve-aux s",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Proxmox VE · nodo del clúster"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1326,
+                "top": 496,
+                "width": 260,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu-et pve-aux",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "CPU"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1560,
+                "top": 478,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "cpu pve-aux",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "cpu:pve-aux",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1592,
+                "top": 478,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram-et pve-aux",
+              "config": {
+                "color": {
+                  "fixed": "#8b949e"
+                },
+                "size": 10,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "RAM"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1634,
+                "top": 478,
+                "width": 34,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "ram pve-aux",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "field",
+                  "field": "ram:pve-aux",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1666,
+                "top": 478,
+                "width": 40,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "top",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": ""
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1322,
+                "top": 522,
+                "width": 396,
+                "height": 224
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "vm:docker-aux"
+                },
+                "width": 2,
+                "radius": 6
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux t",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 12,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "docker-aux · CT 201 · LXC · SRV · monitorización"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1334,
+                "top": 526,
+                "width": 360,
+                "height": 18
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/portainer-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Portainer Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1334,
+                "top": 550,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/portainer-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/prometheus",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Prometheus"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1458,
+                "top": 550,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/prometheus"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/alertmanager",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Alertmanager"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1582,
+                "top": 550,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/alertmanager"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/grafana",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Grafana"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1334,
+                "top": 590,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/grafana"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/cadvisor",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "cAdvisor"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1458,
+                "top": 590,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/cadvisor"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/blackbox",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Blackbox"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1582,
+                "top": 590,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/blackbox"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/qbittorrent-exporter",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Exp. qBit"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1334,
+                "top": 630,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/qbittorrent-exporter"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/dozzle",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Dozzle"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1458,
+                "top": 630,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/dozzle"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/pve-exporter",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Exp. PVE"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1582,
+                "top": 630,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/pve-exporter"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/opnsense-exporter",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Exp. OPN"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1334,
+                "top": 670,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/opnsense-exporter"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/pbs-exporter",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Exp. PBS"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1458,
+                "top": 670,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/pbs-exporter"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "docker-aux/beszel-agent",
+              "config": {
+                "color": {
+                  "fixed": "#e6edf3"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Beszel Ag."
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 1582,
+                "top": 670,
+                "width": 118,
+                "height": 34
+              },
+              "background": {
+                "color": {
+                  "fixed": "#1c2333"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4b5563",
+                  "field": "ct:docker-aux/beszel-agent"
+                },
+                "width": 2,
+                "radius": 5
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "clúster t",
+              "config": {
+                "color": {
+                  "fixed": "#f0a030"
+                },
+                "size": 11,
+                "align": "left",
+                "valign": "middle",
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Clúster Proxmox VE de 3 nodos (pve-router, pve-main y pve-aux)"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 870,
+                "top": 948,
+                "width": 760,
+                "height": 16
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0,
+                "radius": 0
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
