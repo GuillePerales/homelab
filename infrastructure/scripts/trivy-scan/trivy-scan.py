@@ -69,7 +69,10 @@ def imagenes_en_marcha():
     caidos = [x["metric"].get("host", x["metric"]["instance"])
               for x in prometheus(f'up{{job="{CADVISOR_JOB}"}} == 0')]
     hosts_de = {}
-    for x in prometheus(f'count by (host, image) (container_last_seen{{job="{CADVISOR_JOB}", image!=""}})'):
+    # container_last_seen es la hora a la que cAdvisor vio el contenedor por última vez: uno recién
+    # eliminado sigue en la consulta los 5 min de lookback de Prometheus, pero con una hora vieja
+    vistos = f'container_last_seen{{job="{CADVISOR_JOB}", image!=""}} > time() - 120'
+    for x in prometheus(f'count by (host, image) ({vistos})'):
         hosts_de.setdefault(x["metric"]["image"], set()).add(x["metric"].get("host", "?"))
     # El propio Trivy sale si cAdvisor lo vio hace poco (series de hasta 5 min tras parar)
     ignorar = IGNORAR | {TRIVY_IMAGE}
