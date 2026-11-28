@@ -247,6 +247,7 @@ Phase 8 — stack de métricas en `docker-aux`, desplegado con roles de Ansible 
 | mon-pve-01 | Exporter de Proxmox | docker-aux | 9221 | ✅ Operativo | Clúster, quórum, nodos, VM, contenedores y almacenamiento leídos de la API de Proxmox con un token de solo lectura |
 | mon-opnsense-01 | Exporter de OPNsense | docker-aux | 8080 | ✅ Operativo | Tráfico y errores por VLAN, pasarelas, tabla de estados y paquetes del firewall, WireGuard y servicios, leídos de la API de OPNsense con un usuario de solo lectura |
 | mon-pbs-01 | Exporter de PBS | docker-aux | 10019 | ✅ Operativo | Antigüedad y número de copias por VM y contenedor, uso de los datastores y salud del host, leídos de la API de PBS con un token de solo lectura |
+| mon-trivy-01 | trivy-scan | docker-aux | — | ✅ Operativo | Escaneo semanal con Trivy de las imágenes que corren en los hosts Docker (la lista sale de cAdvisor vía Prometheus, sin acceso a los otros hosts): CVE HIGH y CRITICAL con arreglo publicado, resumen a ntfy, informe y métricas; timer de systemd desplegado con un rol de Ansible |
 | mon-ksm-01 | kube-state-metrics | K3s (k3s-01) | — | ✅ Operativo | Estado de los objetos de Kubernetes (pods, deployments, nodos) para Prometheus; solo Prometheus puede llegar a él (NetworkPolicy) |
 
 Todavía planificado, fuera de la fase 8:
@@ -439,7 +440,7 @@ El stack DevOps replica un entorno enterprise real usando exclusivamente herrami
 | Gestor de paquetes K8s | **Helm** | Estándar para desplegar aplicaciones en Kubernetes |
 | Secretos de los servicios | **Fuera de Git** | Los `.env` reales solo viven en los hosts, cubiertos por snapshots ZFS y PBS (copia externa en preparación); SOPS + Age está preparado para lo que haya que versionar |
 | Secretos en K8s | **HashiCorp Vault** | Secretos dinámicos, auto-rotación, estándar enterprise |
-| Escaneo de vulnerabilidades | **Trivy** | Paso del pipeline en Woodpecker (falla con CVE críticos antes de publicar) y Trivy Operator en el clúster |
+| Escaneo de vulnerabilidades | **Trivy** | Paso del pipeline en Woodpecker (falla con CVE críticos antes de publicar), Trivy Operator en el clúster y escaneo semanal de las imágenes de los hosts Docker |
 | CNI Kubernetes | **Flannel de K3s** | Con el controlador de NetworkPolicies de K3s: aplica las políticas sin un segundo CNI |
 | Estrategia de branches | **Trunk-based** | Main protegido, feature branches de vida corta, PR obligatorio |
 
@@ -648,7 +649,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
 | **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |
-| **Phase 8** | Observabilidad y operación: Prometheus, Alertmanager, Grafana (8 dashboards, con los de Proxmox, red/OPNsense y K3s), exporters de nodos, contenedores, S.M.A.R.T., sondas HTTP y qBittorrent, un visor de logs en vivo (Dozzle) y exporters del clúster Proxmox, el firewall y PBS, desplegados con roles de Ansible, más las métricas y alertas del clúster K3s y la potencia de CPU (RAPL) en los nodos Proxmox. Se descartó medir el consumo con enchufes. A continuación, fuera de esta fase: planificador de tareas; Loki en evaluación | ✅ Completada |
+| **Phase 8** | Observabilidad y operación: Prometheus, Alertmanager, Grafana (8 dashboards, con los de Proxmox, red/OPNsense y K3s), exporters de nodos, contenedores, S.M.A.R.T., sondas HTTP y qBittorrent, un visor de logs en vivo (Dozzle) y exporters del clúster Proxmox, el firewall y PBS, desplegados con roles de Ansible, más las métricas y alertas del clúster K3s y la potencia de CPU (RAPL) en los nodos Proxmox, y un escaneo semanal con Trivy de las imágenes de los hosts Docker. Se descartó medir el consumo con enchufes. A continuación, fuera de esta fase: planificador de tareas; Loki en evaluación | ✅ Completada |
 | **Phase 9** | Agente IA acotado y siempre encendido, con mínimo privilegio (replanteada) | ⏳ Planificada |
 | **Postimplantación** | Práctica de data engineering con datos reales del homelab: lakehouse, streaming CDC | ⏳ Ideas |
 

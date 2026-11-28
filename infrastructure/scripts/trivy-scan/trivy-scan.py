@@ -71,7 +71,14 @@ def imagenes_en_marcha():
     hosts_de = {}
     for x in prometheus(f'count by (host, image) (container_last_seen{{job="{CADVISOR_JOB}", image!=""}})'):
         hosts_de.setdefault(x["metric"]["image"], set()).add(x["metric"].get("host", "?"))
-    return {i: sorted(h) for i, h in hosts_de.items() if i not in IGNORAR}, caidos
+    # El propio Trivy sale si cAdvisor lo vio hace poco (series de hasta 5 min tras parar)
+    ignorar = IGNORAR | {TRIVY_IMAGE}
+    return {i: sorted(h) for i, h in hosts_de.items() if i not in ignorar}, caidos
+
+
+def corto(imagen):
+    """Nombre para ntfy y títulos: sin registro ni digest."""
+    return imagen.split("@")[0].split("/")[-1]
 
 
 def trivy(*args, timeout):
@@ -230,15 +237,17 @@ def main():
     peores = [i for i in orden if i in cuenta and sum(cuenta[i])][:6]
     lineas = [f"{total_c} CRITICAL y {total_h} HIGH con arreglo en {len(cuenta)} imágenes"
               + (f" (antes {antes_c} CRITICAL)" if antes_c is not None else "") + "."]
-    lineas += [f"• {i.split('/')[-1]}: {cuenta[i][0]} C, {cuenta[i][1]} H" for i in peores]
+    lineas += [f"• {corto(i)}: {cuenta[i][0]} C, {cuenta[i][1]} H" for i in peores]
     if sin:
-        lineas.append(f"Sin escanear: {', '.join(s.split('/')[-1] for s in sin)}")
+        lineas.append(f"Sin escanear: {', '.join(corto(s) for s in sin)}")
     if caidos:
         lineas.append(f"Hosts sin datos: {', '.join(caidos)}")
     lineas.append(f"Informe: {ruta}")
     print("\n".join(lineas))
     if not args.sin_ntfy:
-        notify(3 if total_c or caidos else 2, ["shield"], "Escaneo semanal de imágenes", "\n".join(lineas))
+        # Siempre habrá CRITICAL en imágenes grandes: la prioridad sube solo si empeora o falta un host
+        empeora = antes_c is not None and total_c > antes_c
+        notify(3 if empeora or caidos else 2, ["shield"], "Escaneo semanal de imágenes", "\n".join(lineas))
 
 
 if __name__ == "__main__":

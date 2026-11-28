@@ -247,6 +247,7 @@ Phase 8 — metrics stack on `docker-aux`, deployed with Ansible roles (`infrast
 | mon-pve-01 | Proxmox exporter | docker-aux | 9221 | ✅ Operational | Cluster, quorum, nodes, VMs, containers and storage read from the Proxmox API with a read-only token |
 | mon-opnsense-01 | OPNsense exporter | docker-aux | 8080 | ✅ Operational | Per-VLAN traffic and errors, gateways, firewall state table and packets, WireGuard and services, read from the OPNsense API with a read-only user |
 | mon-pbs-01 | PBS exporter | docker-aux | 10019 | ✅ Operational | Backup age and count per VM and container, datastore usage and host health, read from the PBS API with a read-only token |
+| mon-trivy-01 | trivy-scan | docker-aux | — | ✅ Operational | Weekly Trivy scan of the images running on the Docker hosts (the list comes from cAdvisor through Prometheus, with no access to the other hosts): HIGH and CRITICAL CVEs with a published fix, summary to ntfy, report and metrics; systemd timer deployed with an Ansible role |
 | mon-ksm-01 | kube-state-metrics | K3s (k3s-01) | — | ✅ Operational | Kubernetes object state (pods, deployments, nodes) for the Prometheus; only the Prometheus can reach it (NetworkPolicy) |
 
 Still planned, outside Phase 8:
@@ -439,7 +440,7 @@ The DevOps stack replicates a real enterprise environment using exclusively open
 | K8s package manager | **Helm** | Standard for deploying applications on Kubernetes |
 | Service secrets | **Kept out of Git** | Real `.env` files live only on the hosts, covered by ZFS snapshots and PBS (off-site copy being set up); SOPS + Age is set up for files that must be versioned |
 | Secrets in K8s | **HashiCorp Vault** | Dynamic secrets, auto-rotation, enterprise standard |
-| Vulnerability scanning | **Trivy** | Pipeline stage in Woodpecker (fails on critical CVEs before publishing) and Trivy Operator in the cluster |
+| Vulnerability scanning | **Trivy** | Pipeline stage in Woodpecker (fails on critical CVEs before publishing), Trivy Operator in the cluster and a weekly scan of the Docker hosts' images |
 | Kubernetes CNI | **K3s Flannel** | With the K3s NetworkPolicy controller: enforces policies without a second CNI |
 | Branch strategy | **Trunk-based** | Protected main, short-lived feature branches, PR required |
 
@@ -648,7 +649,7 @@ CI (`sops-check`) fails if any `sops.env` is committed unencrypted.
 | **Phase 5** | Network & security (replanned): firewall rule hardening, internal domain, VLAN review, naming conventions | ⏳ Planned |
 | **Phase 6** | Personal apps: Immich (✅ deployed early), home inventory; Paperless-ngx under evaluation | ⏳ Planned |
 | **Phase 7** | Media: Jellyfin and Seerr (✅ deployed early); game library (Romm ✅ deployed) | ✅ Done |
-| **Phase 8** | Observability & operations: Prometheus, Alertmanager, Grafana (8 dashboards, including Proxmox, network/OPNsense and K3s), node, container, S.M.A.R.T., HTTP-probe and qBittorrent exporters, a live log viewer (Dozzle) and exporters for the Proxmox cluster, the firewall and PBS, deployed with Ansible roles, plus the K3s cluster metrics and alerts and CPU power (RAPL) on the Proxmox nodes. Wall-power metering with smart plugs was dropped. Next, outside this phase: job scheduler; Loki under evaluation | ✅ Done |
+| **Phase 8** | Observability & operations: Prometheus, Alertmanager, Grafana (8 dashboards, including Proxmox, network/OPNsense and K3s), node, container, S.M.A.R.T., HTTP-probe and qBittorrent exporters, a live log viewer (Dozzle) and exporters for the Proxmox cluster, the firewall and PBS, deployed with Ansible roles, plus the K3s cluster metrics and alerts and CPU power (RAPL) on the Proxmox nodes, and a weekly Trivy scan of the Docker hosts' images. Wall-power metering with smart plugs was dropped. Next, outside this phase: job scheduler; Loki under evaluation | ✅ Done |
 | **Phase 9** | Restricted, always-on AI agent with least privilege (replanned) | ⏳ Planned |
 | **Post-deployment** | Data-engineering practice on real homelab data: lakehouse, CDC streaming | ⏳ Ideas |
 
