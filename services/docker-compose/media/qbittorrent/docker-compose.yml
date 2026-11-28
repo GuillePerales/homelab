@@ -38,7 +38,7 @@ services:
       - FIREWALL_OUTBOUND_SUBNETS=${LAN_SUBNETS}
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:5.3.0
+    image: lscr.io/linuxserver/qbittorrent:5.3.1
     container_name: qbittorrent
     labels:
       # 14.x son tags antiguos del esquema de versiones anterior

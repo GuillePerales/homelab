@@ -10,7 +10,7 @@ networks:
 services:
   diun:
     container_name: diun
-    image: crazymax/diun:4.33.1
+    image: crazymax/diun:4.34.0
     command: serve
     restart: unless-stopped
     networks:
@@ -28,7 +28,7 @@ services:
       - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
       # Las imágenes van fijadas a una versión: vigilar los tags nuevos del repo, no solo el digest.
       # Un servicio con otro formato de tag lo indica con la etiqueta diun.include_tags.
-      - DIUN_DEFAULTS_WATCHREPO=true
+      - DIUN_DEFAULTS_WATCHMODE=all
       - DIUN_DEFAULTS_NOTIFYON=new
       - DIUN_DEFAULTS_SORTTAGS=semver
       - DIUN_DEFAULTS_MAXTAGS=5
