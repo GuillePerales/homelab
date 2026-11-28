@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Escaneo semanal de imágenes con Trivy
+
+[Timer]
+OnCalendar={{ trivy_scan_on_calendar }}
+# Si docker-aux estaba apagado a esa hora, corre al arrancar
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

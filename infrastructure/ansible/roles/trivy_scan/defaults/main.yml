@@ -1,0 +1,28 @@
+---
+# trivy-scan en docker-aux: escaneo semanal con Trivy de las imágenes que corren en los hosts Docker.
+# La lista de imágenes sale de Prometheus (cAdvisor de cada host), así que no necesita acceso a los otros hosts.
+
+trivy_scan_dir: /srv/trivy-scan
+
+# Versión fijada: subirla a propósito (diun no la vigila, porque el contenedor no queda corriendo)
+trivy_scan_image: aquasec/trivy:0.76.2
+
+# Cuándo corre (OnCalendar de systemd). Sábado temprano: no coincide con scrub, SMART ni copias
+trivy_scan_on_calendar: "Sat *-*-* 07:00:00"
+
+# Prometheus del propio host (rol prometheus) y job de cAdvisor de los hosts Docker
+trivy_scan_prometheus_url: "http://{{ prometheus_container_ip }}:9090"
+trivy_scan_cadvisor_job: cadvisor
+
+# ntfy: URL base y topic (el de diun: el arreglo casi siempre es actualizar la imagen)
+trivy_scan_ntfy_url: ""
+trivy_scan_ntfy_topic: homelab-actualizaciones
+
+trivy_scan_severity: HIGH,CRITICAL
+trivy_scan_reports_keep: 8
+trivy_scan_ignore: []
+trivy_scan_timeout_image: 600
+trivy_scan_timeout_total: 10800
+
+# Collector textfile del node_exporter (rol node_exporter)
+trivy_scan_textfile_dir: "{{ node_exporter_textfile_dir | default('/var/lib/node_exporter/textfile') }}"

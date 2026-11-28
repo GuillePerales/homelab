@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Escaneo con Trivy de las imágenes en marcha de los hosts Docker
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+Environment=ENV_FILE={{ trivy_scan_dir }}/trivy-scan.env
+ExecStart=/usr/bin/python3 {{ trivy_scan_dir }}/trivy-scan.py
+# Un escaneo largo no debe quitarle CPU ni disco a Prometheus y Grafana
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec={{ trivy_scan_timeout_total + 1800 }}

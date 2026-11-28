@@ -1,0 +1,58 @@
+---
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - trivy_scan_ntfy_url | length > 0
+      - prometheus_container_ip is defined
+    fail_msg: "Faltan trivy_scan_ntfy_url o prometheus_container_ip en el host_vars de {{ inventory_hostname }}"
+    quiet: true
+
+- name: Create the data directory
+  ansible.builtin.file:
+    path: "{{ trivy_scan_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Copy the repo script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../scripts/trivy-scan/trivy-scan.py"
+    dest: "{{ trivy_scan_dir }}/trivy-scan.py"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Write the configuration
+  ansible.builtin.template:
+    src: trivy-scan.env.j2
+    dest: "{{ trivy_scan_dir }}/trivy-scan.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+# Bajarla al desplegar: el primer escaneo no depende de que Docker Hub conteste a esa hora
+- name: Pull the Trivy image
+  community.docker.docker_image_pull:
+    name: "{{ trivy_scan_image }}"
+
+- name: Install the systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - trivy-scan.service
+    - trivy-scan.timer
+  notify: Reload systemd
+
+- name: Apply pending reload
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable the timer
+  ansible.builtin.systemd_service:
+    name: trivy-scan.timer
+    enabled: true
+    state: started
