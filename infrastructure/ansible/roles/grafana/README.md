@@ -16,6 +16,10 @@ Despliega Grafana en el host del grupo `monitoring` (docker-aux) como los roles
   `Homelab · Contenedores` (cAdvisor: contenedores, RAM, CPU, red, disco, arranques
   recientes y OOM, con selector de host y de stack). `Homelab · Discos` (smartctl_exporter: estado SMART, temperatura, errores, escrituras
   acumuladas y desgaste de SSD y NVMe). `Homelab · K3s` (kube-state-metrics, cAdvisor del kubelet y API server: pods, reinicios, CPU y RAM por namespace, latencia y etcd). Los de HTTP y consumo llegan con sus exporters.
+- **`Homelab · Vulnerabilidades`**: métricas `trivy_scan_*` del escaneo semanal con Trivy
+  (rol `trivy_scan`): totales de CRITICAL y HIGH con arreglo, imágenes sin escanear, antigüedad
+  del último escaneo, las diez peores imágenes, la evolución semanal y la tabla de todas, con
+  selector de host. Lo genera `infrastructure/scripts/trivy-scan/dashboard.py`.
 - **`Homelab · Mapa`**: un panel Canvas con el mapa de la infraestructura (red, hosts,
   VM/LXC y contenedores). El color de cada caja sigue el estado en vivo de Prometheus; el
   dibujo no es editable en la interfaz, sale de `infrastructure/scripts/grafana-mapa/generar.py`
