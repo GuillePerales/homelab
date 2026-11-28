@@ -68,6 +68,11 @@ prometheus_pbs_exporter_address: "{{ pbs_exporter_container_ip }}:10019"
 # cAdvisor (rol cadvisor): IP fija en srv-net
 cadvisor_container_ip: 10.0.30.54
 
+# Escaneo semanal de imágenes (rol trivy_scan): ntfy de docker-main
+trivy_scan_ntfy_url: "http://10.0.30.31/"
+# Imágenes construidas en el host (sin registro del que bajarlas)
+trivy_scan_ignore: ["salud:local"]
+
 
 # Métricas del clúster K3s en Prometheus (jobs k3s, k3s-cadvisor y kube-state-metrics)
 prometheus_k3s_address: "{{ hostvars['k3s-01'].monitoring_address }}"
