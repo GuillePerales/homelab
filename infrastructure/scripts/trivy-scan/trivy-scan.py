@@ -87,16 +87,22 @@ def trivy(*args, timeout):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
 
-def escanear(imagen):
+def escanear(imagen, reintentos=3):
     """Devuelve {"CRITICAL": [...], "HIGH": [...]} o un str con el error."""
-    try:
-        r = trivy("image", "--image-src", "remote", "--scanners", "vuln", "--severity", SEVERIDAD,
-                  "--ignore-unfixed", "--skip-db-update", "--format", "json", "--quiet", imagen,
-                  timeout=TIMEOUT_IMAGEN)
-    except subprocess.TimeoutExpired:
-        return f"más de {TIMEOUT_IMAGEN // 60} min"
+    for intento in range(reintentos):
+        try:
+            r = trivy("image", "--image-src", "remote", "--scanners", "vuln", "--severity", SEVERIDAD,
+                      "--ignore-unfixed", "--skip-db-update", "--format", "json", "--quiet", imagen,
+                      timeout=TIMEOUT_IMAGEN)
+        except subprocess.TimeoutExpired:
+            return f"más de {TIMEOUT_IMAGEN // 60} min"
+        # Límite de peticiones del registro (ghcr.io, lscr.io, Docker Hub): esperar y reintentar
+        if r.returncode != 0 and "TOOMANYREQUESTS" in r.stderr and intento < reintentos - 1:
+            time.sleep(60 * (intento + 1))
+            continue
+        break
     if r.returncode != 0:
-        lineas = [li for li in r.stderr.strip().splitlines() if li.strip()]
+        lineas = [li.strip() for li in r.stderr.strip().splitlines() if li.strip()]
         return (lineas[-1] if lineas else f"código {r.returncode}")[:200]
     try:
         datos = json.loads(r.stdout)
