@@ -4,7 +4,7 @@ networks:
 
 services:
   portainer:
-    image: portainer/portainer-ce:2.45.3
+    image: portainer/portainer-ce:2.45.4
     container_name: portainer
     restart: unless-stopped
     networks:

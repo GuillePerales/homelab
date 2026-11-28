@@ -6,7 +6,7 @@ networks:
 services:
   agenda:
     container_name: agenda
-    image: python:3.13.3-slim
+    image: python:3.13.18-slim
     command: ["python", "/app/agenda.py", "run"]
     restart: unless-stopped
     user: "3000:3000"
