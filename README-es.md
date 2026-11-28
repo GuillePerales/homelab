@@ -237,7 +237,7 @@ Phase 8 — stack de métricas en `docker-aux`, desplegado con roles de Ansible 
 |---|---|---|---|---|---|
 | mon-prometheus-01 | Prometheus | docker-aux | 9090 | ✅ Operativo | Base de datos de métricas y reglas de alertas (retención de 30 días, configuración de scrape generada desde el inventario de Ansible) |
 | mon-alertmanager-01 | Alertmanager | docker-aux | 9093 | ✅ Operativo | Reparte las alertas a ntfy con una prioridad por gravedad e inhibe el ruido de un host caído |
-| mon-grafana-01 | Grafana | docker-aux | 3000 | ✅ Operativo | Ocho dashboards provisionados desde ficheros del repo: visión global, contenedores, salud de discos, sondas HTTP, torrents, Proxmox, red y K3s |
+| mon-grafana-01 | Grafana | docker-aux | 3000 | ✅ Operativo | Diez dashboards provisionados desde ficheros del repo: visión global, contenedores, salud de discos, sondas HTTP, torrents, Proxmox, red, K3s, mapa de la infraestructura en vivo y vulnerabilidades de las imágenes |
 | mon-nodeexp-01 | Node Exporter | Nodos Proxmox, hosts Docker, K3s, NAS (contenedor) y el firewall (plugin de OPNsense) | 9100 | ✅ Operativo | Métricas de CPU, RAM, disco y red, más la potencia de CPU (RAPL) en los nodos Proxmox (binario fijado, unidad systemd endurecida) |
 | mon-cadvisor-01 | cAdvisor | docker-main, docker-aux, NAS | 8080 | ✅ Operativo | Métricas por contenedor |
 | mon-smartctl-01 | smartctl_exporter | Nodos Proxmox, NAS | 9633 | ✅ Operativo | Salud y temperatura S.M.A.R.T. en solo lectura, con 12 reglas de alerta; sustituye a Scrutiny |
@@ -247,7 +247,7 @@ Phase 8 — stack de métricas en `docker-aux`, desplegado con roles de Ansible 
 | mon-pve-01 | Exporter de Proxmox | docker-aux | 9221 | ✅ Operativo | Clúster, quórum, nodos, VM, contenedores y almacenamiento leídos de la API de Proxmox con un token de solo lectura |
 | mon-opnsense-01 | Exporter de OPNsense | docker-aux | 8080 | ✅ Operativo | Tráfico y errores por VLAN, pasarelas, tabla de estados y paquetes del firewall, WireGuard y servicios, leídos de la API de OPNsense con un usuario de solo lectura |
 | mon-pbs-01 | Exporter de PBS | docker-aux | 10019 | ✅ Operativo | Antigüedad y número de copias por VM y contenedor, uso de los datastores y salud del host, leídos de la API de PBS con un token de solo lectura |
-| mon-trivy-01 | trivy-scan | docker-aux | — | ✅ Operativo | Escaneo semanal con Trivy de las imágenes que corren en los hosts Docker (la lista sale de cAdvisor vía Prometheus, sin acceso a los otros hosts): CVE HIGH y CRITICAL con arreglo publicado, resumen a ntfy, informe y métricas; timer de systemd desplegado con un rol de Ansible |
+| mon-trivy-01 | trivy-scan | docker-aux | — | ✅ Operativo | Escaneo semanal con Trivy de las imágenes que corren en los hosts Docker (la lista sale de cAdvisor vía Prometheus, sin acceso a los otros hosts): CVE HIGH y CRITICAL con arreglo publicado, resumen a ntfy, informe y métricas con su dashboard en Grafana; timer de systemd desplegado con un rol de Ansible |
 | mon-ksm-01 | kube-state-metrics | K3s (k3s-01) | — | ✅ Operativo | Estado de los objetos de Kubernetes (pods, deployments, nodos) para Prometheus; solo Prometheus puede llegar a él (NetworkPolicy) |
 
 Todavía planificado, fuera de la fase 8:
@@ -649,7 +649,7 @@ La CI (`sops-check`) falla si se sube algún `sops.env` sin cifrar.
 | **Phase 5** | Red y seguridad (replanteada): endurecer reglas de firewall, dominio interno, revisión de VLANs, convenciones de nombres | ⏳ Planificada |
 | **Phase 6** | Apps personales: Immich (✅ adelantado), inventario del hogar; Paperless-ngx en evaluación | ⏳ Planificada |
 | **Phase 7** | Multimedia: Jellyfin y Seerr (✅ adelantado); biblioteca de juegos (Romm ✅ desplegado) | ✅ Completada |
-| **Phase 8** | Observabilidad y operación: Prometheus, Alertmanager, Grafana (8 dashboards, con los de Proxmox, red/OPNsense y K3s), exporters de nodos, contenedores, S.M.A.R.T., sondas HTTP y qBittorrent, un visor de logs en vivo (Dozzle) y exporters del clúster Proxmox, el firewall y PBS, desplegados con roles de Ansible, más las métricas y alertas del clúster K3s y la potencia de CPU (RAPL) en los nodos Proxmox, y un escaneo semanal con Trivy de las imágenes de los hosts Docker. Se descartó medir el consumo con enchufes. A continuación, fuera de esta fase: planificador de tareas; Loki en evaluación | ✅ Completada |
+| **Phase 8** | Observabilidad y operación: Prometheus, Alertmanager, Grafana (10 dashboards, con los de Proxmox, red/OPNsense, K3s, el mapa en vivo y vulnerabilidades), exporters de nodos, contenedores, S.M.A.R.T., sondas HTTP y qBittorrent, un visor de logs en vivo (Dozzle) y exporters del clúster Proxmox, el firewall y PBS, desplegados con roles de Ansible, más las métricas y alertas del clúster K3s y la potencia de CPU (RAPL) en los nodos Proxmox, y un escaneo semanal con Trivy de las imágenes de los hosts Docker. Se descartó medir el consumo con enchufes. A continuación, fuera de esta fase: planificador de tareas; Loki en evaluación | ✅ Completada |
 | **Phase 9** | Agente IA acotado y siempre encendido, con mínimo privilegio (replanteada) | ⏳ Planificada |
 | **Postimplantación** | Práctica de data engineering con datos reales del homelab: lakehouse, streaming CDC | ⏳ Ideas |
 
